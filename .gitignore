@@ -1,0 +1,15 @@
+# compiled binary
+/slqs
+
+# secrets / tokens / profiles / local cache
+profiles.json
+*.token
+*secret*
+.env
+*.db
+*.sqlite
+
+# nix
+result
+result-*
+.direnv/

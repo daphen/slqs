@@ -1,0 +1,1728 @@
+package slackclient
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"net/http/cookiejar"
+	"net/url"
+	"strings"
+	"sync"
+	"time"
+
+	"slqs/internal/debuglog"
+	"slqs/internal/slack/mrkdwn"
+	"slqs/internal/slackhttp"
+	"github.com/gorilla/websocket"
+	"github.com/slack-go/slack"
+)
+
+// SlackAPI defines the subset of the Slack API we use.
+// This interface enables mocking in tests.
+type SlackAPI interface {
+	GetConversations(params *slack.GetConversationsParameters) ([]slack.Channel, string, error)
+	GetConversationsForUser(params *slack.GetConversationsForUserParameters) ([]slack.Channel, string, error)
+	GetConversationHistory(params *slack.GetConversationHistoryParameters) (*slack.GetConversationHistoryResponse, error)
+	GetConversationReplies(params *slack.GetConversationRepliesParameters) ([]slack.Message, bool, string, error)
+	GetConversationInfoContext(ctx context.Context, input *slack.GetConversationInfoInput) (*slack.Channel, error)
+	SearchMessagesContext(ctx context.Context, query string, params slack.SearchParameters) (*slack.SearchMessages, error)
+	GetUsersContext(ctx context.Context, options ...slack.GetUsersOption) ([]slack.User, error)
+	GetUsersInConversationContext(ctx context.Context, params *slack.GetUsersInConversationParameters) ([]string, string, error)
+	GetUserInfo(user string) (*slack.User, error)
+	GetBotInfoContext(ctx context.Context, parameters slack.GetBotInfoParameters) (*slack.Bot, error)
+	GetEmoji() (map[string]string, error)
+	PostMessage(channelID string, options ...slack.MsgOption) (string, string, error)
+	UpdateMessage(channelID, timestamp string, options ...slack.MsgOption) (string, string, string, error)
+	DeleteMessage(channelID, timestamp string) (string, string, error)
+	AddReaction(name string, item slack.ItemRef) error
+	RemoveReaction(name string, item slack.ItemRef) error
+	GetPermalinkContext(ctx context.Context, params *slack.PermalinkParameters) (string, error)
+	AuthTest() (*slack.AuthTestResponse, error)
+	JoinConversation(channelID string) (*slack.Channel, string, []string, error)
+	SetUserPresenceContext(ctx context.Context, presence string) error
+	GetUserPresenceContext(ctx context.Context, user string) (*slack.UserPresence, error)
+	GetUserGroupsContext(ctx context.Context, options ...slack.GetUserGroupsOption) ([]slack.UserGroup, error)
+	SetSnoozeContext(ctx context.Context, minutes int) (*slack.DNDStatus, error)
+	EndSnoozeContext(ctx context.Context) (*slack.DNDStatus, error)
+	EndDNDContext(ctx context.Context) error
+	GetDNDInfoContext(ctx context.Context, user *string, options ...slack.ParamOption) (*slack.DNDStatus, error)
+	UploadFileContext(ctx context.Context, params slack.UploadFileParameters) (*slack.FileSummary, error)
+	GetUploadURLExternalContext(ctx context.Context, params slack.GetUploadURLExternalParameters) (*slack.GetUploadURLExternalResponse, error)
+	UploadToURL(ctx context.Context, params slack.UploadToURLParameters) error
+	CompleteUploadExternalContext(ctx context.Context, params slack.CompleteUploadExternalParameters) (*slack.CompleteUploadExternalResponse, error)
+	OpenConversationContext(ctx context.Context, params *slack.OpenConversationParameters) (*slack.Channel, bool, bool, error)
+}
+
+// defaultAPIBaseURL is the canonical Slack Web API root used as a fallback
+// before Connect() has run, when auth.test returns no usable URL, or when a
+// caller never goes through NewClient (e.g., tests). It mirrors slack-go's
+// internal default (slack.APIURL).
+const defaultAPIBaseURL = "https://slack.com/api/"
+
+// Client wraps the slack-go library, providing RTM connectivity
+// and a simplified Web API surface for the service layer.
+// Uses browser cookie auth (xoxc token + d cookie).
+type Client struct {
+	api    SlackAPI
+	wsConn *websocket.Conn
+	wsMu   sync.Mutex
+	wsDone chan struct{}
+	teamID string
+	userID string
+	token  string
+	cookie string
+
+	// apiBaseURL is the workspace-specific Web API root, e.g.
+	// "https://slack.com/api/" for non-grid workspaces or
+	// "https://hackclub.enterprise.slack.com/api/" for enterprise grids.
+	// Always ends in "/" so it can be concatenated with method names.
+	// Discovered from auth.test's URL field on Connect; defaults to
+	// defaultAPIBaseURL until then.
+	apiBaseURL string
+
+	// teamURL is the raw workspace URL from auth.test's response
+	// (e.g. "https://truelist-workspace.slack.com/"). Used to derive
+	// the workspace subdomain for in-app permalink routing.
+	teamURL string
+
+	// httpClient is the cookie-bearing HTTP client used by both the
+	// inner slack-go client and the four hand-rolled endpoint calls.
+	// Stored so Connect() can rebuild the slack-go client with the
+	// discovered apiBaseURL via slack.OptionAPIURL. Nil for clients
+	// constructed directly in tests (e.g., &Client{api: mock}); in
+	// that case Connect() leaves the existing api field alone.
+	httpClient *http.Client
+}
+
+// NewClient creates a new Slack client using browser cookie auth.
+// xoxcToken is the xoxc-... token from the browser.
+// dCookie is the value of the 'd' cookie from slack.com.
+func NewClient(xoxcToken, dCookie string) *Client {
+	httpClient := newCookieHTTPClient(dCookie)
+
+	api := slack.New(
+		xoxcToken,
+		slack.OptionHTTPClient(httpClient),
+	)
+
+	return &Client{
+		api:        api,
+		token:      xoxcToken,
+		cookie:     dCookie,
+		apiBaseURL: defaultAPIBaseURL,
+		httpClient: httpClient,
+	}
+}
+
+// newCookieJar creates a cookie jar with the Slack 'd' cookie set.
+func newCookieJar(dCookie string) http.CookieJar {
+	jar, _ := cookiejar.New(nil)
+
+	slackURL, _ := url.Parse("https://slack.com")
+	jar.SetCookies(slackURL, []*http.Cookie{
+		{
+			Name:   "d",
+			Value:  dCookie,
+			Domain: ".slack.com",
+			Path:   "/",
+			Secure: true,
+		},
+	})
+
+	return jar
+}
+
+// newCookieHTTPClient creates an http.Client with the Slack 'd' cookie set
+// and a BrowserTransport that injects Chrome-like headers on every request
+// to *.slack.com hosts. This keeps Enterprise Grid anomaly detectors from
+// flagging slk's traffic as non-browser. See internal/slackhttp.
+func newCookieHTTPClient(dCookie string) *http.Client {
+	return slackhttp.NewBrowserHTTPClient(newCookieJar(dCookie))
+}
+
+// TeamID returns the authenticated workspace's team ID.
+// Empty before Connect is called.
+func (c *Client) TeamID() string {
+	return c.teamID
+}
+
+// UserID returns the authenticated user's ID.
+// Empty before Connect is called.
+func (c *Client) UserID() string {
+	return c.userID
+}
+
+// WsDone returns a channel that is closed when the WebSocket read loop exits.
+func (c *Client) WsDone() <-chan struct{} {
+	return c.wsDone
+}
+
+// Connect authenticates with Slack, populates the team/user IDs, and
+// discovers the workspace-specific API base URL from auth.test's response.
+//
+// On enterprise grid workspaces, every API request must hit the
+// grid-prefixed host (e.g. "https://hackclub.enterprise.slack.com/api/...")
+// rather than the canonical "https://slack.com/api/..." — otherwise the
+// requests are routed to a different team or fail outright. The official
+// browser client learns the right host the same way: the URL field on
+// auth.test's response carries it.
+//
+// If we own the inner slack-go client (NewClient set httpClient), rebuild
+// it with the discovered API URL via slack.OptionAPIURL so subsequent
+// slack-go calls also target the workspace host. If a test injected a
+// mock api directly, leave it alone.
+func (c *Client) Connect(ctx context.Context) error {
+	resp, err := c.api.AuthTest()
+	if err != nil {
+		return fmt.Errorf("auth test failed: %w", err)
+	}
+	c.teamID = resp.TeamID
+	c.userID = resp.UserID
+	c.apiBaseURL = deriveAPIBaseURL(resp.URL)
+	c.teamURL = resp.URL
+
+	if c.httpClient != nil {
+		c.api = slack.New(
+			c.token,
+			slack.OptionHTTPClient(c.httpClient),
+			slack.OptionAPIURL(c.apiBaseURL),
+		)
+	}
+
+	return nil
+}
+
+// deriveAPIBaseURL turns the team URL returned by auth.test (e.g.
+// "https://hackclub.enterprise.slack.com/") into the API base URL slk
+// should use for subsequent requests ("https://hackclub.enterprise.slack.com/api/").
+//
+// We only trust hosts under .slack.com — anything else (empty input, garbage,
+// a non-Slack host) falls back to the canonical defaultAPIBaseURL. This
+// keeps a malformed auth.test response from accidentally routing tokens to
+// an unintended host.
+func deriveAPIBaseURL(authTestURL string) string {
+	if authTestURL == "" {
+		return defaultAPIBaseURL
+	}
+	u, err := url.Parse(authTestURL)
+	if err != nil || u.Scheme == "" || u.Host == "" {
+		return defaultAPIBaseURL
+	}
+	host := u.Host
+	if host != "slack.com" && !strings.HasSuffix(host, ".slack.com") {
+		return defaultAPIBaseURL
+	}
+	return "https://" + host + "/api/"
+}
+
+// TeamSubdomain returns the workspace's subdomain under .slack.com
+// (e.g. "truelist-workspace" for truelist-workspace.slack.com), or ""
+// before Connect or when the auth.test URL was not a *.slack.com host.
+func (c *Client) TeamSubdomain() string {
+	return subdomainFromTeamURL(c.teamURL)
+}
+
+// subdomainFromTeamURL extracts the subdomain from a workspace URL.
+// Only hosts strictly under .slack.com produce a non-empty result.
+func subdomainFromTeamURL(teamURL string) string {
+	if teamURL == "" {
+		return ""
+	}
+	u, err := url.Parse(teamURL)
+	if err != nil || u.Host == "" {
+		return ""
+	}
+	if !strings.HasSuffix(u.Host, ".slack.com") {
+		return ""
+	}
+	return strings.TrimSuffix(u.Host, ".slack.com")
+}
+
+// wsUpgradeHeaders returns the HTTP headers slk attaches to the WebSocket
+// upgrade request. These match the Chrome-like headers BrowserTransport
+// adds to ordinary HTTP requests, with Sec-Fetch-Dest narrowed to
+// "websocket" — the value a real browser sends when opening a WS to
+// app.slack.com.
+//
+// gorilla/websocket's Dialer.Dial accepts arbitrary headers (except for
+// the protocol-managed Sec-WebSocket-* set, which it owns), so this is
+// the right injection point. We can't reuse BrowserTransport here because
+// the dialer doesn't go through http.RoundTripper.
+func wsUpgradeHeaders() http.Header {
+	h := slackhttp.BrowserHeaders()
+	h.Set("Sec-Fetch-Dest", "websocket")
+	return h
+}
+
+// StartWebSocket connects to Slack's internal WebSocket using the xoxc token
+// and d cookie, matching the protocol used by the browser client.
+// Events are dispatched to the provided handler in a goroutine.
+// Call this after Connect.
+func (c *Client) StartWebSocket(handler EventHandler) error {
+	wsURL := fmt.Sprintf(
+		"wss://wss-primary.slack.com/?token=%s&sync_desync=1&slack_client=desktop&start_args=%%3Fagent%%3Dclient%%26connect_only%%3Dtrue%%26ms_latest%%3Dtrue&no_query_on_subscribe=1&flannel=3&lazy_channels=1&gateway_server=%s-1&batch_presence_aware=1",
+		url.QueryEscape(c.token),
+		c.teamID,
+	)
+
+	jar := newCookieJar(c.cookie)
+	dialer := &websocket.Dialer{Jar: jar}
+
+	conn, _, err := dialer.Dial(wsURL, wsUpgradeHeaders())
+	if err != nil {
+		return fmt.Errorf("websocket connect failed: %w", err)
+	}
+	c.wsConn = conn
+	c.wsDone = make(chan struct{})
+
+	// Detect dead connections: set a read deadline that resets on every
+	// incoming message or pong. Slack sends pings ~every 30s, so a 60s
+	// deadline gives plenty of margin. Without this, ReadMessage blocks
+	// forever on a silently-dropped TCP connection (e.g., wifi disconnect).
+	const wsTimeout = 60 * time.Second
+	conn.SetReadDeadline(time.Now().Add(wsTimeout))
+	conn.SetPongHandler(func(string) error {
+		conn.SetReadDeadline(time.Now().Add(wsTimeout))
+		return nil
+	})
+	conn.SetPingHandler(func(msg string) error {
+		conn.SetReadDeadline(time.Now().Add(wsTimeout))
+		c.wsMu.Lock()
+		defer c.wsMu.Unlock()
+		return conn.WriteControl(websocket.PongMessage, []byte(msg), time.Now().Add(10*time.Second))
+	})
+
+	go func() {
+		defer close(c.wsDone)
+		defer handler.OnDisconnect()
+		for {
+			_, message, err := conn.ReadMessage()
+			if err != nil {
+				if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+					return
+				}
+				// Read error (timeout, connection closed, etc.) — exit loop
+				return
+			}
+			// Reset deadline on every successful read
+			conn.SetReadDeadline(time.Now().Add(wsTimeout))
+			dispatchWebSocketEvent(message, handler)
+		}
+	}()
+
+	// Client-side keepalive. Slack's flannel WebSocket reaps connections that
+	// go idle from the client side (~2 min), which silently killed quiet,
+	// unviewed workspaces — only the actively-viewed one stayed up. An
+	// application-level ping every 30s (what the browser client sends) keeps
+	// every connection active regardless of whether the user is looking at it.
+	go func(conn *websocket.Conn, done chan struct{}) {
+		t := time.NewTicker(30 * time.Second)
+		defer t.Stop()
+		id := 1
+		for {
+			select {
+			case <-done:
+				return
+			case <-t.C:
+				c.wsMu.Lock()
+				err := conn.WriteJSON(map[string]interface{}{"type": "ping", "id": id})
+				c.wsMu.Unlock()
+				if err != nil {
+					return
+				}
+				id++
+			}
+		}
+	}(conn, c.wsDone)
+
+	return nil
+}
+
+// StopWebSocket disconnects the WebSocket connection.
+func (c *Client) StopWebSocket() error {
+	if c.wsConn != nil {
+		return c.wsConn.Close()
+	}
+	return nil
+}
+
+// SendTyping sends a typing indicator to the given channel via WebSocket.
+func (c *Client) SendTyping(channelID string) error {
+	c.wsMu.Lock()
+	defer c.wsMu.Unlock()
+	if c.wsConn == nil {
+		return fmt.Errorf("websocket not connected")
+	}
+	msg := map[string]string{
+		"type":    "typing",
+		"channel": channelID,
+	}
+	return c.wsConn.WriteJSON(msg)
+}
+
+// SubscribePresence asks Slack to deliver presence_change events for the
+// given user IDs. Sent over the existing WebSocket connection. Slack only
+// emits presence_change for users you've explicitly subscribed to (the
+// authenticated user is typically auto-subscribed at connect, but the
+// explicit subscription is reliable across servers).
+func (c *Client) SubscribePresence(userIDs []string) error {
+	c.wsMu.Lock()
+	defer c.wsMu.Unlock()
+	if c.wsConn == nil {
+		return fmt.Errorf("websocket not connected")
+	}
+	msg := map[string]interface{}{
+		"type": "presence_sub",
+		"ids":  userIDs,
+	}
+	return c.wsConn.WriteJSON(msg)
+}
+
+// QueryPresence asks Slack for the current presence of the given users.
+// The socket is opened with no_query_on_subscribe=1, so presence_sub
+// alone never returns initial state — only later changes. The reply
+// arrives as presence_change events (batched when batch_presence_aware).
+func (c *Client) QueryPresence(userIDs []string) error {
+	c.wsMu.Lock()
+	defer c.wsMu.Unlock()
+	if c.wsConn == nil {
+		return fmt.Errorf("websocket not connected")
+	}
+	msg := map[string]interface{}{
+		"type": "presence_query",
+		"ids":  userIDs,
+	}
+	return c.wsConn.WriteJSON(msg)
+}
+
+// GetChannels retrieves conversations the user is a member of (channels, DMs,
+// group DMs), paginating automatically. Uses users.conversations which returns
+// only joined channels — much faster than conversations.list for large workspaces.
+func (c *Client) GetChannels(ctx context.Context) ([]slack.Channel, error) {
+	var allChannels []slack.Channel
+	cursor := ""
+
+	for {
+		params := &slack.GetConversationsForUserParameters{
+			Types:           []string{"public_channel", "private_channel", "mpim", "im"},
+			Limit:           200,
+			Cursor:          cursor,
+			ExcludeArchived: true,
+		}
+
+		channels, nextCursor, err := c.api.GetConversationsForUser(params)
+		if err != nil {
+			// Handle rate limits gracefully
+			if rlErr, ok := err.(*slack.RateLimitedError); ok {
+				wait := rlErr.RetryAfter
+				if wait == 0 {
+					wait = 30 * time.Second
+				}
+				select {
+				case <-ctx.Done():
+					return nil, ctx.Err()
+				case <-time.After(wait):
+				}
+				continue // retry same page
+			}
+			return nil, fmt.Errorf("getting user conversations: %w", err)
+		}
+
+		allChannels = append(allChannels, channels...)
+
+		if nextCursor == "" {
+			break
+		}
+		cursor = nextCursor
+	}
+
+	return allChannels, nil
+}
+
+// GetAllPublicChannels retrieves all public channels in the workspace via
+// conversations.list, including ones the user is NOT a member of. This is used
+// to populate the channel finder so users can join / switch to public channels
+// they haven't joined yet.
+//
+// Note: this is significantly slower than GetChannels for large workspaces
+// (potentially thousands of channels). Callers should run it in the background
+// after the joined-channel list is loaded.
+func (c *Client) GetAllPublicChannels(ctx context.Context) ([]slack.Channel, error) {
+	var allChannels []slack.Channel
+	cursor := ""
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		params := &slack.GetConversationsParameters{
+			Types:           []string{"public_channel"},
+			Limit:           1000,
+			Cursor:          cursor,
+			ExcludeArchived: true,
+		}
+
+		channels, nextCursor, err := c.api.GetConversations(params)
+		if err != nil {
+			if rlErr, ok := err.(*slack.RateLimitedError); ok {
+				wait := rlErr.RetryAfter
+				if wait == 0 {
+					wait = 30 * time.Second
+				}
+				select {
+				case <-ctx.Done():
+					return nil, ctx.Err()
+				case <-time.After(wait):
+				}
+				continue
+			}
+			return nil, fmt.Errorf("listing public channels: %w", err)
+		}
+
+		allChannels = append(allChannels, channels...)
+
+		if nextCursor == "" {
+			break
+		}
+		cursor = nextCursor
+	}
+
+	return allChannels, nil
+}
+
+// GetUsersInConversation returns all user IDs that are members of the
+// given conversation (channel, DM, group DM, or shared channel). Paginates
+// 1000 IDs per page. On 429 responses, sleeps the server-advised RetryAfter
+// (defaulting to 30s if zero) and retries the same page; honors ctx
+// cancellation both between iterations and during the rate-limit sleep.
+// Mirrors GetAllPublicChannels' loop structure.
+func (c *Client) GetUsersInConversation(ctx context.Context, channelID string) ([]string, error) {
+	var all []string
+	cursor := ""
+
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+		}
+
+		params := &slack.GetUsersInConversationParameters{
+			ChannelID: channelID,
+			Cursor:    cursor,
+			Limit:     1000,
+		}
+
+		users, next, err := c.api.GetUsersInConversationContext(ctx, params)
+		if err != nil {
+			if rlErr, ok := err.(*slack.RateLimitedError); ok {
+				wait := rlErr.RetryAfter
+				if wait == 0 {
+					wait = 30 * time.Second
+				}
+				select {
+				case <-ctx.Done():
+					return nil, ctx.Err()
+				case <-time.After(wait):
+				}
+				continue
+			}
+			return nil, fmt.Errorf("listing conversation members: %w", err)
+		}
+
+		all = append(all, users...)
+
+		if next == "" {
+			return all, nil
+		}
+		cursor = next
+	}
+}
+
+// JoinChannel joins a public channel via conversations.join. Returns nil on
+// success. Idempotent: joining a channel you're already in is a no-op on
+// Slack's side and returns no error here.
+func (c *Client) JoinChannel(ctx context.Context, channelID string) error {
+	_, _, _, err := c.api.JoinConversation(channelID)
+	if err != nil {
+		return fmt.Errorf("joining channel %s: %w", channelID, err)
+	}
+	return nil
+}
+
+// GetUserProfile fetches a single user's profile by ID.
+func (c *Client) GetUserProfile(userID string) (*slack.User, error) {
+	user, err := c.api.GetUserInfo(userID)
+	if err != nil {
+		return nil, fmt.Errorf("getting user info: %w", err)
+	}
+	return user, nil
+}
+
+// GetBotInfo fetches a bot's name and icon by bot ID (the `bot_id` on a
+// bot_message). Used to resolve the display name and avatar for messages
+// posted by bots/apps, which carry no `user` field.
+func (c *Client) GetBotInfo(ctx context.Context, botID string) (*slack.Bot, error) {
+	bot, err := c.api.GetBotInfoContext(ctx, slack.GetBotInfoParameters{Bot: botID})
+	if err != nil {
+		return nil, fmt.Errorf("getting bot info: %w", err)
+	}
+	return bot, nil
+}
+
+// GetHistory retrieves message history for a channel.
+// If oldest is set, returns messages newer than that timestamp.
+func (c *Client) GetHistory(ctx context.Context, channelID string, limit int, oldest string) ([]slack.Message, error) {
+	params := &slack.GetConversationHistoryParameters{
+		ChannelID: channelID,
+		Limit:     limit,
+	}
+	if oldest != "" {
+		params.Oldest = oldest
+	}
+
+	resp, err := c.api.GetConversationHistory(params)
+	if err != nil {
+		return nil, fmt.Errorf("getting history: %w", err)
+	}
+
+	return resp.Messages, nil
+}
+
+// GetOlderHistory retrieves messages older than the given timestamp.
+func (c *Client) GetOlderHistory(ctx context.Context, channelID string, limit int, latest string) ([]slack.Message, error) {
+	params := &slack.GetConversationHistoryParameters{
+		ChannelID: channelID,
+		Limit:     limit,
+		Latest:    latest,
+	}
+
+	resp, err := c.api.GetConversationHistory(params)
+	if err != nil {
+		return nil, fmt.Errorf("getting older history: %w", err)
+	}
+
+	return resp.Messages, nil
+}
+
+// GetHistoryAround fetches a window of channel history centered on ts:
+// up to limit messages at-or-older than ts (inclusive), plus up to
+// limit messages newer than ts — but the newer half is included only
+// when it is complete. With only Oldest set, conversations.history
+// anchors at the channel head: it returns the most recent limit
+// messages in (ts, now], not the ones adjacent to ts. So when more
+// than limit messages were posted after the target (has_more=true),
+// the newer page is dropped entirely and the window ends at the
+// target; a contiguous window beats a gapped one. Returned
+// newest-first, matching Slack's conversations.history ordering. Used
+// by jump-to-message navigation (search results, permalinks) when the
+// target is outside the loaded buffer.
+func (c *Client) GetHistoryAround(ctx context.Context, channelID, ts string, limit int) ([]slack.Message, error) {
+	older, err := c.api.GetConversationHistory(&slack.GetConversationHistoryParameters{
+		ChannelID: channelID,
+		Latest:    ts,
+		Inclusive: true,
+		Limit:     limit,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("getting history around %s (older): %w", ts, err)
+	}
+	if err := ctx.Err(); err != nil {
+		return nil, fmt.Errorf("getting history around %s: %w", ts, err)
+	}
+	newer, err := c.api.GetConversationHistory(&slack.GetConversationHistoryParameters{
+		ChannelID: channelID,
+		Oldest:    ts,
+		Inclusive: false,
+		Limit:     limit,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("getting history around %s (newer): %w", ts, err)
+	}
+	if newer.HasMore {
+		// The newer page is not adjacent to ts (see doc comment);
+		// including it would leave a silent hole after the target.
+		return older.Messages, nil
+	}
+	out := make([]slack.Message, 0, len(newer.Messages)+len(older.Messages))
+	out = append(out, newer.Messages...)
+	out = append(out, older.Messages...)
+	return out, nil
+}
+
+// ChannelName resolves a channel's name via conversations.info — used for
+// jump-to-message into a channel that isn't in the local (joined) list, so the
+// header can show "#name" instead of a raw ID. Returns "" on any error.
+func (c *Client) ChannelName(ctx context.Context, channelID string) string {
+	ch, err := c.api.GetConversationInfoContext(ctx, &slack.GetConversationInfoInput{ChannelID: channelID})
+	if err != nil || ch == nil {
+		return ""
+	}
+	return ch.Name
+}
+
+// SearchMessages runs a workspace-wide message search via Slack's
+// search.messages endpoint. The query string is passed through
+// verbatim, so Slack-side modifiers (from:, in:, before:, ...) work
+// unmodified. Results are relevance-sorted (Slack's default).
+func (c *Client) SearchMessages(ctx context.Context, query string, count int) (*slack.SearchMessages, error) {
+	params := slack.NewSearchParameters()
+	// Non-positive counts would be forwarded to Slack as count=0;
+	// keep slack-go's default (20) instead.
+	if count > 0 {
+		params.Count = count
+	}
+	res, err := c.api.SearchMessagesContext(ctx, query, params)
+	if err != nil {
+		return nil, fmt.Errorf("searching messages: %w", err)
+	}
+	return res, nil
+}
+
+// GetHistorySince fetches all messages newer than `oldest` in the
+// channel, paginating forward via response_metadata.next_cursor.
+// Stops when has_more is false or when the cumulative message count
+// reaches maxTotal (a hard cap that protects against runaway
+// backfills after very long disconnects in busy channels).
+//
+// Returns messages in the order Slack delivered them (newest-first
+// per page, oldest page first since pagination walks forward through
+// time). Callers that need oldest-first order should reverse the
+// slice.
+//
+// HistorySinceResult bundles the messages fetched by GetHistorySince
+// with a "did we get everything?" flag. Capped == true means the
+// caller hit maxTotal before the API ran out of pages, so there are
+// still older-than-cap messages between (oldest, latest-fetched-ts)
+// the caller didn't get. Callers that advance a sync watermark MUST
+// gate the advance on Capped == false.
+type HistorySinceResult struct {
+	Messages []slack.Message
+	Capped   bool
+}
+
+// GetHistorySince fetches all messages newer than `oldest` for the
+// given channel, paginating through next_cursor up to a hard ceiling
+// of maxTotal messages. Slack returns messages newest-first per page;
+// pagination via next_cursor walks toward older pages within the
+// (oldest, latest] window. When maxTotal is hit, the result's Capped
+// field is set to true so callers can decide whether to advance a
+// watermark (don't) or record a gap.
+//
+// If oldest == "", behaves like a single GetHistory call (no
+// pagination) and returns at most maxTotal messages from the latest
+// page, with Capped reflecting whether HasMore was true. This matches
+// the "first-sync channel: just give me the latest page" pattern.
+func (c *Client) GetHistorySince(ctx context.Context, channelID, oldest string, maxTotal int) (HistorySinceResult, error) {
+	if maxTotal <= 0 {
+		maxTotal = 500
+	}
+
+	// No prior sync — fetch latest page only.
+	if oldest == "" {
+		params := &slack.GetConversationHistoryParameters{
+			ChannelID: channelID,
+			Limit:     200,
+		}
+		resp, err := c.api.GetConversationHistory(params)
+		if err != nil {
+			return HistorySinceResult{}, fmt.Errorf("get history (no oldest): %w", err)
+		}
+		out := resp.Messages
+		capped := resp.HasMore
+		if len(out) > maxTotal {
+			out = out[:maxTotal]
+			capped = true
+		}
+		return HistorySinceResult{Messages: out, Capped: capped}, nil
+	}
+
+	var all []slack.Message
+	cursor := ""
+	for {
+		params := &slack.GetConversationHistoryParameters{
+			ChannelID: channelID,
+			Oldest:    oldest,
+			Limit:     200,
+			Cursor:    cursor,
+		}
+		resp, err := c.api.GetConversationHistory(params)
+		if err != nil {
+			// Rate-limit retry mirrors GetChannels' pattern.
+			if rlErr, ok := err.(*slack.RateLimitedError); ok {
+				wait := rlErr.RetryAfter
+				if wait == 0 {
+					wait = 30 * time.Second
+				}
+				select {
+				case <-ctx.Done():
+					return HistorySinceResult{Messages: all, Capped: true}, ctx.Err()
+				case <-time.After(wait):
+				}
+				continue
+			}
+			return HistorySinceResult{Messages: all, Capped: true}, fmt.Errorf("get history since %s: %w", oldest, err)
+		}
+
+		all = append(all, resp.Messages...)
+		if len(all) >= maxTotal {
+			return HistorySinceResult{Messages: all[:maxTotal], Capped: true}, nil
+		}
+		if !resp.HasMore || resp.ResponseMetaData.NextCursor == "" {
+			return HistorySinceResult{Messages: all, Capped: false}, nil
+		}
+		cursor = resp.ResponseMetaData.NextCursor
+	}
+}
+
+// GetUsers retrieves all users in the workspace.
+func (c *Client) GetUsers(ctx context.Context) ([]slack.User, error) {
+	users, err := c.api.GetUsersContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("getting users: %w", err)
+	}
+	return users, nil
+}
+
+// ListCustomEmoji fetches the workspace's custom emoji list via Slack's
+// emoji.list API. Returns a map of emoji name -> URL or "alias:targetname".
+// The map is empty if the workspace has no custom emojis.
+func (c *Client) ListCustomEmoji(ctx context.Context) (map[string]string, error) {
+	emojis, err := c.api.GetEmoji()
+	if err != nil {
+		return nil, fmt.Errorf("listing custom emoji: %w", err)
+	}
+	if emojis == nil {
+		emojis = map[string]string{}
+	}
+	return emojis, nil
+}
+
+// SendMessage posts a new message to the specified channel. Returns
+// the timestamp and the converted mrkdwn text actually sent (callers
+// use this for optimistic display so it matches what other Slack
+// clients will render).
+func (c *Client) SendMessage(ctx context.Context, channelID, text string) (string, string, error) {
+	mr, block := mrkdwn.Convert(text)
+	opts := []slack.MsgOption{slack.MsgOptionText(mr, false)}
+	if block != nil {
+		opts = append(opts, slack.MsgOptionBlocks(block))
+	}
+	_, ts, err := c.api.PostMessage(channelID, opts...)
+	if err != nil {
+		return "", "", fmt.Errorf("sending message: %w", err)
+	}
+	return ts, mr, nil
+}
+
+// OpenConversation opens (or returns) a direct message channel (1 user)
+// or a multi-person direct message / MPIM (2-8 users). Idempotent:
+// when the conversation already exists, Slack returns it with
+// alreadyOpen=true.
+//
+// Defends inputs: rejects 0 users or more than 8. Slack's hard cap on
+// MPIM size is 9 participants total, so up to 8 OTHER user IDs.
+func (c *Client) OpenConversation(ctx context.Context, userIDs []string) (string, bool, error) {
+	if len(userIDs) == 0 {
+		return "", false, fmt.Errorf("opening conversation: at least one user ID required")
+	}
+	if len(userIDs) > 8 {
+		return "", false, fmt.Errorf("opening conversation: at most 8 user IDs allowed (got %d)", len(userIDs))
+	}
+	ch, _, alreadyOpen, err := c.api.OpenConversationContext(ctx, &slack.OpenConversationParameters{
+		Users:    userIDs,
+		ReturnIM: true,
+	})
+	if err != nil {
+		return "", false, fmt.Errorf("opening conversation: %w", err)
+	}
+	return ch.ID, alreadyOpen, nil
+}
+
+// UploadFile uploads a single file to a channel (and optional thread)
+// using Slack's V2 external-upload flow. The slack-go library's
+// UploadFileContext (named for the underlying file.upload.v2 API)
+// handles the three internal steps:
+// getUploadURLExternal -> PUT -> completeUploadExternal.
+//
+// caption, when non-empty, is attached as the file's initial_comment.
+// For multi-file batches the caller should set caption on the LAST
+// file only (Slack groups files completed in one share into one
+// message; sequential single-file uploads can't be grouped).
+//
+// size is int64 (matching os.FileInfo.Size()) and is narrowed to int
+// for slack-go. Callers must enforce a reasonable upper bound; this
+// wrapper does not.
+func (c *Client) UploadFile(
+	ctx context.Context,
+	channelID, threadTS, filename string,
+	r io.Reader,
+	size int64,
+	caption string,
+) (*slack.FileSummary, error) {
+	params := slack.UploadFileParameters{
+		Filename: filename,
+		Reader:   r,
+		FileSize: int(size),
+		Channel:  channelID,
+	}
+	if threadTS != "" {
+		params.ThreadTimestamp = threadTS
+	}
+	if caption != "" {
+		params.InitialComment = caption
+	}
+	f, err := c.api.UploadFileContext(ctx, params)
+	if err != nil {
+		return nil, fmt.Errorf("uploading file %q: %w", filename, err)
+	}
+	return f, nil
+}
+
+// StageUpload uploads a file's bytes to Slack WITHOUT posting it, returning the
+// file id to post later via CompleteUpload. Used for staged image send: the
+// paste uploads, the next message posts it with a comment.
+func (c *Client) StageUpload(ctx context.Context, filename string, data []byte) (string, error) {
+	res, err := c.api.GetUploadURLExternalContext(ctx, slack.GetUploadURLExternalParameters{
+		FileName: filename,
+		FileSize: len(data),
+	})
+	if err != nil {
+		return "", fmt.Errorf("get upload url for %q: %w", filename, err)
+	}
+	if err := c.api.UploadToURL(ctx, slack.UploadToURLParameters{
+		UploadURL: res.UploadURL,
+		Reader:    bytes.NewReader(data),
+		Filename:  filename,
+	}); err != nil {
+		return "", fmt.Errorf("uploading bytes for %q: %w", filename, err)
+	}
+	return res.FileID, nil
+}
+
+// CompleteUpload posts a previously-staged file to the channel with an optional
+// comment (and thread).
+func (c *Client) CompleteUpload(ctx context.Context, channelID, threadTS, fileID, comment string) error {
+	_, err := c.api.CompleteUploadExternalContext(ctx, slack.CompleteUploadExternalParameters{
+		Files:           []slack.FileSummary{{ID: fileID}},
+		Channel:         channelID,
+		InitialComment:  comment,
+		ThreadTimestamp: threadTS,
+	})
+	if err != nil {
+		return fmt.Errorf("completing upload: %w", err)
+	}
+	return nil
+}
+
+// UnreadInfo holds the unread state for a single channel.
+type UnreadInfo struct {
+	ChannelID string
+	Count     int
+	HasUnread bool
+	LastRead  string // Slack message timestamp
+}
+
+// ThreadsAggregate captures Slack's server-side notion of whether the
+// user has any unread thread activity at all, plus the mention/unread
+// counts. The local SQLite cache has no per-thread read state, so the
+// threads-list "Unread" flag is computed by a heuristic that can
+// produce false positives (e.g., a thread reply was read in another
+// Slack client but the parent channel's last_read_ts predates it).
+// HasUnreads from this struct is the authoritative signal that lets us
+// suppress those false positives on startup.
+type ThreadsAggregate struct {
+	HasUnreads   bool
+	UnreadCount  int
+	MentionCount int
+}
+
+// GetUnreadCounts fetches unread counts for all channels using Slack's
+// internal client.counts API (available with xoxc browser tokens).
+// Also returns the threads aggregate (HasUnreads / counts) for the
+// workspace; the threads block in client.counts is the only place
+// Slack tells us whether per-thread unreads exist without us having to
+// hit subscriptions.thread.* directly.
+func (c *Client) GetUnreadCounts() ([]UnreadInfo, ThreadsAggregate, error) {
+	reqURL := c.apiBaseURL + "client.counts"
+	form := url.Values{"token": {c.token}}
+	req, err := http.NewRequest("POST", reqURL, strings.NewReader(form.Encode()))
+	if err != nil {
+		return nil, ThreadsAggregate{}, fmt.Errorf("creating request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	httpClient := newCookieHTTPClient(c.cookie)
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, ThreadsAggregate{}, fmt.Errorf("fetching unread counts: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, ThreadsAggregate{}, fmt.Errorf("reading response: %w", err)
+	}
+
+	var result struct {
+		OK       bool `json:"ok"`
+		Channels []struct {
+			ID                 string `json:"id"`
+			HasUnreads         bool   `json:"has_unreads"`
+			MentionCount       int    `json:"mention_count"`
+			UnreadCountDisplay int    `json:"unread_count_display,omitempty"`
+			LastRead           string `json:"last_read"`
+		} `json:"channels"`
+		Mpims []struct {
+			ID           string `json:"id"`
+			HasUnreads   bool   `json:"has_unreads"`
+			MentionCount int    `json:"mention_count"`
+			LastRead     string `json:"last_read"`
+		} `json:"mpims"`
+		Ims []struct {
+			ID         string `json:"id"`
+			HasUnreads bool   `json:"has_unreads"`
+			LastRead   string `json:"last_read"`
+		} `json:"ims"`
+		// Threads is the workspace-wide thread-subscription rollup.
+		// Slack returns this top-level when the user has subscribed
+		// threads (i.e., authored, replied to, or @-mentioned in any
+		// thread). HasUnreads here is the authoritative "do I have any
+		// unread thread activity?" signal.
+		Threads struct {
+			HasUnreads   bool `json:"has_unreads"`
+			UnreadCount  int  `json:"unread_count"`
+			MentionCount int  `json:"mention_count"`
+		} `json:"threads"`
+	}
+
+	if err := json.Unmarshal(body, &result); err != nil {
+		return nil, ThreadsAggregate{}, fmt.Errorf("parsing response: %w", err)
+	}
+
+	if !result.OK {
+		return nil, ThreadsAggregate{}, fmt.Errorf("client.counts API returned ok=false")
+	}
+
+	var unreads []UnreadInfo
+	for _, ch := range result.Channels {
+		info := UnreadInfo{
+			ChannelID: ch.ID,
+			LastRead:  ch.LastRead,
+			HasUnread: ch.HasUnreads,
+		}
+		if ch.HasUnreads {
+			info.Count = ch.MentionCount
+			if info.Count == 0 {
+				info.Count = 1 // has unreads but no mention count
+			}
+		}
+		unreads = append(unreads, info)
+	}
+	for _, ch := range result.Mpims {
+		info := UnreadInfo{
+			ChannelID: ch.ID,
+			LastRead:  ch.LastRead,
+			HasUnread: ch.HasUnreads,
+		}
+		if ch.HasUnreads {
+			info.Count = max(ch.MentionCount, 1)
+		}
+		unreads = append(unreads, info)
+	}
+	for _, ch := range result.Ims {
+		info := UnreadInfo{
+			ChannelID: ch.ID,
+			LastRead:  ch.LastRead,
+			HasUnread: ch.HasUnreads,
+		}
+		if ch.HasUnreads {
+			info.Count = 1
+		}
+		unreads = append(unreads, info)
+	}
+
+	threads := ThreadsAggregate{
+		HasUnreads:   result.Threads.HasUnreads,
+		UnreadCount:  result.Threads.UnreadCount,
+		MentionCount: result.Threads.MentionCount,
+	}
+	return unreads, threads, nil
+}
+
+// SendReply posts a threaded reply to the specified message.
+// Returns the timestamp and the converted mrkdwn text actually sent.
+func (c *Client) SendReply(ctx context.Context, channelID, threadTS, text string, broadcast bool) (string, string, error) {
+	mr, block := mrkdwn.Convert(text)
+	opts := []slack.MsgOption{
+		slack.MsgOptionText(mr, false),
+		slack.MsgOptionTS(threadTS),
+	}
+	if block != nil {
+		opts = append(opts, slack.MsgOptionBlocks(block))
+	}
+	if broadcast {
+		opts = append(opts, slack.MsgOptionBroadcast())
+	}
+	_, ts, err := c.api.PostMessage(channelID, opts...)
+	if err != nil {
+		return "", "", fmt.Errorf("sending reply: %w", err)
+	}
+	return ts, mr, nil
+}
+
+// GetUsergroups returns (handles, member): a subteam ID -> handle map for
+// resolving bare <!subteam^ID> mentions to a readable @handle, and the set
+// of subteam IDs that selfUserID belongs to (so a mention of one of those
+// groups can trigger a notification). Members come via include_users.
+func (c *Client) GetUsergroups(ctx context.Context, selfUserID string) (map[string]string, map[string]bool, error) {
+	groups, err := c.api.GetUserGroupsContext(ctx, slack.GetUserGroupsOptionIncludeUsers(true))
+	if err != nil {
+		return nil, nil, fmt.Errorf("fetching usergroups: %w", err)
+	}
+	handles := make(map[string]string, len(groups))
+	member := map[string]bool{}
+	for _, g := range groups {
+		name := g.Handle
+		if name == "" {
+			name = g.Name
+		}
+		if name != "" {
+			handles[g.ID] = name
+		}
+		for _, u := range g.Users {
+			if u == selfUserID {
+				member[g.ID] = true
+				break
+			}
+		}
+	}
+	return handles, member, nil
+}
+
+// GetReplies retrieves all replies in a thread.
+// The first message in the returned slice is the parent message.
+func (c *Client) GetReplies(ctx context.Context, channelID, threadTS string) ([]slack.Message, error) {
+	var allMessages []slack.Message
+	cursor := ""
+
+	for {
+		msgs, hasMore, nextCursor, err := c.api.GetConversationReplies(&slack.GetConversationRepliesParameters{
+			ChannelID: channelID,
+			Timestamp: threadTS,
+			Cursor:    cursor,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("getting thread replies: %w", err)
+		}
+		allMessages = append(allMessages, msgs...)
+		if !hasMore || nextCursor == "" {
+			break
+		}
+		cursor = nextCursor
+	}
+
+	return allMessages, nil
+}
+
+// EditMessage updates an existing message's text. Returns the
+// converted mrkdwn text that was sent (callers may use it for
+// optimistic display, but the message-changed WS echo is the
+// authoritative source of truth for the displayed body).
+func (c *Client) EditMessage(ctx context.Context, channelID, ts, text string) (string, error) {
+	mr, block := mrkdwn.Convert(text)
+	opts := []slack.MsgOption{slack.MsgOptionText(mr, false)}
+	if block != nil {
+		opts = append(opts, slack.MsgOptionBlocks(block))
+	}
+	_, _, _, err := c.api.UpdateMessage(channelID, ts, opts...)
+	if err != nil {
+		return "", fmt.Errorf("editing message: %w", err)
+	}
+	return mr, nil
+}
+
+// RemoveMessage deletes a message from the channel.
+func (c *Client) RemoveMessage(ctx context.Context, channelID, ts string) error {
+	_, _, err := c.api.DeleteMessage(channelID, ts)
+	if err != nil {
+		return fmt.Errorf("deleting message: %w", err)
+	}
+	return nil
+}
+
+// AddReaction adds an emoji reaction to a message.
+func (c *Client) AddReaction(ctx context.Context, channelID, ts, emoji string) error {
+	return c.api.AddReaction(emoji, slack.ItemRef{Channel: channelID, Timestamp: ts})
+}
+
+// RemoveReaction removes an emoji reaction from a message.
+func (c *Client) RemoveReaction(ctx context.Context, channelID, ts, emoji string) error {
+	return c.api.RemoveReaction(emoji, slack.ItemRef{Channel: channelID, Timestamp: ts})
+}
+
+// SetUserPresence sets the authenticated user's presence. Accepts "auto"
+// (let Slack determine activity) or "away" (force away). Note the write
+// vocabulary differs from the read side — GetUserPresence and the
+// presence_change WebSocket event return "active" or "away".
+func (c *Client) SetUserPresence(ctx context.Context, presence string) error {
+	if err := c.api.SetUserPresenceContext(ctx, presence); err != nil {
+		return fmt.Errorf("setting presence: %w", err)
+	}
+	return nil
+}
+
+// GetUserPresence fetches a user's current presence ("active" or "away").
+// Pass the authenticated user's ID to read your own state.
+func (c *Client) GetUserPresence(ctx context.Context, userID string) (*slack.UserPresence, error) {
+	p, err := c.api.GetUserPresenceContext(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("getting presence: %w", err)
+	}
+	return p, nil
+}
+
+// SetSnooze enables Do-Not-Disturb for `minutes` minutes.
+func (c *Client) SetSnooze(ctx context.Context, minutes int) (*slack.DNDStatus, error) {
+	st, err := c.api.SetSnoozeContext(ctx, minutes)
+	if err != nil {
+		return nil, fmt.Errorf("setting snooze: %w", err)
+	}
+	return st, nil
+}
+
+// EndSnooze ends the current snooze window. Does NOT end admin-scheduled DND.
+func (c *Client) EndSnooze(ctx context.Context) (*slack.DNDStatus, error) {
+	st, err := c.api.EndSnoozeContext(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("ending snooze: %w", err)
+	}
+	return st, nil
+}
+
+// EndDND ends the user's current scheduled DND session.
+func (c *Client) EndDND(ctx context.Context) error {
+	if err := c.api.EndDNDContext(ctx); err != nil {
+		return fmt.Errorf("ending DND: %w", err)
+	}
+	return nil
+}
+
+// GetDNDInfo fetches DND/snooze status for a user.
+func (c *Client) GetDNDInfo(ctx context.Context, userID string) (*slack.DNDStatus, error) {
+	u := userID
+	st, err := c.api.GetDNDInfoContext(ctx, &u)
+	if err != nil {
+		return nil, fmt.Errorf("getting DND info: %w", err)
+	}
+	return st, nil
+}
+
+// GetPermalink returns the Slack permalink for a message. For a thread reply,
+// pass the reply's ts; Slack returns a thread-aware URL with thread_ts and cid
+// query parameters.
+func (c *Client) GetPermalink(ctx context.Context, channelID, ts string) (string, error) {
+	url, err := c.api.GetPermalinkContext(ctx, &slack.PermalinkParameters{
+		Channel: channelID,
+		Ts:      ts,
+	})
+	if err != nil {
+		return "", fmt.Errorf("getting permalink: %w", err)
+	}
+	return url, nil
+}
+
+// markChannel posts to conversations.mark with the given form values.
+// Used by both MarkChannel (read up to ts) and MarkChannelUnread (roll the
+// watermark backward to ts). Uses c.httpClient for the request so tests
+// can substitute an httptest.NewServer; production wiring (NewClient) sets
+// httpClient to a cookie-bearing client.
+func (c *Client) markChannel(ctx context.Context, channelID, ts string) error {
+	data := url.Values{
+		"token":   {c.token},
+		"channel": {channelID},
+		"ts":      {ts},
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", c.apiBaseURL+"conversations.mark",
+		strings.NewReader(data.Encode()))
+	if err != nil {
+		return fmt.Errorf("creating mark request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("marking channel: %w", err)
+	}
+	defer resp.Body.Close()
+	return nil
+}
+
+// markThread posts to subscriptions.thread.mark with the given args.
+// Used by both MarkThread (read=true => "1") and MarkThreadUnread
+// (read=false => "0"). channelID/threadTS empty is a no-op. ts defaults
+// to threadTS when empty (parent has no replies yet).
+func (c *Client) markThread(ctx context.Context, channelID, threadTS, ts string, read bool) error {
+	if channelID == "" || threadTS == "" {
+		return nil
+	}
+	if ts == "" {
+		ts = threadTS
+	}
+	readVal := "0"
+	if read {
+		readVal = "1"
+	}
+	data := url.Values{
+		"token":     {c.token},
+		"channel":   {channelID},
+		"thread_ts": {threadTS},
+		"ts":        {ts},
+		"read":      {readVal},
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", c.apiBaseURL+"subscriptions.thread.mark",
+		strings.NewReader(data.Encode()))
+	if err != nil {
+		return fmt.Errorf("creating thread mark request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("marking thread: %w", err)
+	}
+	defer resp.Body.Close()
+	return nil
+}
+
+// MarkChannel marks a channel as read up to the given timestamp.
+func (c *Client) MarkChannel(ctx context.Context, channelID, ts string) error {
+	return c.markChannel(ctx, channelID, ts)
+}
+
+// MarkThread marks a thread as read up to the given timestamp using Slack's
+// undocumented subscriptions.thread.mark endpoint (the same call the official
+// web client makes when you view a thread). channelID is the parent channel,
+// threadTS is the parent message ts, and ts is the latest reply ts the user
+// has now seen (use threadTS itself when there are no replies). Best-effort:
+// the endpoint is undocumented and may break if Slack changes its API.
+func (c *Client) MarkThread(ctx context.Context, channelID, threadTS, ts string) error {
+	return c.markThread(ctx, channelID, threadTS, ts, true)
+}
+
+// MarkChannelUnread rolls the channel's read watermark backward to ts,
+// effectively making the message at ts and every newer message in the
+// channel unread again. Pass ts == "" to mark the entire channel unread
+// (Slack's "0" sentinel).
+func (c *Client) MarkChannelUnread(ctx context.Context, channelID, ts string) error {
+	if ts == "" {
+		ts = "0"
+	}
+	return c.markChannel(ctx, channelID, ts)
+}
+
+// MarkThreadUnread marks a thread as unread starting at ts using Slack's
+// subscriptions.thread.mark endpoint with read=0. Mirrors MarkThread but
+// flips the read flag. channelID is the parent channel, threadTS is the
+// parent message ts, and ts is the reply that should become the new
+// "first unread" boundary (use threadTS to mark the entire thread
+// unread when there are no replies). Best-effort.
+func (c *Client) MarkThreadUnread(ctx context.Context, channelID, threadTS, ts string) error {
+	return c.markThread(ctx, channelID, threadTS, ts, false)
+}
+
+// UnsubscribeThread removes the user's subscription to a thread via Slack's
+// subscriptions.thread.remove endpoint (the "unfollow thread" the web client
+// makes). channelID is the parent channel, threadTS the parent message ts.
+// Best-effort and undocumented; returns the API error if Slack rejects it.
+func (c *Client) UnsubscribeThread(ctx context.Context, channelID, threadTS string) error {
+	if channelID == "" || threadTS == "" {
+		return nil
+	}
+	data := url.Values{
+		"token":     {c.token},
+		"channel":   {channelID},
+		"thread_ts": {threadTS},
+	}
+	req, err := http.NewRequestWithContext(ctx, "POST", c.apiBaseURL+"subscriptions.thread.remove",
+		strings.NewReader(data.Encode()))
+	if err != nil {
+		return fmt.Errorf("creating thread unsubscribe request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("unsubscribing thread: %w", err)
+	}
+	defer resp.Body.Close()
+	var r struct {
+		OK    bool   `json:"ok"`
+		Error string `json:"error"`
+	}
+	if json.NewDecoder(resp.Body).Decode(&r) == nil && !r.OK {
+		return fmt.Errorf("subscriptions.thread.remove: %s", r.Error)
+	}
+	return nil
+}
+
+// GetMutedChannels fetches the authenticated user's mute set by
+// reading users.prefs.get and parsing the per-channel notification
+// prefs blob. Returns the IDs of channels the user has muted.
+//
+// Slack does NOT ship a flat `muted_channels` pref anymore (it used
+// to, and is still documented as such in some places, but live
+// browser-protocol responses no longer include it). Mute state lives
+// inside the JSON-encoded `all_notifications_prefs` string under
+// channels[id].muted=true. After this initial fetch, pref_change WS
+// events for `all_notifications_prefs` keep the set fresh.
+//
+// users.prefs.get is undocumented but is the same call the official
+// browser client uses; may break if Slack changes the API. Returns an
+// empty slice (not nil) when the user has no muted channels.
+func (c *Client) GetMutedChannels(ctx context.Context) ([]string, error) {
+	body, err := c.postForm(ctx, "users.prefs.get", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var parsed struct {
+		OK    bool   `json:"ok"`
+		Error string `json:"error"`
+		Prefs struct {
+			// Legacy — accept it if Slack ever ships it again, so this
+			// code keeps working on older workspaces.
+			MutedChannels        string `json:"muted_channels"`
+			AllNotificationPrefs string `json:"all_notifications_prefs"`
+		} `json:"prefs"`
+	}
+	if err := json.Unmarshal(body, &parsed); err != nil {
+		return nil, fmt.Errorf("parsing users.prefs.get response: %w (body=%q)", err, truncateForLog(body))
+	}
+	if !parsed.OK {
+		return nil, fmt.Errorf("users.prefs.get returned ok=false (error=%q, body=%q)", parsed.Error, truncateForLog(body))
+	}
+
+	merged := map[string]bool{}
+	for _, id := range strings.Split(parsed.Prefs.MutedChannels, ",") {
+		id = strings.TrimSpace(id)
+		if id != "" {
+			merged[id] = true
+		}
+	}
+	for _, id := range ParseMutedFromAllNotificationsPrefs(parsed.Prefs.AllNotificationPrefs) {
+		merged[id] = true
+	}
+	debuglog.WS("users.prefs.get: muted_channels=%d all_notifications_prefs_len=%d total_muted=%d",
+		len(parsed.Prefs.MutedChannels), len(parsed.Prefs.AllNotificationPrefs), len(merged))
+	out := make([]string, 0, len(merged))
+	for id := range merged {
+		out = append(out, id)
+	}
+	return out, nil
+}
+
+// ParseMutedFromAllNotificationsPrefs decodes the JSON-string value
+// of the `all_notifications_prefs` pref and returns the channel IDs
+// where channels[id].muted == true. The pref's value is itself a
+// JSON-encoded string (Slack quirk), so callers should pass the raw
+// string contents directly. Returns an empty slice on any decode
+// failure — mute is best-effort UI sugar, not safety-critical.
+func ParseMutedFromAllNotificationsPrefs(raw string) []string {
+	if raw == "" {
+		return nil
+	}
+	var parsed struct {
+		Channels map[string]struct {
+			Muted bool `json:"muted"`
+		} `json:"channels"`
+	}
+	if err := json.Unmarshal([]byte(raw), &parsed); err != nil {
+		return nil
+	}
+	out := make([]string, 0, len(parsed.Channels))
+	for id, prefs := range parsed.Channels {
+		if prefs.Muted {
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+// GetMutedChannelsRaw returns the raw users.prefs.get response body.
+// Diagnostic only (--dump-prefs).
+func (c *Client) GetMutedChannelsRaw(ctx context.Context) ([]byte, error) {
+	return c.postForm(ctx, "users.prefs.get", nil)
+}
+
+// postForm performs a cookie-aware POST to an endpoint under
+// c.apiBaseURL with form values. The xoxc token is injected into the
+// form body — the same convention slack-go and the official browser
+// client use. Returns the raw response body. Shared by hand-rolled
+// undocumented endpoints.
+func (c *Client) postForm(ctx context.Context, method string, form url.Values) ([]byte, error) {
+	// Inject the xoxc token into the form body — the same convention
+	// slack-go and the official browser client use. Using
+	// Authorization: Bearer here is an OAuth/server-side pattern that
+	// browsers never send to app.slack.com; combined with our browser-
+	// shaped headers it forms a contradictory signature that triggers
+	// Enterprise Grid anomaly detection (issue #5).
+	//
+	// Copy the caller's map so we don't mutate it across retries or
+	// concurrent calls.
+	body := url.Values{"token": {c.token}}
+	for k, vs := range form {
+		body[k] = vs
+	}
+
+	req, err := http.NewRequestWithContext(ctx, "POST", c.apiBaseURL+method, strings.NewReader(body.Encode()))
+	if err != nil {
+		return nil, fmt.Errorf("creating %s request: %w", method, err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	httpClient := c.httpClient
+	if httpClient == nil {
+		httpClient = newCookieHTTPClient(c.cookie)
+	}
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("calling %s: %w", method, err)
+	}
+	defer resp.Body.Close()
+	return io.ReadAll(resp.Body)
+}
+
+// truncateForLog clips a response body to a length safe to splat into
+// an error message or log line. Hand-rolled endpoints occasionally
+// return multi-KB HTML error pages; without truncation those would
+// blow out a single log line.
+func truncateForLog(b []byte) string {
+	const max = 512
+	if len(b) <= max {
+		return string(b)
+	}
+	return string(b[:max]) + "...(truncated)"
+}
+
+// callChannelSectionsList performs the raw POST to users.channelSections.list
+// using cookie-aware auth (xoxc token in the form body + d cookie) and an
+// optional cursor for pagination through sections. Shared by both the typed
+// and raw accessors.
+func (c *Client) callChannelSectionsList(ctx context.Context, cursor string) ([]byte, error) {
+	endpoint := c.apiBaseURL + "users.channelSections.list"
+
+	form := url.Values{"token": {c.token}}
+	if cursor != "" {
+		form.Set("cursor", cursor)
+	}
+	body := strings.NewReader(form.Encode())
+
+	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, body)
+	if err != nil {
+		return nil, fmt.Errorf("creating request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	httpClient := newCookieHTTPClient(c.cookie)
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("calling channelSections API: %w", err)
+	}
+	defer resp.Body.Close()
+
+	return io.ReadAll(resp.Body)
+}
+
+// GetChannelSectionsRaw calls users.channelSections.list with no cursor and
+// returns the raw JSON response body. Diagnostic only (--dump-sections).
+func (c *Client) GetChannelSectionsRaw(ctx context.Context) ([]byte, error) {
+	return c.callChannelSectionsList(ctx, "")
+}
+
+// GetChannelSections calls users.channelSections.list and returns the
+// fully-paginated section list. Loops on the top-level cursor until the
+// server reports no more sections. Per-section channel_ids_page pagination
+// is NOT followed here — see ListSectionChannels.
+//
+// This endpoint is undocumented; may break if Slack changes the API.
+func (c *Client) GetChannelSections(ctx context.Context) ([]SidebarSection, error) {
+	var all []SidebarSection
+	cursor := ""
+	for {
+		body, err := c.callChannelSectionsList(ctx, cursor)
+		if err != nil {
+			return nil, err
+		}
+		var resp channelSectionsListResponse
+		if err := json.Unmarshal(body, &resp); err != nil {
+			return nil, fmt.Errorf("parsing response: %w", err)
+		}
+		if !resp.OK {
+			return nil, fmt.Errorf("API error: %s (response: %s)", resp.Error, string(body))
+		}
+		all = append(all, resp.Sections...)
+		// Slack's documented contract is empty cursor on the last page.
+		// Bail also when the server echoes back the same cursor we just
+		// sent — defensive against server bugs that would otherwise infinite-loop
+		// against an undocumented endpoint.
+		if resp.Cursor == "" || resp.Cursor == cursor {
+			break
+		}
+		cursor = resp.Cursor
+	}
+	return all, nil
+}
+
+// ThreadSubscription is the slk-side projection of one subscribed
+// thread returned by subscriptions.thread.getView. The five fields
+// here map cleanly onto cache.ThreadSubscription. The caller in
+// cmd/slk/reconnect_backfill.go does the adapter cast.
+type ThreadSubscription struct {
+	ChannelID string
+	ThreadTS  string
+	LastRead  string
+	Active    bool
+}
+
+// ThreadSubscriptionView is one item from subscriptions.thread.getView.
+// It carries both the subscription-state projection (Subscription) and
+// the full parent message Slack ships inside root_msg
+// (RootMessage). The subscription-phase backfiller uses Subscription
+// to upsert the thread_subscriptions row and RootMessage to upsert
+// the parent into the messages cache, eliminating the need for a
+// follow-up conversations.replies fetch when the parent isn't
+// already cached.
+type ThreadSubscriptionView struct {
+	Subscription ThreadSubscription
+	RootMessage  slack.Message
+}
+
+// listThreadSubscriptionsResponse decodes one page of
+// subscriptions.thread.getView.
+type listThreadSubscriptionsResponse struct {
+	OK      bool   `json:"ok"`
+	Error   string `json:"error"`
+	Threads []struct {
+		// RootMsg is decoded twice: once into the typed
+		// slackThreadRootMsg shape for the channel/last_read/subscribed
+		// fields we need, and once into a slack.Message via json.RawMessage
+		// so the caller can re-marshal it for the messages cache.
+		RootMsg json.RawMessage `json:"root_msg"`
+	} `json:"threads"`
+	HasMore bool   `json:"has_more"`
+	MaxTS   string `json:"max_ts"`
+}
+
+// slackThreadRootMsg is the subset of root_msg fields the
+// subscription-phase reconcile needs. The rest of root_msg flows
+// through as slack.Message via the raw JSON re-parse.
+type slackThreadRootMsg struct {
+	Channel    string `json:"channel"`
+	TS         string `json:"ts"`
+	ThreadTS   string `json:"thread_ts"`
+	LastRead   string `json:"last_read"`
+	Subscribed bool   `json:"subscribed"`
+}
+
+// listThreadSubscriptionsHardCap bounds how many subscriptions
+// ListThreadSubscriptions will return per call. Protects against
+// runaway requests if Slack ships a buggy has_more flag.
+const listThreadSubscriptionsHardCap = 1000
+
+// ListThreadSubscriptions fetches the workspace's full subscribed-
+// threads list via Slack's internal subscriptions.thread.getView
+// endpoint (the same call the official web client makes when
+// bootstrapping its Threads view). Paginates via the `current_ts`
+// form field (set to the previous response's max_ts), terminated by
+// has_more=false. Stops at listThreadSubscriptionsHardCap items.
+//
+// Items where root_msg.subscribed is false are filtered out —
+// defensive, since the live endpoint hasn't been observed returning
+// them.
+//
+// Returns (nil, err) on network failure or ok=false JSON. The caller
+// (the reconnect backfill phase) treats any error as "subscriptions
+// unavailable" and surfaces the UI banner.
+func (c *Client) ListThreadSubscriptions(ctx context.Context, max int) ([]ThreadSubscriptionView, error) {
+	if max <= 0 || max > listThreadSubscriptionsHardCap {
+		max = listThreadSubscriptionsHardCap
+	}
+	var all []ThreadSubscriptionView
+	currentTS := ""
+	for {
+		body, err := c.callListThreadSubscriptions(ctx, currentTS)
+		if err != nil {
+			return nil, err
+		}
+		var resp listThreadSubscriptionsResponse
+		if err := json.Unmarshal(body, &resp); err != nil {
+			return nil, fmt.Errorf("parsing subscriptions.thread.getView: %w (body=%s)", err, truncateForLog(body))
+		}
+		if !resp.OK {
+			return nil, fmt.Errorf("subscriptions.thread.getView: %s (body=%s)", resp.Error, truncateForLog(body))
+		}
+		for _, item := range resp.Threads {
+			var sm slackThreadRootMsg
+			if err := json.Unmarshal(item.RootMsg, &sm); err != nil {
+				// Skip malformed items but keep paginating.
+				debuglog.Backfill("ListThreadSubscriptions: skipping malformed root_msg: %v", err)
+				continue
+			}
+			if !sm.Subscribed {
+				continue
+			}
+			var raw slack.Message
+			if err := json.Unmarshal(item.RootMsg, &raw); err != nil {
+				// Couldn't decode the rich message; skip so we don't
+				// corrupt the messages cache, but the subscription row
+				// is still useful — fall back to a synthetic empty
+				// slack.Message so the caller can still record the row.
+				debuglog.Backfill("ListThreadSubscriptions: root_msg slack.Message decode err=%v; subscription kept without RootMessage", err)
+				raw = slack.Message{}
+			}
+			all = append(all, ThreadSubscriptionView{
+				Subscription: ThreadSubscription{
+					ChannelID: sm.Channel,
+					ThreadTS:  sm.ThreadTS,
+					LastRead:  sm.LastRead,
+					Active:    sm.Subscribed,
+				},
+				RootMessage: raw,
+			})
+			if len(all) >= max {
+				debuglog.Backfill("ListThreadSubscriptions: reached cap %d, stopping", max)
+				return all, nil
+			}
+		}
+		if !resp.HasMore || resp.MaxTS == "" {
+			break
+		}
+		// Note: unlike GetChannelSections we do NOT bail when the
+		// server echoes back the same MaxTS — the
+		// listThreadSubscriptionsHardCap above is the runaway-protection
+		// mechanism for this endpoint, and the hard-cap test exercises
+		// exactly that case (server returns has_more=true with an
+		// unchanging max_ts forever).
+		currentTS = resp.MaxTS
+	}
+	return all, nil
+}
+
+func (c *Client) callListThreadSubscriptions(ctx context.Context, currentTS string) ([]byte, error) {
+	form := url.Values{}
+	form.Set("limit", "100")
+	form.Set("fetch_threads_state", "true")
+	form.Set("priority_mode", "all")
+	if currentTS != "" {
+		form.Set("current_ts", currentTS)
+	}
+	return c.postForm(ctx, "subscriptions.thread.getView", form)
+}

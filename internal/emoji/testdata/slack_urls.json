@@ -1,0 +1,16 @@
+{
+  "_comment": "Captured/expected Slack CDN URLs for representative emoji, used to validate internal/emoji/url.go. To re-capture: open Slack web with a workspace using the 'google' emoji style, open browser network tab filtered to slack-edge.com, expand a message containing the emoji, and copy the URL of the .png request. ALL codepoints are preserved in the path, including VS16 (U+FE0F), ZWJ (U+200D), and regional-indicator codepoints. (An earlier design doc claimed VS16 was stripped; HTTP fetches against the CDN proved otherwise — 2764.png 403s, 2764-fe0f.png serves the heart.)",
+  "base": "https://a.slack-edge.com/production-standard-emoji-assets/16.0/google-small/",
+  "entries": [
+    {"name": "thumbsup",      "codepoints": [128077],                 "url": "https://a.slack-edge.com/production-standard-emoji-assets/16.0/google-small/1f44d.png"},
+    {"name": "heart",         "codepoints": [10084, 65039],           "url": "https://a.slack-edge.com/production-standard-emoji-assets/16.0/google-small/2764-fe0f.png"},
+    {"name": "warning",       "codepoints": [9888, 65039],            "url": "https://a.slack-edge.com/production-standard-emoji-assets/16.0/google-small/26a0-fe0f.png"},
+    {"name": "joy",           "codepoints": [128514],                 "url": "https://a.slack-edge.com/production-standard-emoji-assets/16.0/google-small/1f602.png"},
+    {"name": "man_astronaut", "codepoints": [128104, 8205, 128640],   "url": "https://a.slack-edge.com/production-standard-emoji-assets/16.0/google-small/1f468-200d-1f680.png"},
+    {"name": "rainbow-flag",  "codepoints": [127987, 65039, 8205, 127752], "url": "https://a.slack-edge.com/production-standard-emoji-assets/16.0/google-small/1f3f3-fe0f-200d-1f308.png"},
+    {"name": "us",            "codepoints": [127482, 127480],         "url": "https://a.slack-edge.com/production-standard-emoji-assets/16.0/google-small/1f1fa-1f1f8.png"},
+    {"name": "thumbsup_tone3","codepoints": [128077, 127997],         "url": "https://a.slack-edge.com/production-standard-emoji-assets/16.0/google-small/1f44d-1f3fd.png"},
+    {"name": "fire",          "codepoints": [128293],                 "url": "https://a.slack-edge.com/production-standard-emoji-assets/16.0/google-small/1f525.png"},
+    {"name": "eyes",          "codepoints": [128064],                 "url": "https://a.slack-edge.com/production-standard-emoji-assets/16.0/google-small/1f440.png"}
+  ]
+}
