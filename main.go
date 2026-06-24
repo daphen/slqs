@@ -828,7 +828,7 @@ func (d *daemon) readConn(c net.Conn) {
 		// Channel carries a globally-unique Slack channel ID (the wire key),
 		// so it resolves the owning workspace without a separate field.
 		var cmd struct {
-			Type, Channel, Text, Before, Thread, Id, Url, Ext, Mediatype, Ts, Emoji, Workspace, Team string
+			Type, Channel, Text, Before, Thread, Id, Url, Ext, Mediatype, Ts, Emoji, Workspace, Team, State string
 			Remove, Broadcast bool
 		}
 		if json.Unmarshal(sc.Bytes(), &cmd) != nil {
@@ -887,6 +887,24 @@ func (d *daemon) readConn(c net.Conn) {
 				d.activeWS = ""
 			}
 			d.focusMu.Unlock()
+			continue
+		}
+		// Presence: while you're active on the computer we report "auto" (Slack
+		// treats a connected client as active and holds mobile push); when idle we
+		// report "away" so Slack resumes pushing to your phone.
+		if cmd.Type == "presence" {
+			presence := "auto"
+			if cmd.State == "idle" {
+				presence = "away"
+			}
+			for _, w := range d.wsList {
+				go func(w *workspace) {
+					if err := w.client.SetUserPresence(d.ctx, presence); err != nil {
+						log.Printf("[%s] set presence %s: %v", w.teamName, presence, err)
+					}
+				}(w)
+			}
+			log.Printf("presence -> %s (%d ws)", presence, len(d.wsList))
 			continue
 		}
 		// Opening the Threads view re-syncs the followed-threads list LIVE from
