@@ -143,8 +143,9 @@ Item {
             width: parent.width
             text: Backend.richify(del.text, 22)
             // Light mode: plain black body text (the theme's secondary fg is a
-            // purple that reads wrong for message content).
-            color: Theme.mode === "light" ? Theme.ink : Theme.fg_secondary
+            // purple that reads wrong for message content). Dark mode: fg (#EDEDED),
+            // the same near-white neovim's Normal text uses.
+            color: Theme.mode === "light" ? Theme.ink : Theme.fg
             textFormat: Text.RichText
             wrapMode: Text.Wrap
             font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 15
