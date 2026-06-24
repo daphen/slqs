@@ -336,6 +336,43 @@ func (d *daemon) imagesJSON(w *workspace, channelID, ts string, files []slack.Fi
 		})
 	}
 	for _, f := range files {
+		if strings.HasPrefix(f.Mimetype, "video/") {
+			// Video file: cache Slack's still poster (if any) for inline display.
+			// The video URL rides as `full`, so `v` runs the same view flow as a
+			// photo — slkd downloads it with auth, media-viewer.sh plays it in mpv.
+			poster := f.Thumb720
+			if poster == "" {
+				poster = f.Thumb480
+			}
+			if poster == "" {
+				poster = f.Thumb360
+			}
+			vext := f.Filetype
+			if vext == "" {
+				vext = "mp4"
+			}
+			vw, vh := f.Thumb360W, f.Thumb360H
+			if vw == 0 {
+				vw, vh = f.OriginalW, f.OriginalH
+			}
+			ppath, ready := "", true
+			if poster != "" {
+				pdst := filepath.Join(dir, f.ID+"-poster.jpg")
+				ppath = "file://" + pdst
+				if _, err := os.Stat(pdst); err != nil {
+					pending = append(pending, task{pdst, poster})
+					ready = false
+				}
+			}
+			if channelID == "" && !ready {
+				continue
+			}
+			out = append(out, map[string]any{
+				"path": ppath, "w": vw, "h": vh,
+				"id": f.ID + "-vid", "full": f.URLPrivate, "ext": vext, "type": "video", "pending": !ready,
+			})
+			continue
+		}
 		if !strings.HasPrefix(f.Mimetype, "image/") {
 			continue
 		}

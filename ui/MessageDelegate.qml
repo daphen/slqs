@@ -180,7 +180,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                         color: Theme.mode === "light" ? Theme.ink : Theme.fg
-                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 36
+                        font.family: "Noto Color Emoji"; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 36
                     }
                 }
             }
@@ -200,8 +200,11 @@ Item {
                     color: Theme.surface
                     // cap to a sane inline size, preserve aspect ratio
                     readonly property real maxW: Math.min(380, del.width - 80)
-                    readonly property real ar: (img.w > 0 && img.h > 0) ? img.h / img.w : 0.66
-                    width: Math.min(maxW, img.w || maxW)
+                    // videos render as a compact 16:9 card — the poster fills it if
+                    // one loads, otherwise it's a plain ▶ card (never a big empty box).
+                    readonly property bool isVideo: img.type === "video"
+                    readonly property real ar: isVideo ? 0.5625 : ((img.w > 0 && img.h > 0) ? img.h / img.w : 0.66)
+                    width: isVideo ? Math.min(320, maxW) : Math.min(maxW, img.w || maxW)
                     height: width * ar
                     // gifs animate inline (AnimatedImage); stills use Image.
                     // Only the matching element loads its source.
@@ -218,6 +221,18 @@ Item {
                         source: img.type === "gif" ? (img.path || "") : ""
                         fillMode: Image.PreserveAspectCrop; cache: true
                         playing: visible; speed: 1.0
+                    }
+                    // video: still poster (via the Image above) with a play badge.
+                    // Press `v` on the message to download + play it in mpv.
+                    Rectangle {
+                        visible: img.type === "video"
+                        anchors.centerIn: parent
+                        width: 52; height: 52; radius: 26
+                        color: Qt.rgba(0, 0, 0, 0.5)
+                        border.color: Qt.rgba(1, 1, 1, 0.85); border.width: 2
+                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                               anchors.centerIn: parent; anchors.horizontalCenterOffset: 2
+                               text: "▶"; color: "white"; font.pixelSize: 22 }
                     }
                 }
             }
