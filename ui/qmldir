@@ -1,0 +1,15 @@
+singleton Theme Theme.qml
+singleton Backend Backend.qml
+Sidebar Sidebar.qml
+RailBar RailBar.qml
+MessageList MessageList.qml
+MessageDelegate MessageDelegate.qml
+Composer Composer.qml
+ThreadPanel ThreadPanel.qml
+ChannelPalette ChannelPalette.qml
+ThreadsPage ThreadsPage.qml
+EmojiPicker EmojiPicker.qml
+Autocomplete Autocomplete.qml
+BrowsePicker BrowsePicker.qml
+WorkspacePicker WorkspacePicker.qml
+ConfirmDialog ConfirmDialog.qml

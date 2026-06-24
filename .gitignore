@@ -13,3 +13,11 @@ profiles.json
 result
 result-*
 .direnv/
+
+# vendored UI (synced from canonical slk-gui-proto via sync-ui.sh): the QML is
+# committed, but the daemon writes these into the UI dir at runtime — keep them out.
+ui/channels.json
+ui/codemap.json
+ui/emoji.json
+ui/emoji-*.json
+ui/*.log
