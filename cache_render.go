@@ -152,11 +152,141 @@ func attachmentText(atts []slack.Attachment) string {
 	return strings.Join(parts, "\n")
 }
 
+// richTextSection renders a rich_text_section's inline elements back to Slack mrkdwn,
+// so the existing render()+richify pipeline styles them: styled text, mentions,
+// channels, emoji, links — emitted as the tokens render() already understands.
+func richTextSection(v any) string {
+	els, ok := v.([]any)
+	if !ok {
+		return ""
+	}
+	var sb strings.Builder
+	for _, e := range els {
+		em, ok := e.(map[string]any)
+		if !ok {
+			continue
+		}
+		switch em["type"] {
+		case "text":
+			t, _ := em["text"].(string)
+			if st, ok := em["style"].(map[string]any); ok {
+				if b, _ := st["code"].(bool); b {
+					t = "`" + t + "`"
+				}
+				if b, _ := st["bold"].(bool); b {
+					t = "*" + t + "*"
+				}
+				if b, _ := st["italic"].(bool); b {
+					t = "_" + t + "_"
+				}
+				if b, _ := st["strike"].(bool); b {
+					t = "~" + t + "~"
+				}
+			}
+			sb.WriteString(t)
+		case "link":
+			if u, _ := em["url"].(string); u != "" {
+				sb.WriteString("<" + u + ">")
+			}
+		case "user":
+			if u, _ := em["user_id"].(string); u != "" {
+				sb.WriteString("<@" + u + ">")
+			}
+		case "usergroup":
+			if g, _ := em["usergroup_id"].(string); g != "" {
+				sb.WriteString("<!subteam^" + g + ">")
+			}
+		case "channel":
+			if ch, _ := em["channel_id"].(string); ch != "" {
+				sb.WriteString("<#" + ch + ">")
+			}
+		case "broadcast":
+			if r, _ := em["range"].(string); r != "" {
+				sb.WriteString("<!" + r + ">")
+			}
+		case "emoji":
+			if n, _ := em["name"].(string); n != "" {
+				sb.WriteString(":" + n + ":")
+			}
+		}
+	}
+	return sb.String()
+}
+
+// richTextRaw concatenates a section's text elements verbatim (no style markers) —
+// for code blocks, whose content must stay literal.
+func richTextRaw(v any) string {
+	els, ok := v.([]any)
+	if !ok {
+		return ""
+	}
+	var sb strings.Builder
+	for _, e := range els {
+		if em, ok := e.(map[string]any); ok {
+			if t, _ := em["text"].(string); t != "" {
+				sb.WriteString(t)
+			}
+		}
+	}
+	return sb.String()
+}
+
+// richTextToText reconstructs Slack mrkdwn from a rich_text block, preserving the
+// line structure (each section / list item is its own line) that the official client
+// shows — the flat top-level text collapses every newline to spaces. "" if no block.
+func richTextToText(raw string) string {
+	if raw == "" || !strings.Contains(raw, `"rich_text"`) {
+		return ""
+	}
+	var p struct {
+		Blocks []map[string]any `json:"blocks"`
+	}
+	if json.Unmarshal([]byte(raw), &p) != nil {
+		return ""
+	}
+	var lines []string
+	for _, b := range p.Blocks {
+		if b["type"] != "rich_text" {
+			continue
+		}
+		els, _ := b["elements"].([]any)
+		for _, e := range els {
+			em, ok := e.(map[string]any)
+			if !ok {
+				continue
+			}
+			switch em["type"] {
+			case "rich_text_section":
+				lines = append(lines, richTextSection(em["elements"]))
+			case "rich_text_quote":
+				lines = append(lines, "> "+richTextSection(em["elements"]))
+			case "rich_text_preformatted":
+				lines = append(lines, "```\n"+richTextRaw(em["elements"])+"\n```")
+			case "rich_text_list":
+				ordered := em["style"] == "ordered"
+				items, _ := em["elements"].([]any)
+				for i, it := range items {
+					im, _ := it.(map[string]any)
+					marker := "• "
+					if ordered {
+						marker = strconv.Itoa(i+1) + ". "
+					}
+					lines = append(lines, marker+richTextSection(im["elements"]))
+				}
+			}
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
 // textFromBlocks pulls display text out of Block Kit section/header/context
 // blocks so bot messages aren't blank (their top-level text is a flat fallback).
 func textFromBlocks(raw string) string {
 	if raw == "" || !strings.Contains(raw, `"blocks"`) {
 		return ""
+	}
+	if rt := richTextToText(raw); rt != "" { // user messages: the structured rich_text block
+		return rt
 	}
 	var p struct {
 		Blocks []map[string]any `json:"blocks"`
@@ -569,6 +699,69 @@ func (d *daemon) joinChannel(w *workspace, channelID, name string) {
 		d.sendChannels(cc)
 	}
 	d.broadcast(map[string]any{"type": "open", "workspace": w.teamID, "channel": channelID, "thread": ""})
+}
+
+// registerChannel adds a channel the user was added to remotely (channel_joined,
+// group_joined, or a newly opened DM) to the workspace maps. Like joinChannel it
+// rebuilds the maps copy-on-write so the poll/ws/read goroutines never hit a
+// concurrent-map panic; unlike joinChannel it makes no join API call and doesn't
+// steal focus — the channel just appears in the sidebar. No-op if already known.
+func (d *daemon) registerChannel(w *workspace, ch slack.Channel) {
+	id := ch.ID
+	if id == "" || w.chans[id] != "" {
+		return
+	}
+	kind, name := "channel", cleanName(ch.Name)
+	switch {
+	case ch.IsIM:
+		kind = "dm"
+		if name = w.users[ch.User]; name == "" {
+			name = ch.User
+		}
+	case ch.IsMpIM:
+		kind = "dm"
+	}
+	if name == "" {
+		return
+	}
+	nc := make(map[string]string, len(w.chans)+1)
+	for k, v := range w.chans {
+		nc[k] = v
+	}
+	nc[id] = name
+	nk := make(map[string]string, len(w.chanKind)+1)
+	for k, v := range w.chanKind {
+		nk[k] = v
+	}
+	nk[id] = kind
+	nt := make(map[string]string, len(w.topics)+1)
+	for k, v := range w.topics {
+		nt[k] = v
+	}
+	nt[id] = ch.Topic.Value
+	nd := make(map[string]string, len(w.dmUser)+1)
+	for k, v := range w.dmUser {
+		nd[k] = v
+	}
+	if ch.IsIM {
+		nd[id] = ch.User
+	}
+	ni := make(map[string]*workspace, len(d.idIndex)+1)
+	for k, v := range d.idIndex {
+		ni[k] = v
+	}
+	ni[id] = w
+	w.chans, w.chanKind, w.topics, w.dmUser, d.idIndex = nc, nk, nt, nd, ni
+	log.Printf("[%s] registered channel %s (%s) from live event", w.teamName, id, name)
+	d.mu.Lock()
+	conns := make([]net.Conn, 0, len(d.conns))
+	for cc := range d.conns {
+		conns = append(conns, cc)
+	}
+	d.mu.Unlock()
+	for _, cc := range conns {
+		d.sendChannels(cc)
+	}
 }
 
 // buildSubThreads returns the followed-threads list from the cache. The

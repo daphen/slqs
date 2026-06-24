@@ -11,6 +11,7 @@ Rectangle {
     bottomLeftRadius: 10
     signal exitReply()
     signal openPalette()   // Ctrl+K from the reply input → jump palette (drops to normal)
+    property bool alsoToChannel: false   // Slack "also send to channel" (thread broadcast); reset after each send
 
     function focusReply() { replyInput.forceActiveFocus() }
     property string editingTs: ""   // editing an existing reply
@@ -157,12 +158,31 @@ Rectangle {
         id: thFooter
         anchors.bottom: parent.bottom; width: parent.width; color: Theme.bg
         bottomLeftRadius: 10   // follow the panel's rounded bottom-left corner
-        // Grow with the text, capped at 180px (then the Flickable scrolls). The
-        // +36 is just the box chrome (10px margins + the Flickable's 8px insets);
-        // a single line's natural implicitHeight is the minimum, no fudge needed.
-        height: Math.min(180, replyInput.implicitHeight + 36)
+        // Grow with the text, capped at 180px (then the Flickable scrolls). +36 is box
+        // chrome; bcastH reserves the "Also send to channel" toggle row above the box.
+        readonly property real bcastH: panel.editingTs === "" ? 24 : 0
+        height: bcastH + Math.min(180, replyInput.implicitHeight + 36)
+        // Slack thread-broadcast. Click to toggle; Ctrl+Enter on send does it one-off.
+        // Hidden while editing an existing reply.
+        Row {
+            id: bcastRow
+            anchors.top: parent.top; anchors.left: parent.left
+            anchors.leftMargin: 14; anchors.topMargin: 8
+            spacing: 6; visible: thFooter.bcastH > 0
+            Rectangle {
+                width: 14; height: 14; radius: 3; anchors.verticalCenter: parent.verticalCenter
+                color: panel.alsoToChannel ? Theme.cursor : "transparent"
+                border.color: panel.alsoToChannel ? Theme.cursor : Theme.hairline; border.width: 1
+                Text { renderType: Text.QtRendering; anchors.centerIn: parent; visible: panel.alsoToChannel
+                       text: "✓"; color: Theme.ink; font.pixelSize: 10; font.weight: 800 }
+            }
+            Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
+                   text: "Also send to channel"; color: panel.alsoToChannel ? Theme.fg : Theme.fg_muted
+                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12 }
+            TapHandler { onTapped: panel.alsoToChannel = !panel.alsoToChannel }
+        }
         Rectangle {
-            anchors.fill: parent; anchors.margins: 10; radius: Theme.radius
+            anchors.fill: parent; anchors.margins: 10; anchors.topMargin: 10 + thFooter.bcastH; radius: Theme.radius
             color: Theme.surface; border.width: 1
             border.color: replyInput.focus ? Theme.cursor : Theme.hairline
             // same `:` emoji + `@` mention autocomplete as the channel composer
@@ -206,8 +226,11 @@ Rectangle {
                     if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) {
                         if (e.modifiers & Qt.ShiftModifier) { e.accepted = false }
                         else {
+                            // Ctrl+Enter forces "also send to channel" even if the toggle is off.
+                            const bcast = panel.alsoToChannel || !!(e.modifiers & Qt.ControlModifier)
                             if (panel.editingTs !== "") { Backend.editMessage(panel.editingTs, text); panel.editingTs = "" }
-                            else Backend.sendThreadReply(text)
+                            else Backend.sendThreadReply(text, bcast)
+                            panel.alsoToChannel = false
                             // follow to the bottom so your reply (and the echo) lands in view
                             tlist.pinEnd = true; Qt.callLater(tlist.toEnd)
                             clear(); replyAc.reset(); e.accepted = true

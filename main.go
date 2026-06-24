@@ -52,10 +52,11 @@ var emojiMap = emoji.CodeMap()
 var (
 	reToken  = regexp.MustCompile(`<([^>]+)>`)
 	reEmoji  = regexp.MustCompile(`:([a-z0-9_+\-]+):`)
-	reBold   = regexp.MustCompile(`\*([^*\n]+)\*`)
+	reBold   = regexp.MustCompile(`(^|[\s(])\*([^\s*][^*\n]*?)\*([\s).,!?;:]|$)`)
 	reStrike = regexp.MustCompile(`~([^~\n]+)~`)
 	reMpdmN  = regexp.MustCompile(`-\d+$`)
 	reLink   = regexp.MustCompile(`<(https?://[^|>\s]+)`)
+	reCodeBlock = regexp.MustCompile("(?s)```.*?```")
 )
 
 // firstLink returns the primary URL in a message (kept so the client's `o`
@@ -492,6 +493,11 @@ var mentMarkStripper = strings.NewReplacer(markMent, "", markSelf, "", markEnd, 
 func stripMentionMarks(s string) string { return mentMarkStripper.Replace(s) }
 
 func (d *daemon) render(w *workspace, text string) string {
+	var codeBlocks []string
+	text = reCodeBlock.ReplaceAllStringFunc(text, func(m string) string {
+		codeBlocks = append(codeBlocks, m)
+		return "" + strconv.Itoa(len(codeBlocks)-1) + ""
+	})
 	text = reToken.ReplaceAllStringFunc(text, func(m string) string {
 		s := m[1 : len(m)-1]
 		switch {
@@ -549,8 +555,11 @@ func (d *daemon) render(w *workspace, text string) string {
 		}
 		return m // custom emoji left as :name: for the client to render as <img>
 	})
-	text = reBold.ReplaceAllString(text, "**$1**")
+	text = reBold.ReplaceAllString(text, "${1}**${2}**${3}")
 	text = reStrike.ReplaceAllString(text, "~~$1~~")
+	for i, c := range codeBlocks {
+		text = strings.Replace(text, ""+strconv.Itoa(i)+"", c, 1)
+	}
 	return strings.TrimSpace(text)
 }
 
@@ -783,7 +792,7 @@ func (d *daemon) readConn(c net.Conn) {
 		// so it resolves the owning workspace without a separate field.
 		var cmd struct {
 			Type, Channel, Text, Before, Thread, Id, Url, Ext, Mediatype, Ts, Emoji, Workspace, Team string
-			Remove                                                                                   bool
+			Remove, Broadcast bool
 		}
 		if json.Unmarshal(sc.Bytes(), &cmd) != nil {
 			continue
@@ -886,7 +895,7 @@ func (d *daemon) readConn(c net.Conn) {
 				if fileID != "" {
 					err = w.client.CompleteUpload(d.ctx, id, cmd.Thread, fileID, cmd.Text)
 				} else if cmd.Thread != "" {
-					_, _, err = w.client.SendReply(d.ctx, id, cmd.Thread, cmd.Text, false)
+					_, _, err = w.client.SendReply(d.ctx, id, cmd.Thread, cmd.Text, cmd.Broadcast)
 				} else {
 					_, _, err = w.client.SendMessage(d.ctx, id, cmd.Text)
 				}
@@ -1210,19 +1219,29 @@ func (d *daemon) maybeNotify(w *workspace, chID, uID, text, threadTS string) {
 	dbgActiveWS := d.activeWS
 	dbgAppActive := d.appActive
 	d.focusMu.RUnlock()
+	// A reply in a thread you follow (Slack auto-subscribes you to threads you
+	// start, reply to, or are @-mentioned in) should notify even without an @.
+	threadFollowed := false
+	if threadTS != "" {
+		if sub, err := d.writeDB.IsThreadSubscribed(w.teamID, chID, threadTS); err == nil {
+			threadFollowed = sub
+		}
+	}
 	ctx := notify.NotifyContext{
 		CurrentUserID:   w.selfID,
 		ActiveChannelID: active,
 		IsActiveWS:      activeHere,
 		OnMention:       true,
 		OnDM:            true,
+		OnThread:        true,
+		ThreadFollowed:  threadFollowed,
 		ChannelName:     chName,
 	}
 	kind := w.chanKind[chID]
 	should := notify.ShouldNotify(ctx, chID, uID, text, kind)
-	log.Printf("notify-dbg: [%s] ch=%s kind=%s from=%s self=%s appActive=%v activeWS=%s activeHere=%v activeCh=%s mentionSelf=%v own=%v -> should=%v",
+	log.Printf("notify-dbg: [%s] ch=%s kind=%s from=%s self=%s appActive=%v activeWS=%s activeHere=%v activeCh=%s mentionSelf=%v threadFollowed=%v own=%v -> should=%v",
 		w.teamName, chName, kind, uID, w.selfID, dbgAppActive, dbgActiveWS, activeHere, active,
-		strings.Contains(text, "<@"+w.selfID+">"), uID == w.selfID, should)
+		strings.Contains(text, "<@"+w.selfID+">"), threadFollowed, uID == w.selfID, should)
 	if !should {
 		return
 	}

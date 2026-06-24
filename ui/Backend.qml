@@ -185,6 +185,16 @@ Item {
         if (!text) return ""
         const ep = emojiPx || 22
         let s = text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+        // Fenced code blocks (```): lift them out (with an optional language hint on
+        // the fence line) so the mrkdwn / emoji / quote passes below leave their
+        // contents literal; restored as a filled block just before return. Sentinels
+        // are private-use chars so nothing downstream matches them.
+        const codeBlocks = []
+        const cb0 = String.fromCharCode(0xE005), cb1 = String.fromCharCode(0xE006)
+        s = s.replace(/```(?:[a-zA-Z0-9+_#.-]+\n)?([\s\S]*?)```/g, function (m, code) {
+            codeBlocks.push(code.replace(/^\n/, "").replace(/\n+$/, ""))
+            return cb0 + (codeBlocks.length - 1) + cb1
+        })
         // Bare URLs → styled, clickable links. Done before the emoji <img> tags
         // exist so their CDN src URLs aren't themselves linkified. Trailing
         // sentence punctuation is kept out of the link.
@@ -206,7 +216,17 @@ Item {
             const p = _emoji[name]
             return p ? '<img src="' + p + '" width="' + ep + '" height="' + ep + '">' : m
         })
-        return s.replace(/\n/g, "<br>")
+        // Blockquotes: a leading "> " (escaped to "&gt; ") → muted text with a bar.
+        s = s.replace(/(^|\n)&gt;[ \t]?([^\n]*)/g, '$1<font color="' + cssHex(Theme.fg_muted) + '">▎&#160;$2</font>')
+        // Markdown bullets ("- "/"* " at line start) → • (Slack rich_text already emits •).
+        s = s.replace(/(^|\n)[*-][ \t]+/g, '$1• ')
+        s = s.replace(/\n/g, "<br>")
+        // Restore fenced code blocks as a filled monospace block.
+        s = s.replace(new RegExp(cb0 + "(\\d+)" + cb1, "g"), function (m, i) {
+            return '<table width="100%" cellpadding="6" bgcolor="' + cssHex(Theme.surface)
+                + '"><tr><td>' + codeBlocks[+i].replace(/\n/g, "<br>") + '</td></tr></table>'
+        })
+        return s
     }
     // Split an emoji-only message into render tokens — custom emoji as image srcs
     // (the delegate draws them as real Image elements, which antialias when scaled;
@@ -866,10 +886,10 @@ Item {
         _threads[thread] = msgs
     }
     function closeThread() { threadOpen = false }
-    function sendThreadReply(text) {
+    function sendThreadReply(text, broadcast) {
         const t = (text || "").trim()
         if (t.length === 0 || !threadParentTs) return
-        safeWrite(JSON.stringify({ type: "send", channel: currentChannelId, text: resolveMentions(t), thread: threadParentTs }) + "\n")
+        safeWrite(JSON.stringify({ type: "send", channel: currentChannelId, text: resolveMentions(t), thread: threadParentTs, broadcast: !!broadcast }) + "\n")
     }
     function showTyping(id, thread, who) {
         if (!who) return

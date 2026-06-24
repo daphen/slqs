@@ -155,7 +155,7 @@ func (h *wsHandler) OnUserTyping(channelID, threadTS, userID string) {
 func (h *wsHandler) OnPresenceChange(userID, presence string)                       {}
 func (h *wsHandler) OnSelfPresenceChange(presence string)                           {}
 func (h *wsHandler) OnDNDChange(enabled bool, endUnix int64)                        {}
-func (h *wsHandler) OnConversationOpened(channel slack.Channel)                     {}
+func (h *wsHandler) OnConversationOpened(channel slack.Channel)                     { h.d.registerChannel(h.w, channel) }
 func (h *wsHandler) OnChannelSectionUpserted(ev slackclient.ChannelSectionUpserted) {}
 func (h *wsHandler) OnChannelSectionDeleted(sectionID string)                       {}
 func (h *wsHandler) OnChannelSectionChannelsUpserted(sectionID string, ids []string) {}
