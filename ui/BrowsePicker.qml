@@ -55,7 +55,7 @@ Item {
                 Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.hairline }
                 Row {
                     anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 10
-                    Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter; text: "#"
+                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter; text: "#"
                            color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 19 }
                     TextInput { renderType: TextInput.QtRendering;
                         id: search
@@ -73,7 +73,7 @@ Item {
                                 else if (e.key === Qt.Key_K) { bp.move(-1); e.accepted = true }
                             }
                         }
-                        Text { renderType: Text.QtRendering; visible: !search.text; text: "Browse channels to join…"
+                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: !search.text; text: "Browse channels to join…"
                                color: Theme.fg_muted; font: search.font }
                     }
                 }
@@ -103,14 +103,14 @@ Item {
                         width: 3; height: 20; radius: 2; color: Theme.cursor; visible: index === bp.sel }
                     Row {
                         anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 14; spacing: 9
-                        Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
+                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                                text: "#"; color: Theme.fg_muted
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 15 }
-                        Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
+                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                                text: row.modelData.name; color: Theme.fg
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 15 }
                     }
-                    Text { renderType: Text.QtRendering
+                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                            anchors.right: parent.right; anchors.rightMargin: 14; anchors.verticalCenter: parent.verticalCenter
                            text: row.modelData.member ? "joined" : "join"
                            color: row.modelData.member ? Theme.fg_muted : Theme.green

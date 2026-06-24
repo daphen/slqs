@@ -63,7 +63,7 @@ Item {
             visible: del.cursor; anchors.centerIn: parent
             width: 7; height: 7; radius: 3.5; color: Theme.cursor
         }
-        Text { renderType: Text.QtRendering
+        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
             visible: !del.cursor
             anchors.right: parent.right; anchors.rightMargin: 7
             anchors.verticalCenter: parent.verticalCenter
@@ -84,7 +84,7 @@ Item {
             width: 36; height: 36; radius: 8
             color: del.color                    // colored fallback behind the image
 
-            Text { renderType: Text.QtRendering;
+            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
                 anchors.centerIn: parent; text: del.initials; color: Theme.ink
                 visible: avatarImg.status !== Image.Ready
                 font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 14; font.weight: 800
@@ -99,7 +99,7 @@ Item {
                 sourceSize.width: 96; sourceSize.height: 96
             }
         }
-        Text { renderType: Text.QtRendering;
+        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
             visible: del.grouped && hov.hovered
             anchors.horizontalCenter: parent.horizontalCenter; y: 1
             text: del.time; color: Theme.fg_muted
@@ -119,12 +119,12 @@ Item {
             visible: del.isReply
             width: parent.width
             spacing: 5
-            Text { renderType: Text.QtRendering; text: "↰"; color: Theme.fg_muted
+            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: "↰"; color: Theme.fg_muted
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13 }
-            Text { renderType: Text.QtRendering; text: del.replyAuthor; color: Theme.sky
+            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: del.replyAuthor; color: Theme.sky
                    visible: del.replyAuthor.length > 0
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13; font.weight: 700 }
-            Text { renderType: Text.QtRendering; text: del.replyText; color: Theme.fg_muted
+            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: del.replyText; color: Theme.fg_muted
                    width: Math.max(0, body.width - 140); elide: Text.ElideRight
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13 }
         }
@@ -132,13 +132,13 @@ Item {
         Row {
             visible: !del.grouped
             spacing: 8
-            Text { renderType: Text.QtRendering; text: del.author; color: Theme.mode === "light" ? Theme.ink : Theme.fg
+            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: del.author; color: Theme.mode === "light" ? Theme.ink : Theme.fg
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 15; font.weight: 700 }
-            Text { renderType: Text.QtRendering; text: del.time; color: Theme.fg_muted; anchors.bottom: parent.bottom; anchors.bottomMargin: 1
+            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: del.time; color: Theme.fg_muted; anchors.bottom: parent.bottom; anchors.bottomMargin: 1
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12 }
         }
 
-        Text { renderType: Text.QtRendering;
+        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
             visible: del.text.length > 0 && !del.emojiOnly
             width: parent.width
             text: Backend.richify(del.text, 22)
@@ -178,7 +178,7 @@ Item {
                         visible: !part.modelData.img
                         text: part.modelData.glyph || ""
                         anchors.verticalCenter: parent.verticalCenter
-                        renderType: Text.QtRendering
+                        renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                         color: Theme.mode === "light" ? Theme.ink : Theme.fg
                         font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 36
                     }
@@ -249,9 +249,9 @@ Item {
                             source: pill._path; fillMode: Image.PreserveAspectFit
                             sourceSize.width: 36; sourceSize.height: 36
                         }
-                        Text { renderType: Text.QtRendering; visible: pill._path === ""; text: modelData.e; font.pixelSize: 17
+                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: pill._path === ""; text: modelData.e; font.pixelSize: 17
                                anchors.verticalCenter: parent.verticalCenter }
-                        Text { renderType: Text.QtRendering; text: modelData.n; color: Theme.fg_muted
+                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: modelData.n; color: Theme.fg_muted
                                anchors.verticalCenter: parent.verticalCenter
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12; font.weight: 700 }
                     }
@@ -260,7 +260,7 @@ Item {
         }
 
         // thread indicator — Enter opens it
-        Text { renderType: Text.QtRendering;
+        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
             visible: del.reply_count > 0
             topPadding: 3
             text: "  " + del.reply_count + (del.reply_count === 1 ? " reply" : " replies")

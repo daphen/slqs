@@ -56,7 +56,7 @@ Item {
                 Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.hairline }
                 Row {
                     anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 10
-                    Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter; text: "⇄"
+                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter; text: "⇄"
                            color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 17 }
                     TextInput { renderType: TextInput.QtRendering;
                         id: search
@@ -74,7 +74,7 @@ Item {
                                 else if (e.key === Qt.Key_K) { wp.move(-1); e.accepted = true }
                             }
                         }
-                        Text { renderType: Text.QtRendering; visible: !search.text; text: "Switch workspace…"
+                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: !search.text; text: "Switch workspace…"
                                color: Theme.fg_muted; font: search.font }
                     }
                 }
@@ -110,7 +110,7 @@ Item {
                         ClippingRectangle {
                             anchors.verticalCenter: parent.verticalCenter
                             width: 28; height: 28; radius: 8; color: Theme.hover
-                            Text { renderType: Text.QtRendering; anchors.centerIn: parent
+                            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent
                                    visible: wsIcon.status !== Image.Ready
                                    readonly property bool dm: row.modelData.id === "@me"
                                    text: dm ? "" : (row.modelData.name || "?").slice(0, 2).toUpperCase()   // nf-fa-comments for DMs
@@ -121,12 +121,12 @@ Item {
                                     visible: status === Image.Ready; asynchronous: true; cache: true
                                     fillMode: Image.PreserveAspectCrop; sourceSize.width: 56; sourceSize.height: 56 }
                         }
-                        Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
+                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                                text: (row.modelData.id === "@me") ? "Direct Messages" : row.modelData.name; color: Theme.fg
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
                                font.pixelSize: 15; font.weight: row.active ? 700 : 500 }
                     }
-                    Text { renderType: Text.QtRendering
+                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                            anchors.right: parent.right; anchors.rightMargin: 14; anchors.verticalCenter: parent.verticalCenter
                            text: row.active ? "current" : ""; color: Theme.fg_muted
                            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12; font.weight: 700 }

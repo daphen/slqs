@@ -75,7 +75,7 @@ Rectangle {
                         // Snap, don't animate: a color fade on the active tab reads as a
                         // "blink" when switching workspaces (same reason the msg cursor snaps).
                         color: active ? Theme.selection : tabHov.hovered ? Theme.hover : "transparent"
-                        Text { id: tabLbl; renderType: Text.QtRendering
+                        Text { id: tabLbl; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                             anchors.centerIn: parent; width: parent.width - 12; elide: Text.ElideRight
                             horizontalAlignment: Text.AlignHCenter
                             text: modelData.name
@@ -96,15 +96,15 @@ Rectangle {
                 Row {
                     anchors.left: parent.left; anchors.leftMargin: 4
                     anchors.verticalCenter: parent.verticalCenter; spacing: 6
-                    Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
+                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                         text: Backend.currentWorkspaceName || "Direct Messages"; color: Theme.fg
                         font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
                         font.pixelSize: 15; font.weight: 700 }
-                    Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
+                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                         text: "⌄"; color: Theme.fg_muted
                         font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13 }
                 }
-                Text { renderType: Text.QtRendering; anchors.right: parent.right; anchors.rightMargin: 4
+                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.right: parent.right; anchors.rightMargin: 4
                     anchors.verticalCenter: parent.verticalCenter; text: "⌃S"; color: Theme.fg_muted
                     font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 11 }
                 HoverHandler { id: wsHdrHov }
@@ -118,7 +118,7 @@ Rectangle {
             border.color: search.activeFocus ? Theme.cursor : Theme.hairline
             Row {
                 anchors.fill: parent; anchors.leftMargin: 9; spacing: 7
-                Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter; text: "⌕"
+                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter; text: "⌕"
                        color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 16 }
                 TextInput { renderType: TextInput.QtRendering;
                     id: search
@@ -126,7 +126,7 @@ Rectangle {
                     width: parent.width - 30; color: Theme.fg; clip: true
                     font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 14
                     Keys.onEscapePressed: { text = ""; sidebar.searchClosed() }
-                    Text { renderType: Text.QtRendering; visible: !search.text && !search.activeFocus; text: "Jump to…"
+                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: !search.text && !search.activeFocus; text: "Jump to…"
                            color: Theme.fg_muted; font: search.font }
                 }
             }
@@ -141,10 +141,10 @@ Rectangle {
                  : thHov.hovered ? Theme.hover : "transparent"
             Row {
                 anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 8; spacing: 7
-                Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
+                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                        text: "↳"; color: Theme.fg_muted
                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 15 }
-                Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
+                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                        text: "Threads"; color: Theme.fg
                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
                        font.pixelSize: 14; font.weight: Backend.threadUnreadTotal > 0 ? 700 : Theme.fontWeight }
@@ -153,7 +153,7 @@ Rectangle {
                 visible: Backend.threadUnreadTotal > 0
                 anchors.right: parent.right; anchors.rightMargin: 8; anchors.verticalCenter: parent.verticalCenter
                 height: 17; width: Math.max(17, tb.implicitWidth + 10); radius: 9; color: Theme.cursor
-                Text { id: tb; renderType: Text.QtRendering; anchors.centerIn: parent
+                Text { id: tb; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent
                        text: Backend.threadUnreadTotal; color: Theme.ink
                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
                        font.pixelSize: 12; font.weight: 700 }
@@ -185,7 +185,7 @@ Rectangle {
             }
 
             section.property: "section"
-            section.delegate: Text { renderType: Text.QtRendering;
+            section.delegate: Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
                 required property string section
                 topPadding: 12; bottomPadding: 4; leftPadding: 6
                 text: section.toUpperCase()
@@ -230,7 +230,7 @@ Rectangle {
 
                 // relative line number (vim hybrid: absolute on cursor row),
                 // shown only while the sidebar is focused — drives N j/k jumps.
-                Text { renderType: Text.QtRendering
+                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                     visible: sidebar.active
                     anchors.left: parent.left; anchors.leftMargin: 6
                     width: 18; horizontalAlignment: Text.AlignRight
@@ -253,7 +253,7 @@ Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
                         width: (row.kind === "dm" && row.avatar) ? 18 : 14
                         height: 18
-                        Text { renderType: Text.QtRendering;
+                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
                             anchors.centerIn: parent
                             visible: !(row.kind === "dm" && dmAv.status === Image.Ready)
                             text: row.kind === "dm" ? "●" : "#"
@@ -272,7 +272,7 @@ Rectangle {
                             }
                         }
                     }
-                    Text { renderType: Text.QtRendering;
+                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - chIcon.width - parent.spacing
                         text: row.name; elide: Text.ElideRight
@@ -289,7 +289,7 @@ Rectangle {
                     height: 17; width: Math.max(17, badge.implicitWidth + 10); radius: 9
                     // one consistent monochrome chip; mentions get an accent dot, not a color flip
                     color: Theme.hover
-                    Text { renderType: Text.QtRendering;
+                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
                         id: badge; anchors.centerIn: parent; text: row.unread
                         color: Theme.fg
                         font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12; font.weight: 700

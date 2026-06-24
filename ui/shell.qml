@@ -233,13 +233,13 @@ FloatingWindow {
                         Row {
                             anchors.left: parent.left; anchors.leftMargin: 18
                             anchors.verticalCenter: parent.verticalCenter; spacing: 9
-                            Text { renderType: Text.QtRendering; text: "#"; color: Theme.fg_muted; anchors.verticalCenter: parent.verticalCenter
+                            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: "#"; color: Theme.fg_muted; anchors.verticalCenter: parent.verticalCenter
                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 19 }
-                            Text { renderType: Text.QtRendering; text: Backend.currentChannel; color: Theme.fg; anchors.verticalCenter: parent.verticalCenter
+                            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: Backend.currentChannel; color: Theme.fg; anchors.verticalCenter: parent.verticalCenter
                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 17; font.weight: 700 }
                             Rectangle { visible: Backend.currentTopic.length > 0; width: 1; height: 16; color: Theme.hairline
                                         anchors.verticalCenter: parent.verticalCenter }
-                            Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
+                            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                                    // collapse the (often multi-line) topic to one elided line
                                    text: Backend.currentTopic.replace(/[\r\n]+/g, "  ")
                                    color: Theme.fg_muted; elide: Text.ElideRight
@@ -256,7 +256,7 @@ FloatingWindow {
                             width: joinLbl.implicitWidth + 22; height: 26; radius: 6
                             color: joinMA.containsMouse ? Theme.selection : Theme.surface
                             border.width: 1; border.color: Theme.sky
-                            Text { id: joinLbl; renderType: Text.QtRendering; anchors.centerIn: parent
+                            Text { id: joinLbl; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent
                                    text: "+ Join channel"; color: Theme.sky
                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13; font.weight: 700 }
                             MouseArea { id: joinMA; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
@@ -288,7 +288,7 @@ FloatingWindow {
                             height: Backend.typing ? 22 : 0
                             clip: true
                             Behavior on height { NumberAnimation { duration: 120 } }
-                            Text { renderType: Text.QtRendering;
+                            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
                                 x: 20; anchors.top: parent.top; anchors.bottom: parent.bottom
                                 verticalAlignment: Text.AlignVCenter
                                 text: Backend.typingWho + " is typing…"
@@ -344,7 +344,7 @@ FloatingWindow {
                     Rectangle {
                         width: modeLabel.implicitWidth + 18; height: 22
                         color: win.insertMode ? Theme.cursor : Theme.green
-                        Text { renderType: Text.QtRendering;
+                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
                             id: modeLabel; anchors.centerIn: parent
                             text: win.insertMode ? "INSERT" : "NORMAL"
                             // Contrast against the chip's own bg: dark text on a light
@@ -356,14 +356,14 @@ FloatingWindow {
                         }
                     }
                     Item { width: 10; height: 1 }
-                    Text { renderType: Text.QtRendering;
+                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
                         anchors.verticalCenter: parent.verticalCenter
                         text: "panel: " + win.focusedPanel + "   #" + Backend.currentChannel
                               + (win.pendingCount > 0 ? "      " + win.pendingCount : "")
                         color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12
                     }
                 }
-                Text { renderType: Text.QtRendering;
+                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
                     anchors.right: parent.right; anchors.rightMargin: 12
                     anchors.verticalCenter: parent.verticalCenter
                     text: "ctrl+k jump · j/k move · h/l panel · ⏎ open · i insert · esc normal"
@@ -428,7 +428,7 @@ FloatingWindow {
                 color: Theme.surface; border.width: 1; border.color: Theme.hairline
                 Behavior on opacity { NumberAnimation { duration: 140 } }
                 Text {
-                    id: toastLbl; renderType: Text.QtRendering; anchors.centerIn: parent
+                    id: toastLbl; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent
                     text: toast.message; color: Theme.fg
                     font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13
                 }

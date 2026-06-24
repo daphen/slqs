@@ -118,7 +118,7 @@ Item {
                 Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.hairline }
                 Row {
                     anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 10
-                    Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter; text: "⌕"
+                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter; text: "⌕"
                            color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 19 }
                     TextInput { renderType: TextInput.QtRendering;
                         id: search
@@ -136,7 +136,7 @@ Item {
                                 else if (e.key === Qt.Key_K) { palette.move(-1); e.accepted = true }
                             }
                         }
-                        Text { renderType: Text.QtRendering; visible: !search.text; text: "Jump to a channel or DM…"
+                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: !search.text; text: "Jump to a channel or DM…"
                                color: Theme.fg_muted; font: search.font }
                     }
                 }
@@ -164,7 +164,7 @@ Item {
                     height: isDivider ? 34 : 52
 
                     // divider
-                    Text { renderType: Text.QtRendering
+                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                         visible: del.isDivider
                         x: 16; y: 12
                         text: del.isDivider ? modelData.label.toUpperCase() : ""
@@ -187,7 +187,7 @@ Item {
                         }
                         Row {
                             anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 12; spacing: 9
-                            Text { renderType: Text.QtRendering
+                            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: modelData.kind === "dm" ? "●" : (modelData.kind === "thread" ? "" : "#")
                                 color: modelData.kind === "dm" ? Theme.green : Theme.fg_muted
@@ -196,10 +196,10 @@ Item {
                             Column {
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: parent.width - 40 - (badge.visible ? 32 : 0); spacing: 3
-                                Text { renderType: Text.QtRendering; text: modelData.name || ""; color: Theme.fg
+                                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: modelData.name || ""; color: Theme.fg
                                        elide: Text.ElideRight; width: parent.width; maximumLineCount: 1; wrapMode: Text.NoWrap
                                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 15; font.weight: 600 }
-                                Text { renderType: Text.QtRendering; visible: !!modelData.sub; text: modelData.sub || ""
+                                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: !!modelData.sub; text: modelData.sub || ""
                                        color: Theme.fg_muted; elide: Text.ElideRight; width: parent.width; maximumLineCount: 1; wrapMode: Text.NoWrap
                                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12 }
                             }
@@ -211,7 +211,7 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             height: 18; width: Math.max(18, bt.implicitWidth + 10); radius: 9
                             color: Theme.cursor
-                            Text { id: bt; renderType: Text.QtRendering; anchors.centerIn: parent
+                            Text { id: bt; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent
                                    text: modelData.unread || ""; color: Theme.ink
                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
                                    font.pixelSize: 12; font.weight: 700 }

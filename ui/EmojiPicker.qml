@@ -75,7 +75,7 @@ Item {
                 Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.hairline }
                 Row {
                     anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 10
-                    Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter; text: "☺"
+                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter; text: "☺"
                            color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 18 }
                     TextInput { renderType: TextInput.QtRendering;
                         id: search
@@ -94,7 +94,7 @@ Item {
                                 else if (e.key === Qt.Key_K) { picker.move(-1); e.accepted = true }
                             }
                         }
-                        Text { renderType: Text.QtRendering; visible: !search.text; text: "React with…"
+                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: !search.text; text: "React with…"
                                color: Theme.fg_muted; font: search.font }
                     }
                 }
@@ -134,20 +134,20 @@ Item {
                             width: 22; height: 22; anchors.verticalCenter: parent.verticalCenter
                             Image { anchors.fill: parent; visible: row.modelData.custom; source: row.modelData.path || ""
                                     fillMode: Image.PreserveAspectFit; sourceSize.width: 44; sourceSize.height: 44 }
-                            Text { renderType: Text.QtRendering; anchors.centerIn: parent; visible: !row.modelData.custom
+                            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent; visible: !row.modelData.custom
                                    text: row.modelData.glyph || ""; font.pixelSize: 19 }
                         }
                         // reaction row: count + who reacted; the mine ones are bold/accent
-                        Text { renderType: Text.QtRendering; visible: row.isReaction; anchors.verticalCenter: parent.verticalCenter
+                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: row.isReaction; anchors.verticalCenter: parent.verticalCenter
                                width: 26; text: row.modelData.count
                                color: row.modelData.mine ? Theme.sky : Theme.fg
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 14; font.weight: 700 }
-                        Text { renderType: Text.QtRendering; visible: row.isReaction; anchors.verticalCenter: parent.verticalCenter
+                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: row.isReaction; anchors.verticalCenter: parent.verticalCenter
                                width: row.width - 90; elide: Text.ElideRight
                                text: (row.modelData.users || []).join(", "); color: Theme.fg_muted
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13 }
                         // emoji row: :name:
-                        Text { renderType: Text.QtRendering; visible: !row.isReaction; anchors.verticalCenter: parent.verticalCenter
+                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: !row.isReaction; anchors.verticalCenter: parent.verticalCenter
                                text: ":" + row.modelData.name + ":"; color: Theme.fg
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 14 }
                     }

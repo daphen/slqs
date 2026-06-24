@@ -23,7 +23,7 @@ ListView {
             anchors.centerIn: parent; height: 20; radius: 10
             width: dayLbl.implicitWidth + 22
             color: Theme.bg; border.color: Theme.hairline; border.width: 1
-            Text { id: dayLbl; anchors.centerIn: parent; renderType: Text.QtRendering
+            Text { id: dayLbl; anchors.centerIn: parent; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                    text: Backend.dayLabel(secItem.section); color: Theme.fg_muted
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
                    font.pixelSize: 12; font.weight: 700 }

@@ -80,13 +80,13 @@ Rectangle {
         Row {
             anchors.left: parent.left; anchors.leftMargin: 16
             anchors.verticalCenter: parent.verticalCenter; spacing: 8
-            Text { renderType: Text.QtRendering; text: "Thread"; color: Theme.fg
+            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: "Thread"; color: Theme.fg
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 16; font.weight: 700 }
-            Text { renderType: Text.QtRendering; text: "— " + Backend.threadTitle; color: Theme.fg_muted
+            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: "— " + Backend.threadTitle; color: Theme.fg_muted
                    anchors.verticalCenter: parent.verticalCenter
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 14 }
         }
-        Text { renderType: Text.QtRendering;
+        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
             anchors.right: parent.right; anchors.rightMargin: 14; anchors.verticalCenter: parent.verticalCenter
             text: "q to close"; color: Theme.fg_muted
             font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12
@@ -148,7 +148,7 @@ Rectangle {
         height: Backend.threadTyping ? 22 : 0
         clip: true
         Behavior on height { NumberAnimation { duration: 120 } }
-        Text { renderType: Text.QtRendering; x: 16
+        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; x: 16
                anchors.top: parent.top; anchors.bottom: parent.bottom; verticalAlignment: Text.AlignVCenter
                text: Backend.threadTypingWho + " is typing…"; color: Theme.fg_muted
                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13 }
@@ -173,10 +173,10 @@ Rectangle {
                 width: 14; height: 14; radius: 3; anchors.verticalCenter: parent.verticalCenter
                 color: panel.alsoToChannel ? Theme.cursor : "transparent"
                 border.color: panel.alsoToChannel ? Theme.cursor : Theme.hairline; border.width: 1
-                Text { renderType: Text.QtRendering; anchors.centerIn: parent; visible: panel.alsoToChannel
+                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent; visible: panel.alsoToChannel
                        text: "✓"; color: Theme.ink; font.pixelSize: 10; font.weight: 800 }
             }
-            Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
+            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                    text: "Also send to channel"; color: panel.alsoToChannel ? Theme.fg : Theme.fg_muted
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12 }
             TapHandler { onTapped: panel.alsoToChannel = !panel.alsoToChannel }
