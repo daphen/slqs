@@ -1052,11 +1052,15 @@ func (d *daemon) readConn(c net.Conn) {
 		case "uploadClipboard":
 			// Paste an image from the Wayland clipboard (e.g. a grim screenshot)
 			// into the channel/thread. No-op if the clipboard holds no image.
+			// Register the in-flight upload SYNCHRONOUSLY (before the goroutine) so
+			// a "send" read next always observes it and waits for the staged image —
+			// otherwise a quick paste+send races and the image posts with the
+			// following message instead of this one.
+			done := make(chan struct{})
+			d.attachMu.Lock()
+			d.uploading[id] = done
+			d.attachMu.Unlock()
 			go func(w *workspace) {
-				done := make(chan struct{})
-				d.attachMu.Lock()
-				d.uploading[id] = done
-				d.attachMu.Unlock()
 				defer close(done) // release any send waiting on this upload
 				types, _ := exec.Command("wl-paste", "--list-types").Output()
 				var mime, ext string
@@ -1068,7 +1072,9 @@ func (d *daemon) readConn(c net.Conn) {
 				case strings.Contains(t, "image/gif"):
 					mime, ext = "image/gif", "gif"
 				default:
-					return // not an image — let the text paste stand
+					// text paste, not an image — clear the optimistic "uploading" badge
+					d.broadcast(map[string]any{"type": "attachReady", "channel": id, "name": "", "ok": false})
+					return
 				}
 				fail := func() {
 					d.broadcast(map[string]any{"type": "attachReady", "channel": id, "name": "", "ok": false})

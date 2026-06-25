@@ -28,7 +28,9 @@ Item {
             if (ch === ":" || ch === "@") {
                 if (i === 0 || /\s/.test(txt[i - 1])) {
                     const token = txt.substring(i + 1, pos)
-                    if (/^[A-Za-z0-9_+'.\-]*$/.test(token) && (ch === "@" || token.length >= 1)) {
+                    // emoji needs >= 2 chars after ':' (":jo" yes, ":p" no — too noisy);
+                    // mentions ('@') open immediately.
+                    if (/^[A-Za-z0-9_+'.\-]*$/.test(token) && (ch === "@" || token.length >= 2)) {
                         mode = ch === ":" ? "emoji" : "user"
                         startPos = i
                         rows = mode === "emoji" ? Backend.searchEmoji(token.toLowerCase(), 8)
