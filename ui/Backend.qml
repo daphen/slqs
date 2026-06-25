@@ -779,6 +779,10 @@ Item {
                 if (!done) {
                     msg.grouped = threadModel.count > 0 && _grp(threadModel.get(threadModel.count - 1), msg)
                     threadModel.append(msg)
+                    // we're reading this thread → mark the reply read so it doesn't
+                    // resurface as unread in the Threads list (and syncs to Slack)
+                    _clearThreadUnread(thread)
+                    safeWrite(JSON.stringify({ type: "markThreadRead", channel: id, thread: thread, ts: msg.ts }) + "\n")
                 }
             } else if (!isBroadcast) {
                 bumpThreadUnread(id, thread)   // live unread on a followed thread

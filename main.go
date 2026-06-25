@@ -33,12 +33,12 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/slack-go/slack"
+	_ "modernc.org/sqlite"
 	"slqs/internal/cache"
 	"slqs/internal/emoji"
 	"slqs/internal/notify"
 	slackclient "slqs/internal/slack"
-	"github.com/slack-go/slack"
-	_ "modernc.org/sqlite"
 )
 
 var palette = []string{"#FF570D", "#97B5A6", "#7DD3FC", "#8A92A7", "#ff8a31", "#CCD5E4", "#FF7B72", "#8A9AA6"}
@@ -51,13 +51,13 @@ var fileHTTP = &http.Client{Timeout: 20 * time.Second}
 var emojiMap = emoji.CodeMap()
 
 var (
-	reToken  = regexp.MustCompile(`<([^>]+)>`)
-	reEmoji  = regexp.MustCompile(`:([a-z0-9_+\-]+):`)
-	reBold   = regexp.MustCompile(`(^|[\s(])\*([^\s*][^*\n]*?)\*([\s).,!?;:]|$)`)
-	reStrike = regexp.MustCompile(`~([^~\n]+)~`)
-	reMpdmN  = regexp.MustCompile(`-\d+$`)
-	reLink   = regexp.MustCompile(`<(https?://[^|>\s]+)`)
-	reChanRef = regexp.MustCompile(`<#([A-Z0-9]+)`) // first channel mention id, for `o` to open
+	reToken     = regexp.MustCompile(`<([^>]+)>`)
+	reEmoji     = regexp.MustCompile(`:([a-z0-9_+\-]+):`)
+	reBold      = regexp.MustCompile(`(^|[\s(])\*([^\s*][^*\n]*?)\*([\s).,!?;:]|$)`)
+	reStrike    = regexp.MustCompile(`~([^~\n]+)~`)
+	reMpdmN     = regexp.MustCompile(`-\d+$`)
+	reLink      = regexp.MustCompile(`<(https?://[^|>\s]+)`)
+	reChanRef   = regexp.MustCompile(`<#([A-Z0-9]+)`) // first channel mention id, for `o` to open
 	reCodeBlock = regexp.MustCompile("(?s)```.*?```")
 )
 
@@ -270,7 +270,7 @@ type daemon struct {
 	threadsDirtyMu    sync.Mutex
 	threadsDirtyTimer *time.Timer // debounced threads-list re-push on live activity
 
-	cacheDB *sql.DB    // read-only handle for serving reads
+	cacheDB *sql.DB   // read-only handle for serving reads
 	writeDB *cache.DB // read-write handle the websocket handler persists through
 
 	mu    sync.Mutex
@@ -811,7 +811,10 @@ func (d *daemon) pollWorkspace(ctx context.Context, w *workspace) {
 		if err != nil {
 			continue
 		}
-		type tupd struct{ cid, ts string; count int }
+		type tupd struct {
+			cid, ts string
+			count   int
+		}
 		var tupds []tupd
 		for tr.Next() {
 			var cid, tts, lr string
@@ -849,8 +852,8 @@ func (d *daemon) readConn(c net.Conn) {
 		// so it resolves the owning workspace without a separate field.
 		var cmd struct {
 			Type, Channel, Text, Before, Thread, Id, Url, Ext, Mediatype, Ts, Emoji, Workspace, Team, State string
-			Remove, Broadcast bool
-			Images []struct{ Id, Url, Ext string } // "view" can carry several photos
+			Remove, Broadcast                                                                               bool
+			Images                                                                                          []struct{ Id, Url, Ext string } // "view" can carry several photos
 		}
 		if json.Unmarshal(sc.Bytes(), &cmd) != nil {
 			continue
@@ -1169,6 +1172,25 @@ func (d *daemon) readConn(c net.Conn) {
 					d.writeDB.DeleteThreadSubscription(w.teamID, ch, tts)
 					d.markThreadsDirty()
 				}(w, id, cmd.Thread)
+			}
+		case "markThreadRead":
+			// A reply landed in the thread the client currently has open, so it's
+			// been seen — advance read-state (and mark it on Slack if we follow it)
+			// and re-push the threads list so it doesn't sit as unread while you read.
+			if w != nil && cmd.Thread != "" && cmd.Ts != "" {
+				go func(w *workspace, ch, tts, ts string) {
+					d.writeDB.AdvanceThreadSubscriptionLastRead(w.teamID, ch, tts, ts)
+					var active int
+					d.cacheDB.QueryRowContext(d.ctx,
+						`SELECT active FROM thread_subscriptions WHERE workspace_id=? AND channel_id=? AND thread_ts=?`,
+						w.teamID, ch, tts).Scan(&active)
+					if active == 1 {
+						if err := w.client.MarkThread(d.ctx, ch, tts, ts); err != nil {
+							log.Printf("markThreadRead: %v", err)
+						}
+					}
+					d.markThreadsDirty()
+				}(w, id, cmd.Thread, cmd.Ts)
 			}
 		case "markread":
 			// Opening a channel marks it read on the server (Before carries the
@@ -1490,7 +1512,6 @@ func (d *daemon) watchNiriFocus(ctx context.Context) {
 		time.Sleep(time.Second)
 	}
 }
-
 
 // addWorkspace authenticates one token and builds its workspace state (users,
 // channels, DM names, topics). Returns the user list for avatar prefetch.
