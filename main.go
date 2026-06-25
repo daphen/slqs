@@ -830,6 +830,7 @@ func (d *daemon) readConn(c net.Conn) {
 		var cmd struct {
 			Type, Channel, Text, Before, Thread, Id, Url, Ext, Mediatype, Ts, Emoji, Workspace, Team, State string
 			Remove, Broadcast bool
+			Images []struct{ Id, Url, Ext string } // "view" can carry several photos
 		}
 		if json.Unmarshal(sc.Bytes(), &cmd) != nil {
 			continue
@@ -864,10 +865,30 @@ func (d *daemon) readConn(c net.Conn) {
 			if w == nil {
 				continue
 			}
+			items := cmd.Images
+			if len(items) == 0 && cmd.Url != "" { // single-item fallback (older shape)
+				items = append(items, struct{ Id, Url, Ext string }{cmd.Id, cmd.Url, cmd.Ext})
+			}
+			mediatype := cmd.Mediatype
 			go func(w *workspace) {
-				p := d.cacheFile(cmd.Id+"-full", cmd.Url, cmd.Ext, w.token, w.cookie)
-				if p != "" {
-					b, _ := json.Marshal(map[string]any{"type": "viewReady", "path": p, "mediatype": cmd.Mediatype})
+				// Full-res originals land in a dedicated, easy-to-purge dir
+				// (~/.cache/slqs/view) kept apart from the inline thumbnail cache.
+				viewDir := filepath.Join(os.Getenv("HOME"), ".cache", "slqs", "view")
+				os.MkdirAll(viewDir, 0755)
+				var paths []string
+				for _, im := range items {
+					ext := im.Ext
+					if ext == "" {
+						ext = "jpg"
+					}
+					dst := filepath.Join(viewDir, im.Id+"."+ext)
+					d.downloadFile(dst, im.Url, w.token, w.cookie)
+					if _, err := os.Stat(dst); err == nil {
+						paths = append(paths, "file://"+dst)
+					}
+				}
+				if len(paths) > 0 {
+					b, _ := json.Marshal(map[string]any{"type": "viewReady", "paths": paths, "mediatype": mediatype})
 					b = append(b, '\n')
 					d.mu.Lock()
 					c.Write(b)

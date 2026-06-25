@@ -664,7 +664,7 @@ Item {
         else if (e.type === "replies") setThread(e.channel, e.thread, e.msgs)
         else if (e.type === "unread") setChannelUnread(e.channel, e.count, e.mention)
         else if (e.type === "threadUnread") setThreadUnread(e.channel, e.thread, e.count)
-        else if (e.type === "viewReady") openViewer(e.path, e.mediatype)
+        else if (e.type === "viewReady") openViewer(e.paths || e.path, e.mediatype)
         else if (e.type === "open") openFromNotification(e.workspace, e.channel, e.thread)
         else if (e.type === "typing") showTyping(e.channel, e.thread, e.user)
         else if (e.type === "reactors") applyReactors(e.ts, e.reactions)
@@ -712,12 +712,26 @@ Item {
         let imgs
         try { imgs = JSON.parse(msg.imagesJson || "[]") } catch (e) { return }
         if (!imgs.length || !imgs[0].full) return
-        const im = imgs[0]
-        safeWrite(JSON.stringify({ type: "view", channel: currentChannelId, id: im.id, url: im.full, ext: im.ext, mediatype: im.type }) + "\n")
+        // A video opens alone (mpv). Photos open as a SET so a message with several
+        // is navigable in imv. slkd downloads the full-res to a purgeable view cache
+        // and replies viewReady with the local path(s).
+        if (imgs[0].type === "video") {
+            const v = imgs[0]
+            safeWrite(JSON.stringify({ type: "view", channel: currentChannelId,
+                images: [{ id: v.id, url: v.full, ext: v.ext }], mediatype: "video" }) + "\n")
+            return
+        }
+        const items = imgs.filter(function (i) { return i.type !== "video" && i.full })
+                          .map(function (i) { return { id: i.id, url: i.full, ext: i.ext } })
+        if (!items.length) return
+        safeWrite(JSON.stringify({ type: "view", channel: currentChannelId,
+            images: items, mediatype: "img" }) + "\n")
     }
-    function openViewer(path, mediatype) {
-        const p = path.indexOf("file://") === 0 ? path.slice(7) : path   // script wants a raw path
-        Quickshell.execDetached([Quickshell.env("HOME") + "/.config/endcord/media-viewer.sh", p, mediatype || "img"])
+    function openViewer(paths, mediatype) {
+        const arr = Array.isArray(paths) ? paths : [paths]
+        // strip file://; newline-join so the script opens them all together.
+        const raw = arr.map(function (p) { return p.indexOf("file://") === 0 ? p.slice(7) : p })
+        Quickshell.execDetached([Quickshell.env("HOME") + "/.config/endcord/media-viewer.sh", raw.join("\n"), mediatype || "img"])
     }
     // `o` — open the focused message's link: Slack permalinks jump in-client,
     // everything else goes to the browser.
