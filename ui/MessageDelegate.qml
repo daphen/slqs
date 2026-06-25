@@ -16,6 +16,7 @@ Item {
     required property string imagesJson
     required property string replyAuthor
     required property string replyText
+    required property string subtype
     required property int    index
     readonly property bool isReply: replyAuthor.length > 0 || replyText.length > 0
     width: ListView.view ? ListView.view.width : 600
@@ -274,6 +275,14 @@ Item {
             }
         }
 
+        // broadcast — a thread reply the author also sent to the channel; Enter opens the thread
+        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
+            visible: del.subtype === "thread_broadcast"
+            topPadding: 3
+            text: "↪ replied to a thread"
+            color: Theme.fg_muted
+            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12; font.italic: true
+        }
         // thread indicator — Enter opens it
         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
             visible: del.reply_count > 0

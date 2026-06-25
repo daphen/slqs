@@ -380,6 +380,8 @@ Item {
         if (m.replyText === undefined) m.replyText = ""
         if (m.mine === undefined) m.mine = false
         if (m.day === undefined) m.day = m.ts ? dayKeyOf(m.ts) : ""
+        if (m.subtype === undefined) m.subtype = ""
+        if (m.thread_ts === undefined) m.thread_ts = ""
         return m
     }
     // ctrl+e in insert mode: the last message you sent, scoped to the panel.
@@ -756,18 +758,22 @@ Item {
     }
     function ingest(id, msg, thread, mention) {
         normMsg(msg)
-        // A reply (thread set and not the parent itself) belongs in the thread,
-        // not the channel timeline.
+        const isBroadcast = msg.subtype === "thread_broadcast"
+        // A plain reply lives only in the thread panel. A broadcast ("also sent to
+        // channel") shows in the thread AND the channel timeline, so it falls through.
         if (thread && thread !== msg.ts) {
             if (threadOpen && id === currentChannelId && thread === threadParentTs) {
+                let done = false
                 for (let i = 0; i < threadModel.count; i++)   // edit: replace in place
-                    if (threadModel.get(i).ts === msg.ts) { msg.grouped = threadModel.get(i).grouped; threadModel.set(i, msg); return }
-                msg.grouped = threadModel.count > 0 && _grp(threadModel.get(threadModel.count - 1), msg)
-                threadModel.append(msg)
-            } else {
+                    if (threadModel.get(i).ts === msg.ts) { msg.grouped = threadModel.get(i).grouped; threadModel.set(i, msg); done = true; break }
+                if (!done) {
+                    msg.grouped = threadModel.count > 0 && _grp(threadModel.get(threadModel.count - 1), msg)
+                    threadModel.append(msg)
+                }
+            } else if (!isBroadcast) {
                 bumpThreadUnread(id, thread)   // live unread on a followed thread
             }
-            return
+            if (!isBroadcast) return
         }
         // edit: a message we already have (same ts) → replace in place, don't append
         if (_store[id]) {
@@ -883,6 +889,17 @@ Item {
     // --- threads ---
     function openThread(msg) {
         if (!msg) return
+        // A broadcast/reply shown in the channel belongs to a parent thread — open
+        // that, not a thread rooted at the reply itself. Prefer the parent message
+        // we already have in the channel; fall back to a stub the replies fill in.
+        if (msg.thread_ts && msg.thread_ts !== msg.ts) {
+            const ca = _store[currentChannelId] || []
+            let parent = null
+            for (let i = 0; i < ca.length; i++) if (ca[i].ts === msg.thread_ts) { parent = ca[i]; break }
+            msg = parent || normMsg({ author: msg.replyAuthor || msg.author || "", initials: "", color: "",
+                                      avatar: "", time: msg.time, text: "", grouped: false,
+                                      reactionsJson: "[]", imagesJson: "[]", ts: msg.thread_ts, reply_count: 0 })
+        }
         threadOpenToLatest = false   // clicked the root in-channel → start at the parent
         threadParentTs = msg.ts
         threadTitle = msg.author

@@ -640,7 +640,7 @@ func (d *daemon) msgBody(m slack.Message) string {
 	return body
 }
 
-func (d *daemon) formatMsg(w *workspace, channelID, userID, ts, text, username string, files []slack.File, attachments []slack.Attachment) map[string]any {
+func (d *daemon) formatMsg(w *workspace, channelID, userID, ts, text, username string, files []slack.File, attachments []slack.Attachment, subType, threadTS string) map[string]any {
 	author := w.users[userID]
 	if author == "" {
 		if username != "" {
@@ -668,6 +668,8 @@ func (d *daemon) formatMsg(w *workspace, channelID, userID, ts, text, username s
 		"ts":            ts,
 		"reply_count":   0,
 		"mine":          userID != "" && userID == w.selfID,
+		"subtype":       subType,
+		"thread_ts":     threadTS,
 	}
 }
 
@@ -1187,7 +1189,7 @@ func (d *daemon) sendHistory(c net.Conn, w *workspace, channelID, before string)
 		if m.Text == "" && len(m.Files) == 0 {
 			continue
 		}
-		out = append(out, d.formatMsg(w, channelID, m.User, m.Timestamp, m.Text, m.Username, m.Files, m.Attachments))
+		out = append(out, d.formatMsg(w, channelID, m.User, m.Timestamp, m.Text, m.Username, m.Files, m.Attachments, m.SubType, m.ThreadTimestamp))
 	}
 	b, _ := json.Marshal(map[string]any{"type": "history", "workspace": w.teamID, "channel": channelID, "msgs": out})
 	b = append(b, '\n')
@@ -1216,7 +1218,7 @@ func (d *daemon) sendJump(c net.Conn, w *workspace, channelID, ts string) {
 		if m.Text == "" && len(m.Files) == 0 {
 			continue
 		}
-		out = append(out, d.formatMsg(w, channelID, m.User, m.Timestamp, m.Text, m.Username, m.Files, m.Attachments))
+		out = append(out, d.formatMsg(w, channelID, m.User, m.Timestamp, m.Text, m.Username, m.Files, m.Attachments, m.SubType, m.ThreadTimestamp))
 	}
 	// Channel name for the header — from the joined list, else conversations.info
 	// (jump into a public channel we haven't joined).
@@ -1290,7 +1292,7 @@ func (d *daemon) sendReplies(c net.Conn, w *workspace, channelID, threadTS strin
 		if m.Text == "" && len(m.Files) == 0 {
 			continue
 		}
-		out = append(out, d.formatMsg(w, channelID, m.User, m.Timestamp, m.Text, m.Username, m.Files, m.Attachments))
+		out = append(out, d.formatMsg(w, channelID, m.User, m.Timestamp, m.Text, m.Username, m.Files, m.Attachments, m.SubType, m.ThreadTimestamp))
 	}
 	b, _ := json.Marshal(map[string]any{"type": "replies", "workspace": w.teamID, "channel": channelID, "thread": threadTS, "msgs": out})
 	b = append(b, '\n')

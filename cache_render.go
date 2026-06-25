@@ -83,6 +83,8 @@ func (d *daemon) msgFromRaw(w *workspace, channelID, userID, ts, text string, re
 		Files       []slack.File       `json:"files"`
 		Attachments []slack.Attachment `json:"attachments"`
 		Username    string             `json:"username"`
+		SubType     string             `json:"subtype"`
+		ThreadTS    string             `json:"thread_ts"`
 	}
 	if raw != "" {
 		json.Unmarshal([]byte(raw), &rj)
@@ -123,6 +125,8 @@ func (d *daemon) msgFromRaw(w *workspace, channelID, userID, ts, text string, re
 		"ts":            ts,
 		"reply_count":   replyCount,
 		"mine":          userID != "" && userID == w.selfID,
+		"subtype":       rj.SubType,   // "thread_broadcast" => also show in the channel timeline
+		"thread_ts":     rj.ThreadTS,  // parent ts: lets the channel open the right thread on Enter
 	}
 }
 
@@ -470,7 +474,7 @@ func (d *daemon) sendRecent(c net.Conn, w *workspace, channelID string) {
 		FROM messages
 		WHERE channel_id=? AND is_deleted=0
 		      AND (text<>'' OR raw_json LIKE '%"files"%' OR raw_json LIKE '%"blocks"%' OR raw_json LIKE '%"attachments"%')
-		      AND (thread_ts='' OR thread_ts=ts)
+		      AND (thread_ts='' OR thread_ts=ts OR subtype='thread_broadcast')
 		ORDER BY ts DESC LIMIT 70`, channelID)
 	if err != nil {
 		log.Printf("recent %s: %v", channelID, err)
