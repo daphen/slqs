@@ -2,6 +2,7 @@
 package notify
 
 import (
+	"log"
 	"regexp"
 	"strings"
 	"sync"
@@ -41,6 +42,7 @@ type Notifier struct {
 	enabled  bool
 	conn     *dbus.Conn
 	notifier enotify.Notifier // listens for ActionInvoked/Closed; nil ⇒ stateless send
+	sendMu   sync.Mutex       // serializes send + reconnect so a re-dial is race-free
 
 	mu         sync.Mutex
 	lastID     map[string]uint32 // group key (channel) -> last notification id
@@ -127,24 +129,19 @@ func (n *Notifier) Notify(key, title, body string) error {
 	if !n.enabled {
 		return nil
 	}
+	n.sendMu.Lock()
+	defer n.sendMu.Unlock()
 	if n.conn != nil {
-		n.mu.Lock()
-		replaces := n.lastID[key]
-		n.mu.Unlock()
-		note := enotify.Notification{
-			AppName:       "slk",
-			ReplacesID:    replaces,
-			Summary:       title,
-			Body:          body,
-			Actions:       []enotify.Action{enotify.NewDefaultAction("Open")},
-			ExpireTimeout: enotify.ExpireTimeoutSetByNotificationServer,
-		}
-		var id uint32
-		var err error
-		if n.notifier != nil {
-			id, err = n.notifier.SendNotification(note)
-		} else {
-			id, err = enotify.SendNotification(n.conn, note)
+		id, err := n.sendDBus(key, title, body)
+		if err != nil {
+			// godbus never auto-reconnects: a dropped/stale session bus makes
+			// every send fail (and the error used to be swallowed), so the daemon
+			// went silently dark until restarted. Re-dial once and retry so it
+			// self-heals.
+			log.Printf("[notify] dbus send failed (%v); reconnecting", err)
+			if n.reconnect() {
+				id, err = n.sendDBus(key, title, body)
+			}
 		}
 		if err == nil {
 			n.mu.Lock()
@@ -154,11 +151,59 @@ func (n *Notifier) Notify(key, title, body string) error {
 			n.lastID[key] = id
 			n.idToKey[id] = key
 			n.mu.Unlock()
+			return nil
 		}
-		return err
+		log.Printf("[notify] dbus still failing after reconnect key=%q: %v; using beeep", key, err)
 	}
 	// beeep fallback carries no actions — activation routing needs D-Bus.
 	return beeep.Notify(title, body, "")
+}
+
+// sendDBus builds and sends one notification over the current bus connection.
+func (n *Notifier) sendDBus(key, title, body string) (uint32, error) {
+	n.mu.Lock()
+	replaces := n.lastID[key]
+	n.mu.Unlock()
+	note := enotify.Notification{
+		AppName:       "slk",
+		ReplacesID:    replaces,
+		Summary:       title,
+		Body:          body,
+		Actions:       []enotify.Action{enotify.NewDefaultAction("Open")},
+		ExpireTimeout: enotify.ExpireTimeoutSetByNotificationServer,
+	}
+	if n.notifier != nil {
+		return n.notifier.SendNotification(note)
+	}
+	return enotify.SendNotification(n.conn, note)
+}
+
+// reconnect re-dials the session bus and re-establishes the action listener
+// after a send failure, so a dropped bus self-heals instead of going dark.
+// Returns false if the bus is unreachable (caller falls back to beeep).
+// Caller must hold sendMu.
+func (n *Notifier) reconnect() bool {
+	if n.notifier != nil {
+		n.notifier.Close()
+		n.notifier = nil
+	}
+	if n.conn != nil {
+		n.conn.Close()
+		n.conn = nil
+	}
+	conn, err := dbus.ConnectSessionBus()
+	if err != nil {
+		log.Printf("[notify] reconnect failed: %v", err)
+		return false
+	}
+	n.conn = conn
+	if en, err := enotify.New(conn,
+		enotify.WithOnAction(n.handleAction),
+		enotify.WithOnClosed(n.handleClosed),
+	); err == nil {
+		n.notifier = en
+	}
+	return true
 }
 
 // NotifyContext holds the state needed to evaluate notification triggers.

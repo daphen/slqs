@@ -106,7 +106,7 @@ FloatingWindow {
             // typing composes to the open channel → make the chat the active panel
             "i":        () => { focusPanel("messages"); composer.focusInput() },
             "v":        () => { if (focusedPanel === "messages") Backend.viewImage(msgs.currentMessage()) },
-            "o":        () => { if (focusedPanel === "messages") Backend.openLink(msgs.currentMessage()) },
+            "o":        () => { if (focusedPanel === "messages") Backend.openChannelRef(msgs.currentMessage()) },
             "r":        () => { if (focusedPanel === "messages") reactTo(msgs.currentMessage()) },
             "R":        () => { if (focusedPanel === "messages") { composer.startReply(msgs.currentMessage()); focusPanel("messages") } },
             "y":        () => { if (focusedPanel === "messages") Backend.copyText(msgs.currentMessage()) },
@@ -134,7 +134,7 @@ FloatingWindow {
             "ctrl+l": () => Backend.cycleWorkspace(1),
             "ctrl+h": () => Backend.cycleWorkspace(-1),
             "v":      () => Backend.viewImage(thread.currentMessage()),
-            "o":      () => Backend.openLink(thread.currentMessage()),
+            "o":      () => Backend.openChannelRef(thread.currentMessage()),
             "r":      () => reactTo(thread.currentMessage()),
             "y":      () => Backend.copyText(thread.currentMessage()),
             "e":      () => thread.startEdit(thread.currentMessage()),

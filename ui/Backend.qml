@@ -382,6 +382,7 @@ Item {
         if (m.day === undefined) m.day = m.ts ? dayKeyOf(m.ts) : ""
         if (m.subtype === undefined) m.subtype = ""
         if (m.thread_ts === undefined) m.thread_ts = ""
+        if (m.channelRef === undefined) m.channelRef = ""
         return m
     }
     // ctrl+e in insert mode: the last message you sent, scoped to the panel.
@@ -740,6 +741,15 @@ Item {
     // everything else goes to the browser.
     function openLink(msg) {
         if (msg && msg.link) openUrl(msg.link)
+    }
+    // `o` on a message: if it mentions a #channel you're in, open that channel;
+    // otherwise fall back to opening the first URL.
+    function openChannelRef(msg) {
+        if (msg && msg.channelRef && _findChannel(msg.channelRef)) {
+            openFromNotification(currentWorkspace, msg.channelRef, "")
+            return
+        }
+        openLink(msg)
     }
     // Authoritative unread from slkd (reflects reads made in slk too).
     function setChannelUnread(id, count, mention) { applyUnread(id, count, mention) }

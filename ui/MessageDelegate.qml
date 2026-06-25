@@ -50,8 +50,9 @@ Item {
     }
 
     // vim relative line numbers (only while this list is the focused panel):
-    // an orange dot marks the cursor row, the others show distance-from-cursor —
-    // so "8j"/"3k" jumps are countable without a giant absolute line number.
+    // an orange bar (matching the sidebar's current-channel marker) marks the
+    // cursor row, the others show distance-from-cursor — so "8j"/"3k" jumps are
+    // countable without a giant absolute line number.
     Item {
         visible: del.ListView.view && del.ListView.view.showNumbers
         anchors.left: parent.left; anchors.right: gutter.left
@@ -62,7 +63,7 @@ Item {
         height: del.grouped ? 20 : 36
         Rectangle {
             visible: del.cursor; anchors.centerIn: parent
-            width: 7; height: 7; radius: 3.5; color: Theme.cursor
+            width: 3; height: 16; radius: 2; color: Theme.cursor
         }
         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
             visible: !del.cursor

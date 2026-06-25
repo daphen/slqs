@@ -122,6 +122,7 @@ func (d *daemon) msgFromRaw(w *workspace, channelID, userID, ts, text string, re
 		"reactionsJson": d.reactionsJSONFor(w, channelID, ts),
 		"imagesJson":    d.imagesJSON(w, channelID, ts, rj.Files, append(rj.Attachments, imagesFromBlocks(raw)...)),
 		"link":          firstLink(body),
+		"channelRef":    firstChanRef(body), // first #channel mention id, for `o` to open
 		"ts":            ts,
 		"reply_count":   replyCount,
 		"mine":          userID != "" && userID == w.selfID,

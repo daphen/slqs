@@ -57,6 +57,7 @@ var (
 	reStrike = regexp.MustCompile(`~([^~\n]+)~`)
 	reMpdmN  = regexp.MustCompile(`-\d+$`)
 	reLink   = regexp.MustCompile(`<(https?://[^|>\s]+)`)
+	reChanRef = regexp.MustCompile(`<#([A-Z0-9]+)`) // first channel mention id, for `o` to open
 	reCodeBlock = regexp.MustCompile("(?s)```.*?```")
 )
 
@@ -65,6 +66,15 @@ var (
 func firstLink(text string) string {
 	if m := reLink.FindStringSubmatch(text); m != nil {
 		return html.UnescapeString(m[1])
+	}
+	return ""
+}
+
+// firstChanRef returns the channel id of the first <#CID|name> mention in text,
+// so the client can open that channel (e.g. pressing `o` on the message).
+func firstChanRef(text string) string {
+	if m := reChanRef.FindStringSubmatch(text); m != nil {
+		return m[1]
 	}
 	return ""
 }
@@ -665,6 +675,7 @@ func (d *daemon) formatMsg(w *workspace, channelID, userID, ts, text, username s
 		"reactionsJson": d.reactionsJSONFor(w, channelID, ts),
 		"imagesJson":    d.imagesJSON(w, channelID, ts, files, attachments),
 		"link":          firstLink(text),
+		"channelRef":    firstChanRef(text),
 		"ts":            ts,
 		"reply_count":   0,
 		"mine":          userID != "" && userID == w.selfID,
@@ -842,6 +853,10 @@ func (d *daemon) readConn(c net.Conn) {
 			Images []struct{ Id, Url, Ext string } // "view" can carry several photos
 		}
 		if json.Unmarshal(sc.Bytes(), &cmd) != nil {
+			continue
+		}
+		if cmd.Type == "testnotify" {
+			log.Printf("testnotify -> err=%v", d.notifier.Notify("__test__", "slqs self-test", "if you see this, the daemon notifier delivers"))
 			continue
 		}
 		// browse/join act on channels we may not be a member of yet, so they
