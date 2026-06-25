@@ -29,6 +29,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -264,6 +265,8 @@ type daemon struct {
 
 	mu    sync.Mutex
 	conns map[net.Conn]struct{}
+
+	presenceActive atomic.Bool // false while idle (swayidle) — gates the tickle heartbeat
 }
 
 // cacheFile downloads an authed Slack file (thumbnail) into the shared image
@@ -747,6 +750,10 @@ func (d *daemon) pollWorkspace(ctx context.Context, w *workspace) {
 				"msg":     d.msgFromRaw(w, chID, uID, ts, text, rc, raw),
 			})
 			d.maybeNotify(w, chID, uID, text, threadTS)
+			if threadTS != "" && threadTS != ts {
+				// a live reply just landed — bump the parent's "N replies" in the channel view
+				d.broadcast(map[string]any{"type": "replyCountInc", "workspace": w.teamID, "channel": chID, "ts": threadTS})
+			}
 		}
 		rows.Close()
 
@@ -918,10 +925,14 @@ func (d *daemon) readConn(c net.Conn) {
 			if cmd.State == "idle" {
 				presence = "away"
 			}
+			d.presenceActive.Store(presence == "auto")
 			for _, w := range d.wsList {
 				go func(w *workspace) {
 					if err := w.client.SetUserPresence(d.ctx, presence); err != nil {
 						log.Printf("[%s] set presence %s: %v", w.teamName, presence, err)
+					}
+					if presence == "auto" {
+						_ = w.client.Tickle() // report activity right away so you flip active without waiting a tick
 					}
 				}(w)
 			}
@@ -1703,6 +1714,35 @@ func main() {
 		log.Fatal("no usable workspaces")
 	}
 	log.Printf("%d workspace(s) ready", len(d.wsList))
+
+	// Mobile-push suppression: keep Slack's away timer reset while active by
+	// sending a websocket "tickle" frame (the activity signal the real client
+	// emits on input; users.setActive is a deprecated no-op). Without this Slack
+	// auto-marks you away ~10 min after connect and pushes to your phone.
+	// swayidle flips presenceActive off when idle, stopping the tickle so push
+	// resumes when you're actually away.
+	d.presenceActive.Store(true)
+	go func() {
+		ping := func() {
+			if !d.presenceActive.Load() {
+				return
+			}
+			for _, w := range d.wsList {
+				go func(w *workspace) { _ = w.client.Tickle() }(w)
+			}
+		}
+		ping() // immediately, so a fresh start is active without waiting a tick
+		t := time.NewTicker(60 * time.Second)
+		defer t.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-t.C:
+				ping()
+			}
+		}
+	}()
 
 	// Standard shortcode→unicode table for the client's emoji picker/autocomplete.
 	if b, err := json.Marshal(emojiMap); err == nil {

@@ -629,6 +629,7 @@ Item {
         try { e = JSON.parse(line) } catch (x) { return }
         if (e.type === "ping") return
         if (e.type === "message") ingest(e.channel, e.msg, e.thread, e.mention)
+        else if (e.type === "replyCountInc") bumpReplyCount(e.channel, e.ts)
         else if (e.type === "workspaces") setWorkspaces(e.workspaces, e.rail, e.threads)
         else if (e.type === "users") { _usersByWs = e.users || ({}) }
         else if (e.type === "reaction") applyReaction(e.channel, e.ts, e.reactionsJson)
@@ -740,6 +741,19 @@ Item {
     }
     // Authoritative unread from slkd (reflects reads made in slk too).
     function setChannelUnread(id, count, mention) { applyUnread(id, count, mention) }
+    // A live thread reply bumps the parent's "N replies" count in the channel view
+    // (the reply itself lands in the thread panel, not the timeline).
+    function bumpReplyCount(channelId, parentTs) {
+        const arr = _store[channelId]
+        if (!arr) return
+        for (let i = 0; i < arr.length; i++) if (arr[i].ts === parentTs) {
+            arr[i].reply_count = (arr[i].reply_count || 0) + 1
+            if (channelId === currentChannelId)
+                for (let j = 0; j < messagesModel.count; j++)
+                    if (messagesModel.get(j).ts === parentTs) { messagesModel.setProperty(j, "reply_count", arr[i].reply_count); break }
+            return
+        }
+    }
     function ingest(id, msg, thread, mention) {
         normMsg(msg)
         // A reply (thread set and not the parent itself) belongs in the thread,

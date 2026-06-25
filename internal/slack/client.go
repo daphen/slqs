@@ -70,6 +70,7 @@ type Client struct {
 	wsConn *websocket.Conn
 	wsMu   sync.Mutex
 	wsDone chan struct{}
+	wsSeq  int // outgoing ws frame id counter (guarded by wsMu), used by Tickle
 	teamID string
 	userID string
 	token  string
@@ -1176,6 +1177,22 @@ func (c *Client) SetUserPresence(ctx context.Context, presence string) error {
 		return fmt.Errorf("setting presence: %w", err)
 	}
 	return nil
+}
+
+// Tickle sends a websocket "tickle" frame — the activity signal the real Slack
+// client emits on keyboard/mouse input. It resets Slack's server-side away
+// timer, keeping the user "active" so mobile push is held. This replaces
+// users.setActive, which Slack deprecated to a no-op (it returns ok but never
+// moves last_activity); the activity signal only counts over the socket.
+// Best-effort: a closed socket just returns an error the caller ignores.
+func (c *Client) Tickle() error {
+	c.wsMu.Lock()
+	defer c.wsMu.Unlock()
+	if c.wsConn == nil {
+		return fmt.Errorf("websocket not connected")
+	}
+	c.wsSeq++
+	return c.wsConn.WriteJSON(map[string]interface{}{"type": "tickle", "id": c.wsSeq})
 }
 
 // GetUserPresence fetches a user's current presence ("active" or "away").
