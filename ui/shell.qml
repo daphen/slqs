@@ -42,7 +42,13 @@ FloatingWindow {
     function askDelete(msg) { if (msg && msg.ts) { confirmDelete.target = msg; confirmDelete.ask(Backend.plainText(msg.text)) } }
     function activate() {
         if (focusedPanel === "sidebar") { sidebar.openCurrent(); focusPanel("messages") }
-        else if (focusedPanel === "messages" && Backend.hasThreads) { const m = msgs.currentMessage(); if (m) Backend.openThread(m) }
+        else if (focusedPanel === "messages") {
+            const m = msgs.currentMessage()
+            // A Discord reply → jump the cursor to the message it replied to;
+            // otherwise (Slack) Enter opens the thread.
+            if (m && m.replyToTs) msgs.jumpToTs(m.replyToTs)
+            else if (m && Backend.hasThreads) Backend.openThread(m)
+        }
     }
     function backToNormal() { appRoot.forceActiveFocus() }
 
@@ -110,7 +116,7 @@ FloatingWindow {
             "r":        () => { if (focusedPanel === "messages") reactTo(msgs.currentMessage()) },
             "R":        () => { if (focusedPanel === "messages") { composer.startReply(msgs.currentMessage()); focusPanel("messages") } },
             "y":        () => { if (focusedPanel === "messages") Backend.copyText(msgs.currentMessage()) },
-            "e":        () => { if (focusedPanel === "messages") composer.startEdit(msgs.currentMessage()) },
+            "e":        () => { if (focusedPanel === "messages") { const m = msgs.currentMessage(); if (m && m.mine) composer.startEdit(m) } },
             "D":        () => { if (focusedPanel === "messages") askDelete(msgs.currentMessage()) },
             "b":        () => browse.show(),
             "ctrl+l":   () => Backend.cycleWorkspace(1),
@@ -137,7 +143,7 @@ FloatingWindow {
             "o":      () => Backend.openChannelRef(thread.currentMessage()),
             "r":      () => reactTo(thread.currentMessage()),
             "y":      () => Backend.copyText(thread.currentMessage()),
-            "e":      () => thread.startEdit(thread.currentMessage()),
+            "e":      () => { const m = thread.currentMessage(); if (m && m.mine) thread.startEdit(m) },
             "D":      () => askDelete(thread.currentMessage()),
             "j":      () => thread.move(1),
             "k":      () => thread.move(-1),
@@ -165,6 +171,8 @@ FloatingWindow {
         const ctrl = e.modifiers & Qt.ControlModifier
         const id = keyId(e, ctrl)
         if (!id) return
+        // Ctrl+D/U must not multi-fire on a held/repeated press (one tap = one half-page)
+        if (e.isAutoRepeat && (id === "ctrl+d" || id === "ctrl+u")) { e.accepted = true; return }
         // numeric count prefix (for j/k jumps like 15k); 0 only extends a count
         if (!ctrl && id.length === 1 && id >= "0" && id <= "9") {
             if (id !== "0" || pendingCount > 0) {
@@ -304,6 +312,7 @@ FloatingWindow {
                             anchors.leftMargin: 16; anchors.rightMargin: 16
                             onExitInsert: win.backToNormal()
                             onOpenPalette: palette.show()
+                            onPageScroll: (d) => win.halfPage(d)
                             // Clicking into the composer makes the messages panel the
                             // focused one, so the state machine is in sync on Esc.
                             onInputHasFocusChanged: if (inputHasFocus) win.focusPanel("messages")

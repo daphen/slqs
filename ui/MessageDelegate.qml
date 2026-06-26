@@ -17,20 +17,49 @@ Item {
     required property string replyAuthor
     required property string replyText
     required property string subtype
+    property bool inThread: false   // true when rendered in the thread panel
     required property int    index
+    required property bool   pending
+    required property string day
     readonly property bool isReply: replyAuthor.length > 0 || replyText.length > 0
+    // Per-row date divider: shown when this is the first message of its day (channel
+    // only). Replaces the ListView section, which mis-dated rows after image reflows.
+    readonly property string _prevDay: (ListView.view && index > 0) ? (ListView.view.model.get(index - 1).day || "") : ""
+    readonly property bool showDay: !inThread && (index === 0 || day !== _prevDay)
+    readonly property real _dayPad: showDay ? 34 : 0
     width: ListView.view ? ListView.view.width : 600
     // extra height must match body's top margin so top/bottom padding stay even
     // (a grouped message with a reply line uses the larger 7px top margin).
-    implicitHeight: body.implicitHeight + ((grouped && !isReply) ? 6 : 14)
+    implicitHeight: _dayPad + body.implicitHeight + ((grouped && !isReply) ? 6 : 14)
+    // pending optimistic send: lighter until the server echo lands, then fade in
+    opacity: pending ? 0.5 : 1.0
+    Behavior on opacity { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
 
     readonly property var reactions: JSON.parse(reactionsJson)
     readonly property var images: (imagesJson && imagesJson.length) ? JSON.parse(imagesJson) : []
     readonly property bool cursor: ListView.isCurrentItem && ListView.view && ListView.view.active
     readonly property bool emojiOnly: Backend.isEmojiOnly(text)
 
+    // date divider, rendered as part of this row (the first message of a day)
+    Item {
+        id: dayDiv
+        visible: del.showDay
+        anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
+        height: del._dayPad
+        Rectangle { anchors.verticalCenter: parent.verticalCenter; x: 20; width: parent.width - 40
+                    height: 1; color: Theme.hairline }
+        Rectangle {
+            anchors.centerIn: parent; height: 20; radius: 10
+            width: dayLbl.implicitWidth + 22
+            color: Theme.bg; border.color: Theme.hairline; border.width: 1
+            Text { id: dayLbl; anchors.centerIn: parent; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                   text: Backend.dayLabel(del.day); color: Theme.fg_muted
+                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12; font.weight: 700 }
+        }
+    }
+
     Rectangle {
-        anchors.fill: parent
+        anchors { top: parent.top; topMargin: del._dayPad; left: parent.left; right: parent.right; bottom: parent.bottom }
         // No color/opacity animation here: the cursor must snap instantly so fast
         // j/k navigation doesn't catch rows mid-fade (reads as blinking).
         color: del.cursor ? Theme.selection
@@ -43,7 +72,7 @@ Item {
 
     // Brief accent pulse when this row is jumped to via a permalink.
     Rectangle {
-        anchors.fill: parent
+        anchors { top: parent.top; topMargin: del._dayPad; left: parent.left; right: parent.right; bottom: parent.bottom }
         color: Theme.sky
         opacity: (del.ListView.view && del.ListView.view.flashIndex === del.index) ? 0.28 : 0
         Behavior on opacity { NumberAnimation { duration: 320 } }
@@ -59,7 +88,7 @@ Item {
         // Center on the avatar (pfp) for a leading message; for a grouped message
         // (no avatar) center on its single text line instead.
         anchors.top: parent.top
-        anchors.topMargin: del.grouped ? 3 : 9
+        anchors.topMargin: (del.grouped ? 3 : 9) + del._dayPad
         height: del.grouped ? 20 : 36
         Rectangle {
             visible: del.cursor; anchors.centerIn: parent
@@ -79,7 +108,7 @@ Item {
     Item {
         id: gutter
         x: 26; width: 40
-        anchors.top: parent.top; anchors.topMargin: del.grouped ? 3 : 9
+        anchors.top: parent.top; anchors.topMargin: (del.grouped ? 3 : 9) + del._dayPad
         height: 40
         ClippingRectangle {
             visible: !del.grouped
@@ -113,7 +142,7 @@ Item {
         id: body
         anchors.left: gutter.right; anchors.leftMargin: 10
         anchors.right: parent.right; anchors.rightMargin: 18
-        anchors.top: parent.top; anchors.topMargin: del.grouped && !del.isReply ? 3 : 7
+        anchors.top: parent.top; anchors.topMargin: (del.grouped && !del.isReply ? 3 : 7) + del._dayPad
         spacing: 3
 
         // reply context (Discord): "↰ author  quoted snippet" above the message
@@ -276,11 +305,12 @@ Item {
             }
         }
 
-        // broadcast — a thread reply the author also sent to the channel; Enter opens the thread
+        // broadcast — a thread reply also sent to the channel. In the channel it
+        // reads "replied to a thread"; in the thread it reads "also sent to channel".
         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
             visible: del.subtype === "thread_broadcast"
             topPadding: 3
-            text: "↪ replied to a thread"
+            text: del.inThread ? "↪ also sent to channel" : "↪ replied to a thread"
             color: Theme.fg_muted
             font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12; font.italic: true
         }

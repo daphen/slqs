@@ -99,7 +99,7 @@ Rectangle {
         clip: true; cacheBuffer: 1000000; topMargin: 6; bottomMargin: 8
         boundsBehavior: Flickable.StopAtBounds
         model: Backend.thread
-        delegate: MessageDelegate {}
+        delegate: MessageDelegate { inThread: true }
         // the delegate's cursor highlight shows when its ListView is "active";
         // the thread list is active whenever the panel is open and not replying.
         property bool active: Backend.threadOpen && !panel.replyHasFocus
@@ -187,6 +187,10 @@ Rectangle {
             border.color: replyInput.focus ? Theme.cursor : Theme.hairline
             // same `:` emoji + `@` mention autocomplete as the channel composer
             Autocomplete { id: replyAc; anchors.fill: parent; input: replyInput }
+            Connections {
+                target: Backend
+                function onPasteFallback() { if (replyInput.activeFocus) replyInput.paste() }
+            }
             // Top-anchored Flickable + content-sized TextArea (mirrors Composer):
             // the box grows with the text and a single line sits aligned instead
             // of pinned to the top of a fixed-height field.
@@ -208,11 +212,12 @@ Rectangle {
                 placeholderText: panel.editingTs !== "" ? "Editing… (Esc to cancel)" : "Reply…"
                 placeholderTextColor: Theme.fg_muted
                 background: null
-                onTextChanged: replyAc.update()
+                onTextChanged: { replyAc.update(); if (text.length > 0) Backend.notifyTyping() }
                 onCursorPositionChanged: replyAc.update()
                 Keys.onPressed: e => {
-                    if ((e.modifiers & Qt.ControlModifier) && e.key === Qt.Key_V)
-                        Backend.pasteImage(Backend.threadParentTs)   // upload into this thread
+                    if ((e.modifiers & Qt.ControlModifier) && e.key === Qt.Key_V) {
+                        Backend.pasteImage(Backend.threadParentTs); e.accepted = true; return
+                    }
                     // Ctrl+E: edit the last message you sent in this thread.
                     if ((e.modifiers & Qt.ControlModifier) && e.key === Qt.Key_E) {
                         const m = Backend.lastMineInThread(); if (m) panel.startEdit(m)
@@ -221,6 +226,11 @@ Rectangle {
                     // Ctrl+K: jump palette from the reply input too (drops to normal).
                     if ((e.modifiers & Qt.ControlModifier) && e.key === Qt.Key_K) {
                         panel.openPalette(); e.accepted = true; return
+                    }
+                    // Ctrl+D/U: drop to normal mode and scroll the thread.
+                    if ((e.modifiers & Qt.ControlModifier) && (e.key === Qt.Key_D || e.key === Qt.Key_U)) {
+                        panel.exitReply(); panel.move(e.key === Qt.Key_D ? 8 : -8)
+                        e.accepted = true; return
                     }
                     if (replyAc.handleKey(e)) { e.accepted = true; return }
                     if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) {
@@ -237,7 +247,7 @@ Rectangle {
                         }
                         return
                     }
-                    if (e.key === Qt.Key_Escape) { panel.editingTs = ""; clear(); panel.exitReply(); e.accepted = true }
+                    if (e.key === Qt.Key_Escape) { if (panel.editingTs !== "") { panel.editingTs = ""; clear() } panel.exitReply(); e.accepted = true }
                 }
             }
             }

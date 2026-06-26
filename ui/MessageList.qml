@@ -9,26 +9,9 @@ ListView {
     model: Backend.messages
     delegate: MessageDelegate {}
 
-    // Date dividers: messages are chronological, so grouping by the YYYYMMDD
-    // `day` key gives one "—— Today ——" header per day. Helps avoid replying to
-    // stale messages from an earlier day.
-    section.property: "day"
-    section.delegate: Item {
-        id: secItem
-        required property string section
-        width: ListView.view.width; height: 34
-        Rectangle { anchors.verticalCenter: parent.verticalCenter; x: 20; width: parent.width - 40
-                    height: 1; color: Theme.hairline }
-        Rectangle {
-            anchors.centerIn: parent; height: 20; radius: 10
-            width: dayLbl.implicitWidth + 22
-            color: Theme.bg; border.color: Theme.hairline; border.width: 1
-            Text { id: dayLbl; anchors.centerIn: parent; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
-                   text: Backend.dayLabel(secItem.section); color: Theme.fg_muted
-                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
-                   font.pixelSize: 12; font.weight: 700 }
-        }
-    }
+    // Date dividers are now rendered per-row inside MessageDelegate (first message
+    // of each day), not via ListView sections — section headers mis-dated rows
+    // after image reflows because their delegates didn't refresh their date.
     spacing: 0
     topMargin: 6
     bottomMargin: 10          // last message + reactions clear the composer
@@ -104,6 +87,9 @@ ListView {
 
     Connections {
         target: Backend
+        // optimistic insert/reconcile changed item heights in place → re-flow so
+        // section (date) dividers don't render at stale positions over messages.
+        function onReflowList() { Qt.callLater(list.forceLayout) }
         function onCurrentChannelChanged() {
             list.pinBottom = true; list.stick = true
             Qt.callLater(list.goBottomNow); pinTimer.restart()
@@ -197,19 +183,17 @@ ListView {
     // a fixed row count was a full screen once images are in play). Cursor
     // follows to a still-visible item without re-scrolling.
     function half(d) {
-        const maxY = Math.max(0, contentHeight - height)
-        contentY = Math.max(0, Math.min(maxY, contentY + d * height * 0.5))
-        // Scrolling down into the bottom: snap fully to the last message and
-        // follow new ones, so ctrl+d reliably lands you at the end.
-        if (d > 0 && contentY >= maxY - 4) {
-            currentIndex = count - 1
-            positionViewAtIndex(count - 1, ListView.End)
-            stick = true
-            return
-        }
-        const idx = indexAt(width / 2, contentY + height / 2)
-        if (idx >= 0) currentIndex = idx
-        stick = atYEnd
+        // Move the cursor by ~half a screen of PIXELS relative to where it is, so it
+        // adapts to message height and works whether the channel scrolls or fits on
+        // screen. Clamp to the ends; scroll only to keep the cursor visible.
+        const it = itemAtIndex(currentIndex)
+        const baseY = it ? it.y + it.height / 2 : contentY + height / 2
+        let idx = indexAt(width / 2, baseY + d * height * 0.5)
+        if (idx < 0) idx = (d > 0) ? count - 1 : 0
+        currentIndex = Math.max(0, Math.min(count - 1, idx))
+        if (currentIndex >= count - 1) positionViewAtIndex(count - 1, ListView.End)
+        else positionViewAtIndex(currentIndex, ListView.Contain)
+        stick = atYEnd || currentIndex >= count - 1
         if (d < 0) maybeLoadOlder()
     }
     function currentMessage() { return (currentIndex >= 0 && currentIndex < count) ? model.get(currentIndex) : null }

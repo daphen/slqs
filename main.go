@@ -980,6 +980,10 @@ func (d *daemon) readConn(c net.Conn) {
 		}
 		id := cmd.Channel
 		switch cmd.Type {
+		case "typing":
+			if id != "" {
+				w.client.SendTyping(id)
+			}
 		case "send":
 			go func(w *workspace) {
 				// If an image is still uploading for this channel, wait so it
@@ -1115,8 +1119,13 @@ func (d *daemon) readConn(c net.Conn) {
 					fail()
 					return
 				}
-				// Stage (upload but don't post) — the next message posts it.
 				name := "pasted." + ext
+				// Show an "uploading" state immediately + hand the UI the local file
+				// (for an optimistic preview) before the upload finishes.
+				tmp := "/tmp/slqs-paste." + ext
+				_ = os.WriteFile(tmp, data, 0o600)
+				d.broadcast(map[string]any{"type": "attachUploading", "channel": id, "name": name, "path": "file://" + tmp})
+				// Stage (upload but don't post) — the next message posts it.
 				fileID, err := w.client.StageUpload(d.ctx, name, data)
 				if err != nil {
 					log.Printf("upload: %v", err)

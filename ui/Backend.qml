@@ -378,11 +378,13 @@ Item {
     function normMsg(m) {
         if (m.replyAuthor === undefined) m.replyAuthor = ""
         if (m.replyText === undefined) m.replyText = ""
+        if (m.replyToTs === undefined) m.replyToTs = ""
         if (m.mine === undefined) m.mine = false
         if (m.day === undefined) m.day = m.ts ? dayKeyOf(m.ts) : ""
         if (m.subtype === undefined) m.subtype = ""
         if (m.thread_ts === undefined) m.thread_ts = ""
         if (m.channelRef === undefined) m.channelRef = ""
+        if (m.pending === undefined) m.pending = false
         return m
     }
     // ctrl+e in insert mode: the last message you sent, scoped to the panel.
@@ -524,9 +526,11 @@ Item {
     // it shows in the composer and goes out with the next message (on Enter).
     property string attachState: "none"   // "none" | "uploading" | "ready"
     property string attachName: ""
+    property bool _awaitingPaste: false   // Ctrl+V sent; awaiting the daemon's image-or-text verdict
+    property string _pendingImagePath: "" // local file:// of a staged paste image (for optimistic preview)
     function pasteImage(thread) {
         if (!currentChannelId) return
-        attachState = "uploading"; attachName = ""
+        _awaitingPaste = true
         safeWrite(JSON.stringify({ type: "uploadClipboard", channel: currentChannelId, thread: thread || "" }) + "\n")
     }
     function dropAttach() {
@@ -534,7 +538,55 @@ Item {
         attachState = "none"; attachName = ""
         safeWrite(JSON.stringify({ type: "dropAttach", channel: currentChannelId }) + "\n")
     }
-    function clearAttach() { attachState = "none"; attachName = "" }
+    function clearAttach() { attachState = "none"; attachName = ""; _awaitingPaste = false; _pendingImagePath = "" }
+    // Clipboard held no image → the focused input should paste text instead.
+    signal pasteFallback()
+
+    // --- optimistic send: show your message instantly, reconcile with the echo ---
+    property var _selfProfile: null   // {author,initials,color,avatar} learned from your own messages
+    property int _optSeq: 0
+    function _insertOptimistic(id, text, imagesJson) {
+        if (id !== currentChannelId) return
+        const p = _selfProfile || {}
+        const now = new Date()
+        const arr = _store[id] || (_store[id] = [])
+        const last = arr.length ? arr[arr.length - 1] : null
+        const m = normMsg({
+            ts: "opt-" + (++_optSeq), user: "", mine: true, pending: true,
+            author: p.author || "You", initials: p.initials || "·",
+            color: p.color || "#9aa0a6", avatar: p.avatar || "",
+            time: Qt.formatDateTime(now, "HH:mm"), text: text,
+            reactionsJson: "[]", imagesJson: imagesJson || "[]", replyAuthor: "", replyText: "",
+            subtype: "", reply_count: 0, thread_ts: "", channelRef: "",
+            // Real (today) day key — matches the echo, so reconcile never changes
+            // the section. (Faking the previous message's day scrambled the dividers.)
+            day: _dk(now)
+        })
+        m.grouped = last ? _grp(last, m) : false
+        arr.push(m)
+        messagesModel.append(m)
+        reflowList()
+    }
+    // The server echoed one of our messages → swap it into its optimistic slot
+    // (oldest pending with matching text; echoes arrive in send order).
+    function _reconcileOptimistic(id, msg) {
+        const arr = _store[id]
+        if (!arr) return false
+        for (let i = 0; i < arr.length; i++) {
+            if (arr[i].pending && arr[i].mine) {   // FIFO: echoes arrive in send order; text-match broke on mentions/rendering
+                const optTs = arr[i].ts
+                msg.pending = false; msg.grouped = arr[i].grouped
+                arr[i] = msg
+                if (id === currentChannelId) {
+                    for (let j = 0; j < messagesModel.count; j++)
+                        if (messagesModel.get(j).ts === optTs) { messagesModel.set(j, msg); break }
+                    reflowList()   // swapped an item in place → re-flow so date dividers don't go stale
+                }
+                return true
+            }
+        }
+        return false
+    }
 
     // Transient status toast (e.g. "Copied"); the shell renders it and fades out.
     signal toast(string message)
@@ -573,13 +625,33 @@ Item {
     function joinChannel(id, name) { safeWrite(JSON.stringify({ type: "join", workspace: currentWorkspace, channel: id, text: name }) + "\n") }
 
     signal sentMessage()   // chat should jump to the bottom to show it
+    signal reflowList()    // optimistic in-place update → MessageList re-flows so date dividers don't go stale
+    // Tell the server we're typing so others see the indicator — throttled, since
+    // the server-side indicator lasts ~10s (re-send while still typing).
+    property real _lastTyping: 0
+    function notifyTyping() {
+        if (!currentChannelId) return
+        const now = Date.now()
+        if (now - _lastTyping < 8000) return
+        _lastTyping = now
+        safeWrite(JSON.stringify({ type: "typing", channel: currentChannelId }) + "\n")
+    }
     function sendMessage(text) {
         const t = (text || "").trim()
         if (t.length === 0 && attachState === "none") return   // allow attachment-only sends
         // Real send: slkd → Client.SendMessage. Slack echoes it back, so it
         // lands via ingest() like any other message. A staged attachment (if any)
         // is held per-channel by the daemon and goes out with this send.
-        safeWrite(JSON.stringify({ type: "send", channel: currentChannelId, text: resolveMentions(t) }) + "\n")
+        const sent = resolveMentions(t)
+        // A staged paste image → preview it inline (dimmed) from its local file.
+        let imgs = ""
+        if (attachState !== "none" && _pendingImagePath) {
+            const gif = _pendingImagePath.toLowerCase().indexOf(".gif") !== -1
+            imgs = JSON.stringify([{ type: gif ? "gif" : "img", path: _pendingImagePath, w: 0, h: 0 }])
+        }
+        safeWrite(JSON.stringify({ type: "send", channel: currentChannelId, text: sent }) + "\n")
+        // Show it immediately (text and/or image); the echo reconciles it in place.
+        if (imgs || t.length > 0) _insertOptimistic(currentChannelId, t, imgs)   // typed text, not resolved markup → clean mention placeholder
         clearAttach()
         sentMessage()
     }
@@ -672,10 +744,20 @@ Item {
         else if (e.type === "open") openFromNotification(e.workspace, e.channel, e.thread)
         else if (e.type === "typing") showTyping(e.channel, e.thread, e.user)
         else if (e.type === "reactors") applyReactors(e.ts, e.reactions)
+        else if (e.type === "attachUploading") {
+            // Daemon found a clipboard image and began uploading → show the
+            // "uploading" chip now. Text pastes never reach here, so no false flash.
+            _awaitingPaste = false
+            attachState = "uploading"; attachName = e.name || "image"
+            _pendingImagePath = e.path || ""
+        }
         else if (e.type === "attachReady") {
-            // Only update while still staging; if the user already sent (the daemon
-            // waits for the in-flight upload and attaches it), ignore the late ready.
-            if (attachState === "uploading") { attachState = e.ok ? "ready" : "none"; attachName = e.name || "image" }
+            // Upload finished (ok) — or no image / failed. A no-image verdict while
+            // still awaiting the Ctrl+V result → paste the clipboard text instead.
+            if (e.ok) { attachState = "ready"; attachName = e.name || "image" }
+            else if (_awaitingPaste) pasteFallback()
+            else attachState = "none"
+            _awaitingPaste = false
         }
     }
 
@@ -768,6 +850,8 @@ Item {
     }
     function ingest(id, msg, thread, mention) {
         normMsg(msg)
+        if (msg.mine && msg.author)
+            _selfProfile = { author: msg.author, initials: msg.initials, color: msg.color, avatar: msg.avatar }
         const isBroadcast = msg.subtype === "thread_broadcast"
         // A plain reply lives only in the thread panel. A broadcast ("also sent to
         // channel") shows in the thread AND the channel timeline, so it falls through.
@@ -801,6 +885,8 @@ Item {
                 return
             }
         }
+        // A just-echoed message of ours → drop it into its optimistic placeholder.
+        if (msg.mine && _reconcileOptimistic(id, msg)) return
         if (!_store[id]) _store[id] = []
         const arr = _store[id]
         msg.grouped = arr.length > 0 && _grp(arr[arr.length - 1], msg)
@@ -947,8 +1033,9 @@ Item {
     function closeThread() { threadOpen = false }
     function sendThreadReply(text, broadcast) {
         const t = (text || "").trim()
-        if (t.length === 0 || !threadParentTs) return
+        if ((t.length === 0 && attachState === "none") || !threadParentTs) return
         safeWrite(JSON.stringify({ type: "send", channel: currentChannelId, text: resolveMentions(t), thread: threadParentTs, broadcast: !!broadcast }) + "\n")
+        clearAttach()
     }
     function showTyping(id, thread, who) {
         if (!who) return
