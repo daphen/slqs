@@ -1659,7 +1659,8 @@ func (d *daemon) cacheCustomEmoji(ctx context.Context, w *workspace, into map[st
 	wg.Wait()
 	mu.Lock()
 	defer mu.Unlock()
-	out := filepath.Join(os.Getenv("HOME"), "personal", "slk-gui-proto", "emoji.json")
+	os.MkdirAll(xdgData(), 0700)
+	out := filepath.Join(xdgData(), "emoji.json")
 	if b, err := json.Marshal(into); err == nil {
 		os.WriteFile(out, b, 0644)
 		log.Printf("[%s] custom emoji cached (%d)", w.teamName, len(into[w.teamID]))
@@ -1793,7 +1794,8 @@ func main() {
 
 	// Standard shortcode→unicode table for the client's emoji picker/autocomplete.
 	if b, err := json.Marshal(emojiMap); err == nil {
-		os.WriteFile(filepath.Join(os.Getenv("HOME"), "personal", "slk-gui-proto", "codemap.json"), b, 0644)
+		os.MkdirAll(xdgData(), 0700)
+		os.WriteFile(filepath.Join(xdgData(), "codemap.json"), b, 0644)
 	}
 
 	sock := socketPath()

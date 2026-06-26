@@ -847,7 +847,7 @@ Item {
         const arr = Array.isArray(paths) ? paths : [paths]
         // strip file://; newline-join so the script opens them all together.
         const raw = arr.map(function (p) { return p.indexOf("file://") === 0 ? p.slice(7) : p })
-        Quickshell.execDetached([Quickshell.env("HOME") + "/.config/endcord/media-viewer.sh", raw.join("\n"), mediatype || "img"])
+        Quickshell.execDetached([(Quickshell.env("SLK_MEDIA_VIEWER") || (Quickshell.env("HOME") + "/.config/endcord/media-viewer.sh")), raw.join("\n"), mediatype || "img"])
     }
     // `o` — open the focused message's link: Slack permalinks jump in-client,
     // everything else goes to the browser.
@@ -1082,8 +1082,10 @@ Item {
     Timer { id: typingClear; interval: 4000; onTriggered: backend.typing = false }
     Timer { id: threadTypingClear; interval: 4000; onTriggered: backend.threadTyping = false }
 
+    readonly property string _dataDir: (Quickshell.env("XDG_DATA_HOME") || (Quickshell.env("HOME") + "/.local/share")) + "/" + (Quickshell.env("SLK_SOCK") || "slqs")
+
     FileView {
-        path: Quickshell.env("HOME") + "/personal/slk-gui-proto/emoji" + (Quickshell.env("SLK_SOCK") === "dsqrd" ? "-dsqrd" : "") + ".json"
+        path: backend._dataDir + "/emoji" + (Quickshell.env("SLK_SOCK") === "dsqrd" ? "-dsqrd" : "") + ".json"
         watchChanges: true
         onFileChanged: reload()
         onLoaded: {
@@ -1099,7 +1101,7 @@ Item {
     }
 
     FileView {
-        path: Quickshell.env("HOME") + "/personal/slk-gui-proto/codemap.json"
+        path: backend._dataDir + "/codemap.json"
         watchChanges: true
         onFileChanged: reload()
         onLoaded: { try { backend._codemap = JSON.parse(text()) } catch (e) {} }
