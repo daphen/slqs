@@ -130,18 +130,48 @@ Item {
 
     // Emoji search for the picker: returns {name, custom, path, glyph}. Custom
     // (workspace) emoji first, then standard. Empty query returns a sample.
+    // Relevance rank for a candidate name against the query: lower is better.
+    // exact (0) > prefix (1) > word-boundary, after _/-/space (2) > substring (3);
+    // -1 = no match. This is what puts ":heart:" above ":anthropic-heart:".
+    function _emojiRank(name, q) {
+        const i = name.indexOf(q)
+        if (i < 0) return -1
+        if (name === q) return 0
+        if (i === 0) return 1
+        const prev = name[i - 1]
+        return (prev === "_" || prev === "-" || prev === " ") ? 2 : 3
+    }
     function searchEmoji(q, limit) {
         q = (q || "").toLowerCase()
-        const out = []
         const cust = _emojiByWs[currentWorkspace] || ({})   // only this workspace's customs
+        if (!q) {
+            const out = []
+            for (const name in cust) { out.push({ name: name, custom: true, path: cust[name], glyph: "" }); if (out.length >= limit) return out }
+            for (const key in _codemap) { out.push({ name: key.slice(1, -1), custom: false, path: "", glyph: _codemap[key] }); if (out.length >= limit) return out }
+            return out
+        }
+        // Score every match across customs + standard, then sort — can't bail early
+        // or the best match (often a standard emoji) gets cut by the limit.
+        const scored = []
         for (const name in cust) {
-            if (!q || name.indexOf(q) >= 0) out.push({ name: name, custom: true, path: cust[name], glyph: "" })
-            if (out.length >= limit) return out
+            const r = _emojiRank(name, q)
+            if (r >= 0) scored.push({ r: r, name: name, custom: true, path: cust[name], glyph: "" })
         }
         for (const key in _codemap) {
             const name = key.slice(1, -1)
-            if (!q || name.indexOf(q) >= 0) out.push({ name: name, custom: false, path: "", glyph: _codemap[key] })
-            if (out.length >= limit) return out
+            const r = _emojiRank(name, q)
+            if (r >= 0) scored.push({ r: r, name: name, custom: false, path: "", glyph: _codemap[key] })
+        }
+        scored.sort(function(a, b) {
+            if (a.r !== b.r) return a.r - b.r
+            if (a.name.length !== b.name.length) return a.name.length - b.name.length
+            if (a.custom !== b.custom) return a.custom ? -1 : 1   // workspace customs win ties
+            return a.name < b.name ? -1 : 1
+        })
+        const out = []
+        for (let i = 0; i < scored.length && out.length < limit; i++) {
+            const s = scored[i]
+            out.push({ name: s.name, custom: s.custom, path: s.path, glyph: s.glyph })
         }
         return out
     }
