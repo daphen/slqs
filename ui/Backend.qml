@@ -1167,25 +1167,19 @@ Item {
                 safeWrite(JSON.stringify({ type: "replies", channel: backend.currentChannelId, thread: backend.threadParentTs }) + "\n")
         }
     }
-    Component.onCompleted: lastRecv = Date.now()
-    // Heartbeat-driven reconnect. slkd pings every 3s; if we've heard nothing for
-    // 8s the socket is dead (sock.connected can't be trusted — it stays stuck-true
-    // on a server-side close). Force a re-dial in two phases (drop, then connect a
-    // tick later — doing both at once races the disconnect against the connect).
+    // Reconnect: re-dial whenever we haven't heard from slkd recently. lastRecv starts
+    // at 0, so a cold start re-dials immediately instead of sitting empty until you
+    // reopen the window — `sock.connected` can read true after a failed connect (so
+    // checking it misses the case), and seeding lastRecv to launch time delayed the
+    // staleness path for 8s. slkd pings every 3s; 8s of silence = dead/never-connected.
+    // Toggle connected false→true across two ticks to force a real re-dial (doing both
+    // at once races the disconnect against the connect).
     Timer {
         id: reconnect
         interval: 1000; repeat: true; running: true
         property bool dropping: false
         onTriggered: {
-            // Cold start / after a drop: the socket simply isn't connected yet (e.g. the
-            // daemon hasn't bound it — it needs a network round-trip first). Re-dial every
-            // tick until it takes; don't wait for the staleness window, which left the UI
-            // empty on cold start because lastRecv was seeded to launch time (issue #2).
-            if (!sock.connected) { dropping = false; sock.connected = true; return }
-            // Connected but silent for 8s → Quickshell's `connected` is stuck-true after a
-            // server-side close. Force a re-dial in two phases (drop, then connect next tick).
-            const stale = (Date.now() - backend.lastRecv) > 8000
-            if (!stale) { dropping = false; return }
+            if ((Date.now() - backend.lastRecv) <= 8000) { dropping = false; return }
             if (!dropping) { sock.connected = false; dropping = true }
             else { sock.connected = true; dropping = false }
         }
