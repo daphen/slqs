@@ -29,6 +29,14 @@ Item {
     property string updateCurrent: ""
     property string updateLatest: ""
     function dismissUpdate() { updateAvailable = false }
+    // `U` → run the host's apply command. Detect-only: the app never self-updates;
+    // SLK_UPDATE_CMD is the host's "apply" step (e.g. bump the flake + rebuild +
+    // restart). Runs via `sh -c` so the command can spawn its own terminal for sudo.
+    function applyUpdate() {
+        const cmd = Quickshell.env("SLK_UPDATE_CMD")
+        if (cmd && cmd.length > 0) Quickshell.execDetached(["sh", "-c", cmd])
+        else toast("No update command set — configure SLK_UPDATE_CMD")
+    }
 
     // Multiple Slack workspaces. The sidebar shows one workspace at a time;
     // channels are keyed by id (names collide across workspaces).

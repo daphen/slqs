@@ -287,6 +287,8 @@ type daemon struct {
 	mu    sync.Mutex
 	conns map[net.Conn]struct{}
 
+	updateEvent map[string]any // latest updateAvailable event, replayed to new clients
+
 	presenceActive atomic.Bool // false while idle (swayidle) — gates the tickle heartbeat
 }
 
@@ -1826,8 +1828,14 @@ func main() {
 			}
 			d.mu.Lock()
 			d.conns[c] = struct{}{}
+			ue := d.updateEvent
 			d.mu.Unlock()
 			log.Println("client connected")
+			if ue != nil { // replay update-available state to a (re)connecting client
+				if b, err := json.Marshal(ue); err == nil {
+					c.Write(b)
+				}
+			}
 			go d.sendChannels(c)
 			go d.readConn(c)
 		}
@@ -1882,8 +1890,12 @@ func main() {
 				b, _ := io.ReadAll(io.LimitReader(resp.Body, 64))
 				latest := strings.TrimSpace(string(b))
 				if latest != "" && latest != gitRev {
-					d.broadcast(map[string]any{"type": "updateAvailable",
-						"current": shortRev(gitRev), "latest": shortRev(latest)})
+					ev := map[string]any{"type": "updateAvailable",
+						"current": shortRev(gitRev), "latest": shortRev(latest)}
+					d.mu.Lock()
+					d.updateEvent = ev
+					d.mu.Unlock()
+					d.broadcast(ev)
 				}
 			}
 			check()
