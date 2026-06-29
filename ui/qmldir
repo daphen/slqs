@@ -13,3 +13,4 @@ Autocomplete Autocomplete.qml
 BrowsePicker BrowsePicker.qml
 WorkspacePicker WorkspacePicker.qml
 ConfirmDialog ConfirmDialog.qml
+KeybindHelp KeybindHelp.qml

@@ -90,80 +90,93 @@ FloatingWindow {
         return e.text   // j k h l g i q /
     }
 
+    // Each entry is { act, help, cat }: `act` runs on the key (routeKey calls it),
+    // `help`/`cat` feed the `?` cheat sheet (KeybindHelp reads this table live, so
+    // it can never drift). `help` may be a function for app-specific wording.
+    // cat ∈ nav | chats | msg | thread | view. Entries are ordered by category for
+    // clean display; routeKey looks up by key id, so order is cosmetic.
     readonly property var keymaps: ({
         "channel": {
-            "ctrl+k":   () => palette.show(),
-            "ctrl+s":   () => workspacePicker.show(),
-            "esc":      () => backToNormal(),
-            "tab":      () => cyclePanel(1),
-            "shift+tab":() => cyclePanel(-1),
-            "enter":    () => activate(),
-            "ctrl+d":   () => halfPage(1),
-            "ctrl+u":   () => halfPage(-1),
-            "ctrl+e":   () => scrollView(1),
-            "ctrl+y":   () => scrollView(-1),
-            "ctrl+g":   () => goBottom(),
-            "G":        () => goBottom(),
-            "j":        () => moveCursor(1),
-            "k":        () => moveCursor(-1),
-            "h":        () => focusPanel("sidebar"),
-            "l":        () => focusPanel("messages"),
-            "g":        () => goTop(),
-            // typing composes to the open channel → make the chat the active panel
-            "i":        () => { focusPanel("messages"); composer.focusInput() },
-            "v":        () => { if (focusedPanel === "messages") Backend.viewImage(msgs.currentMessage()) },
-            "o":        () => { if (focusedPanel === "messages") Backend.openChannelRef(msgs.currentMessage()) },
-            "r":        () => { if (focusedPanel === "messages") reactTo(msgs.currentMessage()) },
-            "R":        () => { if (focusedPanel === "messages") { composer.startReply(msgs.currentMessage()); focusPanel("messages") } },
-            "y":        () => { if (focusedPanel === "messages") Backend.copyText(msgs.currentMessage()) },
-            "e":        () => { if (focusedPanel === "messages") { const m = msgs.currentMessage(); if (m && m.mine) composer.startEdit(m) } },
-            "D":        () => { if (focusedPanel === "messages") askDelete(msgs.currentMessage()) },
-            "b":        () => browse.show(),
-            "ctrl+l":   () => Backend.cycleWorkspace(1),
-            "ctrl+h":   () => Backend.cycleWorkspace(-1),
-            "/":        () => sidebar.focusSearch(),
+            // navigate
+            "j":        { act: () => moveCursor(1),  help: "Move down", cat: "nav" },
+            "k":        { act: () => moveCursor(-1), help: "Move up", cat: "nav" },
+            "h":        { act: () => focusPanel("sidebar"),  help: "Focus sidebar", cat: "nav" },
+            "l":        { act: () => focusPanel("messages"), help: "Focus messages", cat: "nav" },
+            "g":        { act: () => goTop(),    help: "Jump to top", cat: "nav" },
+            "G":        { act: () => goBottom(), help: "Jump to bottom", cat: "nav" },
+            "ctrl+d":   { act: () => halfPage(1),  help: "Half-page down", cat: "nav" },
+            "ctrl+u":   { act: () => halfPage(-1), help: "Half-page up", cat: "nav" },
+            "ctrl+e":   { act: () => scrollView(1),  help: "Scroll down, keep cursor", cat: "nav" },
+            "ctrl+y":   { act: () => scrollView(-1), help: "Scroll up, keep cursor", cat: "nav" },
+            "ctrl+g":   { act: () => goBottom(),    help: "Jump to bottom", cat: "nav" },
+            "tab":      { act: () => cyclePanel(1),  help: "Next panel", cat: "nav" },
+            "shift+tab":{ act: () => cyclePanel(-1), help: "Previous panel", cat: "nav" },
+            // chats
+            "enter":    { act: () => activate(), help: "Open selected", cat: "chats" },
+            "/":        { act: () => sidebar.focusSearch(), help: "Search chats", cat: "chats" },
+            "b":        { act: () => browse.show(), help: "Browse channels", cat: "chats" },
+            "ctrl+k":   { act: () => palette.show(), help: "Jump palette", cat: "chats" },
+            "ctrl+s":   { act: () => workspacePicker.show(), help: () => Backend.railHidden ? "Switch server" : "Switch workspace", cat: "chats" },
+            "ctrl+l":   { act: () => Backend.cycleWorkspace(1),  help: () => Backend.railHidden ? "Next server" : "Next workspace", cat: "chats" },
+            "ctrl+h":   { act: () => Backend.cycleWorkspace(-1), help: () => Backend.railHidden ? "Previous server" : "Previous workspace", cat: "chats" },
+            // messages
+            "i":        { act: () => { focusPanel("messages"); composer.focusInput() }, help: "Compose", cat: "msg" },
+            "R":        { act: () => { if (focusedPanel === "messages") { composer.startReply(msgs.currentMessage()); focusPanel("messages") } }, help: () => Backend.hasThreads ? "Reply in thread" : "Reply to message", cat: "msg" },
+            "e":        { act: () => { if (focusedPanel === "messages") { const m = msgs.currentMessage(); if (m && m.mine) composer.startEdit(m) } }, help: "Edit your message", cat: "msg" },
+            "D":        { act: () => { if (focusedPanel === "messages") askDelete(msgs.currentMessage()) }, help: "Delete your message", cat: "msg" },
+            "r":        { act: () => { if (focusedPanel === "messages") reactTo(msgs.currentMessage()) }, help: "React", cat: "msg" },
+            "y":        { act: () => { if (focusedPanel === "messages") Backend.copyText(msgs.currentMessage()) }, help: "Copy text", cat: "msg" },
+            "o":        { act: () => { if (focusedPanel === "messages") Backend.openChannelRef(msgs.currentMessage()) }, help: "Open link", cat: "msg" },
+            "v":        { act: () => { if (focusedPanel === "messages") Backend.viewImage(msgs.currentMessage()) }, help: "View image", cat: "msg" },
+            // views & general
+            "?":        { act: () => help.show(), help: "This help", cat: "view" },
+            "esc":      { act: () => backToNormal(), help: "Back to normal", cat: "view" },
         },
         "thread": {
-            "ctrl+k": () => palette.show(),
-            "ctrl+s": () => workspacePicker.show(),
-            "q":      () => closeThreadAction(),
-            "esc":    () => closeThreadAction(),
-            "h":      () => closeThreadAction(),   // back out to the channel
-            "i":      () => thread.focusReply(),
-            "ctrl+d": () => thread.move(8),
-            "ctrl+u": () => thread.move(-8),
-            "ctrl+e": () => thread.scroll(1),
-            "ctrl+y": () => thread.scroll(-1),
-            "ctrl+g": () => thread.move(9999),
-            "G":      () => thread.move(9999),    // bottom of thread
-            "g":      () => thread.move(-9999),   // top of thread
-            "ctrl+l": () => Backend.cycleWorkspace(1),
-            "ctrl+h": () => Backend.cycleWorkspace(-1),
-            "v":      () => Backend.viewImage(thread.currentMessage()),
-            "o":      () => Backend.openChannelRef(thread.currentMessage()),
-            "r":      () => reactTo(thread.currentMessage()),
-            "y":      () => Backend.copyText(thread.currentMessage()),
-            "e":      () => { const m = thread.currentMessage(); if (m && m.mine) thread.startEdit(m) },
-            "D":      () => askDelete(thread.currentMessage()),
-            "j":      () => thread.move(1),
-            "k":      () => thread.move(-1),
+            "j":      { act: () => thread.move(1),  help: "Move down", cat: "nav" },
+            "k":      { act: () => thread.move(-1), help: "Move up", cat: "nav" },
+            "g":      { act: () => thread.move(-9999), help: "Jump to top", cat: "nav" },
+            "G":      { act: () => thread.move(9999),  help: "Jump to bottom", cat: "nav" },
+            "ctrl+d": { act: () => thread.move(8),  help: "Half-page down", cat: "nav" },
+            "ctrl+u": { act: () => thread.move(-8), help: "Half-page up", cat: "nav" },
+            "ctrl+e": { act: () => thread.scroll(1),  help: "Scroll down, keep cursor", cat: "nav" },
+            "ctrl+y": { act: () => thread.scroll(-1), help: "Scroll up, keep cursor", cat: "nav" },
+            "ctrl+g": { act: () => thread.move(9999), help: "Jump to bottom", cat: "nav" },
+            "v":      { act: () => Backend.viewImage(thread.currentMessage()), help: "View image", cat: "msg" },
+            "o":      { act: () => Backend.openChannelRef(thread.currentMessage()), help: "Open link", cat: "msg" },
+            "r":      { act: () => reactTo(thread.currentMessage()), help: "React", cat: "msg" },
+            "y":      { act: () => Backend.copyText(thread.currentMessage()), help: "Copy text", cat: "msg" },
+            "e":      { act: () => { const m = thread.currentMessage(); if (m && m.mine) thread.startEdit(m) }, help: "Edit your message", cat: "msg" },
+            "D":      { act: () => askDelete(thread.currentMessage()), help: "Delete your message", cat: "msg" },
+            "ctrl+k": { act: () => palette.show(), help: "Jump palette", cat: "chats" },
+            "ctrl+s": { act: () => workspacePicker.show(), help: "Switch workspace", cat: "chats" },
+            "ctrl+l": { act: () => Backend.cycleWorkspace(1),  help: "Next workspace", cat: "chats" },
+            "ctrl+h": { act: () => Backend.cycleWorkspace(-1), help: "Previous workspace", cat: "chats" },
+            // thread-specific (feeds the THREADS section of the cheat sheet)
+            "i":      { act: () => thread.focusReply(), help: "Reply in thread", cat: "thread" },
+            "q":      { act: () => closeThreadAction(), help: "Close thread", cat: "thread" },
+            "h":      { act: () => closeThreadAction(), help: "Back to channel", cat: "thread" },
+            "?":      { act: () => help.show(), help: "This help", cat: "view" },
+            "esc":    { act: () => closeThreadAction(), help: "Close thread", cat: "view" },
         },
         "threadsPage": {
-            "ctrl+k": () => palette.show(),
-            "ctrl+s": () => workspacePicker.show(),
-            "q":      () => Backend.hideThreadsView(),
-            "esc":    () => Backend.hideThreadsView(),
-            "h":      () => focusPanel("sidebar"),
-            "enter":  () => threadsPage.openCurrent(),
-            "ctrl+d": () => threadsPage.half(1),
-            "ctrl+u": () => threadsPage.half(-1),
-            "ctrl+g": () => threadsPage.toBottom(),
-            "G":      () => threadsPage.toBottom(),
-            "j":      () => threadsPage.move(1),
-            "k":      () => threadsPage.move(-1),
-            "g":      () => threadsPage.toTop(),
-            "D":      () => { const t = Backend.currentSubThreads[threadsPage.currentIndex]
-                              if (t) { confirmUnsub.target = t; confirmUnsub.ask("#" + (t.channelName || "") + " · " + (t.title || "")) } },
+            "j":      { act: () => threadsPage.move(1),  help: "Move down", cat: "nav" },
+            "k":      { act: () => threadsPage.move(-1), help: "Move up", cat: "nav" },
+            "g":      { act: () => threadsPage.toTop(),    help: "Jump to top", cat: "nav" },
+            "G":      { act: () => threadsPage.toBottom(), help: "Jump to bottom", cat: "nav" },
+            "ctrl+d": { act: () => threadsPage.half(1),  help: "Half-page down", cat: "nav" },
+            "ctrl+u": { act: () => threadsPage.half(-1), help: "Half-page up", cat: "nav" },
+            "ctrl+g": { act: () => threadsPage.toBottom(), help: "Jump to bottom", cat: "nav" },
+            "h":      { act: () => focusPanel("sidebar"), help: "Focus sidebar", cat: "nav" },
+            "ctrl+k": { act: () => palette.show(), help: "Jump palette", cat: "chats" },
+            "ctrl+s": { act: () => workspacePicker.show(), help: "Switch workspace", cat: "chats" },
+            // threads-view specific (feeds the THREADS section)
+            "enter":  { act: () => threadsPage.openCurrent(), help: "Open thread", cat: "thread" },
+            "D":      { act: () => { const t = Backend.currentSubThreads[threadsPage.currentIndex]
+                              if (t) { confirmUnsub.target = t; confirmUnsub.ask("#" + (t.channelName || "") + " · " + (t.title || "")) } }, help: "Unsubscribe from thread", cat: "thread" },
+            "q":      { act: () => Backend.hideThreadsView(), help: "Close threads view", cat: "thread" },
+            "?":      { act: () => help.show(), help: "This help", cat: "view" },
+            "esc":    { act: () => Backend.hideThreadsView(), help: "Close threads view", cat: "view" },
         },
     })
 
@@ -181,8 +194,8 @@ FloatingWindow {
                 return
             }
         }
-        const fn = keymaps[currentMode()][id]
-        if (fn) { fn(); e.accepted = true }
+        const entry = keymaps[currentMode()][id]
+        if (entry) { entry.act(); e.accepted = true }
         if (id !== "j" && id !== "k") pendingCount = 0   // drop a dangling count
     }
 
@@ -375,7 +388,7 @@ FloatingWindow {
                 Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
                     anchors.right: parent.right; anchors.rightMargin: 12
                     anchors.verticalCenter: parent.verticalCenter
-                    text: "ctrl+k jump · j/k move · h/l panel · ⏎ open · i insert · esc normal"
+                    text: "ctrl+k jump · j/k move · h/l panel · ⏎ open · i insert · esc normal · ? help"
                     color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12
                 }
             }
@@ -421,6 +434,13 @@ FloatingWindow {
                 title: "Unsubscribe from this thread?"
                 property var target: null
                 onConfirmed: { if (target) Backend.unsubThread(target.channel, target.ts); target = null }
+                onOpenChanged: if (!open) win.backToNormal()
+            }
+
+            KeybindHelp {
+                id: help
+                z: 103
+                keymaps: win.keymaps
                 onOpenChanged: if (!open) win.backToNormal()
             }
 
