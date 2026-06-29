@@ -1177,10 +1177,17 @@ Item {
         interval: 1000; repeat: true; running: true
         property bool dropping: false
         onTriggered: {
+            // Cold start / after a drop: the socket simply isn't connected yet (e.g. the
+            // daemon hasn't bound it — it needs a network round-trip first). Re-dial every
+            // tick until it takes; don't wait for the staleness window, which left the UI
+            // empty on cold start because lastRecv was seeded to launch time (issue #2).
+            if (!sock.connected) { dropping = false; sock.connected = true; return }
+            // Connected but silent for 8s → Quickshell's `connected` is stuck-true after a
+            // server-side close. Force a re-dial in two phases (drop, then connect next tick).
             const stale = (Date.now() - backend.lastRecv) > 8000
             if (!stale) { dropping = false; return }
             if (!dropping) { sock.connected = false; dropping = true }
-            else { sock.connected = true; dropping = false }   // next tick → re-dial
+            else { sock.connected = true; dropping = false }
         }
     }
 }
