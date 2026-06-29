@@ -210,6 +210,23 @@ Item {
         if (!/[^\x00-\x7f]/.test(s)) return false  // needs a non-ASCII (emoji) char
         return Array.from(s).length <= 6
     }
+    // Language-agnostic syntax coloring for fenced code blocks: comments, strings,
+    // numbers, then a common keyword set. No real parser — one master regex whose
+    // alternation order lets a string/comment swallow any keywords inside it, so we
+    // never recolour tokens within them. Input is already HTML-escaped (& < > are
+    // entities; quotes survive literally, which the string rules rely on).
+    readonly property string _codeKw: "abstract|and|as|async|await|bool|boolean|break|case|catch|char|class|const|continue|def|default|del|do|double|elif|else|end|enum|export|extends|false|final|finally|float|fn|for|from|func|function|global|go|if|impl|implements|import|in|int|interface|is|lambda|let|match|mut|new|nil|none|not|null|or|package|pass|private|protected|pub|public|raise|return|self|static|str|string|struct|super|switch|then|this|throw|trait|true|try|type|typeof|undefined|union|unless|use|val|var|void|when|while|with|yield"
+    function _highlightCode(c) {
+        const re = new RegExp(
+            "(//[^\\n]*|#[^\\n]*|/\\*[\\s\\S]*?\\*/)"
+            + "|(\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'|`(?:[^`\\\\]|\\\\.)*`)"
+            + "|(\\b\\d+(?:\\.\\d+)?\\b)"
+            + "|(\\b(?:" + _codeKw + ")\\b)", "g")
+        return c.replace(re, function (m, cmt, str, num) {
+            const col = cmt ? Theme.fg_muted : str ? Theme.green : num ? Theme.orange : Theme.sky
+            return '<font color="' + cssHex(col) + '">' + m + '</font>'
+        })
+    }
     function richify(text, emojiPx) {
         const _ = emojiGen   // re-evaluate when emoji map loads
         if (!text) return ""
@@ -221,8 +238,8 @@ Item {
         // are private-use chars so nothing downstream matches them.
         const codeBlocks = []
         const cb0 = String.fromCharCode(0xE005), cb1 = String.fromCharCode(0xE006)
-        s = s.replace(/```(?:[a-zA-Z0-9+_#.-]+\n)?([\s\S]*?)```/g, function (m, code) {
-            codeBlocks.push(code.replace(/^\n/, "").replace(/\n+$/, ""))
+        s = s.replace(/```(?:([a-zA-Z0-9+_#.-]+)\n)?([\s\S]*?)```/g, function (m, lang, code) {
+            codeBlocks.push({ lang: (lang || "").toLowerCase(), code: code.replace(/^\n/, "").replace(/\n+$/, "") })
             return cb0 + (codeBlocks.length - 1) + cb1
         })
         // Bare URLs → styled, clickable links. Done before the emoji <img> tags
@@ -253,8 +270,13 @@ Item {
         s = s.replace(/\n/g, "<br>")
         // Restore fenced code blocks as a filled monospace block.
         s = s.replace(new RegExp(cb0 + "(\\d+)" + cb1, "g"), function (m, i) {
-            return '<table width="100%" cellpadding="6" bgcolor="' + cssHex(Theme.surface)
-                + '"><tr><td>' + codeBlocks[+i].replace(/\n/g, "<br>") + '</td></tr></table>'
+            const blk = codeBlocks[+i]
+            const body = _highlightCode(blk.code).replace(/\n/g, "<br>")
+            const label = blk.lang
+                ? '<font color="' + cssHex(Theme.fg_muted) + '">' + blk.lang + '</font><br>'
+                : ''
+            return '<table width="100%" cellpadding="6" bgcolor="' + cssHex(Theme.overlay)
+                + '"><tr><td>' + label + body + '</td></tr></table>'
         })
         return s
     }
