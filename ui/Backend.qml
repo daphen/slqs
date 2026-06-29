@@ -22,6 +22,14 @@ Item {
     property bool   threadTyping: false
     property string threadTypingWho: ""
 
+    // Update-available indicator. The daemon polls the repo's main SHA and pushes
+    // an `updateAvailable` event when a newer build exists (detect-only — the host
+    // applies it via flake bump + rebuild). Empty/quiet on source/dev builds.
+    property bool   updateAvailable: false
+    property string updateCurrent: ""
+    property string updateLatest: ""
+    function dismissUpdate() { updateAvailable = false }
+
     // Multiple Slack workspaces. The sidebar shows one workspace at a time;
     // channels are keyed by id (names collide across workspaces).
     property var    workspaces: []          // [{id, name}]
@@ -758,6 +766,7 @@ Item {
         if (e.type === "message") ingest(e.channel, e.msg, e.thread, e.mention)
         else if (e.type === "replyCountInc") bumpReplyCount(e.channel, e.ts)
         else if (e.type === "workspaces") setWorkspaces(e.workspaces, e.rail, e.threads)
+        else if (e.type === "updateAvailable") { updateCurrent = e.current || ""; updateLatest = e.latest || ""; updateAvailable = true }
         else if (e.type === "users") { _usersByWs = e.users || ({}) }
         else if (e.type === "reaction") applyReaction(e.channel, e.ts, e.reactionsJson)
         else if (e.type === "images") applyImages(e.channel, e.ts, e.imagesJson)

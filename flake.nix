@@ -14,6 +14,9 @@
         src = ./.;
         vendorHash = "sha256-gJpFPtWUWzDbmG6OgkRSfhKmhCgCNBklf7ZwgOCUAQs=";
         subPackages = [ "." ];
+        # Bake the build's commit so the running daemon can detect newer builds.
+        # Empty on a dirty/dev tree (self.rev absent) → update check stays off.
+        ldflags = [ "-X main.gitRev=${self.rev or ""}" ];
         postInstall = ''
           mkdir -p $out/share/slqs
           cp -r ui $out/share/slqs/ui

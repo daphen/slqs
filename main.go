@@ -47,6 +47,17 @@ var palette = []string{"#FF570D", "#97B5A6", "#7DD3FC", "#8A92A7", "#ff8a31", "#
 // holding a concurrency slot (sendRecent fetches images in parallel).
 var fileHTTP = &http.Client{Timeout: 20 * time.Second}
 
+// gitRev is the build's git commit, injected via -ldflags "-X main.gitRev=...".
+// Empty on a plain `go build` (dev), which disables the update check.
+var gitRev string
+
+func shortRev(s string) string {
+	if len(s) >= 7 {
+		return s[:7]
+	}
+	return s
+}
+
 // Full standard shortcode→unicode table from slk's iamcal-derived map.
 var emojiMap = emoji.CodeMap()
 
@@ -1840,6 +1851,54 @@ func main() {
 			}
 		}
 	}()
+
+	// Update check: poll the repo's main SHA and notify the client when a newer
+	// build exists. Detect-only (the host applies via flake bump + rebuild). Quiet
+	// on source builds (gitRev unset). Conditional ETag requests keep us well under
+	// GitHub's unauthenticated 60/h limit.
+	if gitRev != "" {
+		go func() {
+			const api = "https://api.github.com/repos/daphen/slqs/commits/main"
+			var etag string
+			check := func() {
+				req, err := http.NewRequestWithContext(ctx, "GET", api, nil)
+				if err != nil {
+					return
+				}
+				req.Header.Set("User-Agent", "slqs")
+				req.Header.Set("Accept", "application/vnd.github.sha")
+				if etag != "" {
+					req.Header.Set("If-None-Match", etag)
+				}
+				resp, err := fileHTTP.Do(req)
+				if err != nil {
+					return
+				}
+				defer resp.Body.Close()
+				if resp.StatusCode != http.StatusOK {
+					return // 304 unchanged (ETag hit), or transient error
+				}
+				etag = resp.Header.Get("ETag")
+				b, _ := io.ReadAll(io.LimitReader(resp.Body, 64))
+				latest := strings.TrimSpace(string(b))
+				if latest != "" && latest != gitRev {
+					d.broadcast(map[string]any{"type": "updateAvailable",
+						"current": shortRev(gitRev), "latest": shortRev(latest)})
+				}
+			}
+			check()
+			t := time.NewTicker(3 * time.Hour)
+			defer t.Stop()
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-t.C:
+					check()
+				}
+			}
+		}()
+	}
 
 	// Track whether the client window is focused via niri's event stream, so
 	// notifications for the active channel are suppressed only while we're

@@ -444,6 +444,28 @@ FloatingWindow {
                 onOpenChanged: if (!open) win.backToNormal()
             }
 
+            // Update-available banner — thin, dismissible, pinned to the top. The
+            // daemon detects a newer build; applying it is the host's job (rebuild).
+            Rectangle {
+                visible: Backend.updateAvailable
+                z: 90
+                anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
+                height: visible ? 30 : 0
+                color: Theme.overlay
+                Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.hairline }
+                Row {
+                    anchors.centerIn: parent; spacing: 12
+                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                           anchors.verticalCenter: parent.verticalCenter
+                           text: "⟳  Update available  ·  " + Backend.updateCurrent + " → " + Backend.updateLatest
+                           color: Theme.fg; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13 }
+                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                           anchors.verticalCenter: parent.verticalCenter
+                           text: "✕"; color: Theme.fg_muted; font.family: Theme.fontFamily; font.pixelSize: 13
+                           TapHandler { onTapped: Backend.dismissUpdate() } }
+                }
+            }
+
             // Transient status toast (e.g. "Copied message"), fired by Backend.toast().
             Rectangle {
                 id: toast
