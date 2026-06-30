@@ -54,9 +54,19 @@ view_in_mpv() {
     setsid -f mpv --loop --no-terminal --geometry="${win_w}x${win_h}" "$@" >/dev/null 2>&1
 }
 
+# Mixed images + videos in one playlist: stills hold (image-display-duration inf),
+# videos play; < / > step between them.
+view_in_mpv_mix() {
+    setsid -f mpv --no-terminal --image-display-duration=inf \
+        --geometry="${win_w}x${win_h}" "$@" >/dev/null 2>&1
+}
+
 case "$type" in
     img|gif)
         view_in_imv "${files[@]}"
+        ;;
+    mix)
+        view_in_mpv_mix "${files[@]}"
         ;;
     URL)
         # Endcord categorizes any https:// path as URL — including direct

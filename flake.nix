@@ -27,7 +27,7 @@
 
       client = pkgs.writeShellApplication {
         name = "slqs-client";
-        runtimeInputs = [ daemon pkgs.quickshell pkgs.procps pkgs.coreutils pkgs.mpv pkgs.imv pkgs.jq pkgs.curl pkgs.xdg-utils ];
+        runtimeInputs = [ daemon pkgs.quickshell pkgs.procps pkgs.coreutils pkgs.mpv pkgs.imv pkgs.ffmpeg-headless pkgs.jq pkgs.curl pkgs.xdg-utils ];
         text = ''
           export SLK_MEDIA_VIEWER="${daemon}/share/slqs/media-viewer.sh"
           pgrep -x slqs >/dev/null 2>&1 || \

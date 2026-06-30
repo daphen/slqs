@@ -866,21 +866,18 @@ Item {
         if (!msg) return
         let imgs
         try { imgs = JSON.parse(msg.imagesJson || "[]") } catch (e) { return }
-        if (!imgs.length || !imgs[0].full) return
-        // A video opens alone (mpv). Photos open as a SET so a message with several
-        // is navigable in imv. slkd downloads the full-res to a purgeable view cache
-        // and replies viewReady with the local path(s).
-        if (imgs[0].type === "video") {
-            const v = imgs[0]
-            safeWrite(JSON.stringify({ type: "view", channel: currentChannelId,
-                images: [{ id: v.id, url: v.full, ext: v.ext }], mediatype: "video" }) + "\n")
-            return
-        }
-        const items = imgs.filter(function (i) { return i.type !== "video" && i.full })
-                          .map(function (i) { return { id: i.id, url: i.full, ext: i.ext } })
-        if (!items.length) return
+        imgs = imgs.filter(function (i) { return i.full })
+        if (!imgs.length) return
+        const items = imgs.map(function (i) {
+            return { id: i.id, url: i.full, ext: i.ext, type: i.type }
+        })
+        // Images alone arrow in imv. Anything with a video goes to mpv as one
+        // playlist (stills + videos, < / > to step) so a mixed message is
+        // navigable in a single viewer; a lone video keeps the plain mpv path.
+        const hasVideo = items.some(function (i) { return i.type === "video" })
+        const mediatype = !hasVideo ? "img" : (items.length > 1 ? "mix" : "video")
         safeWrite(JSON.stringify({ type: "view", channel: currentChannelId,
-            images: items, mediatype: "img" }) + "\n")
+            images: items, mediatype: mediatype }) + "\n")
     }
     function openViewer(paths, mediatype) {
         const arr = Array.isArray(paths) ? paths : [paths]

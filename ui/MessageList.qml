@@ -160,13 +160,37 @@ ListView {
         if (currentIndex <= 6 || contentY < 400) Backend.requestOlder()
     }
 
-    // vim nav (j/k/g/G/ctrl-d/u) — drives a message cursor
+    // vim nav (j/k/g/G/ctrl-d/u) — drives a message cursor, but first scrolls
+    // THROUGH a message taller than the viewport before stepping to the next.
     function move(d) {
+        const it = (currentIndex >= 0 && currentIndex < count) ? itemAtIndex(currentIndex) : null
+        if (it) {
+            const maxY = Math.max(0, contentHeight - height)
+            const step = height * 0.85
+            if (d > 0 && it.y + it.height > contentY + height + 1) {
+                contentY = Math.min(maxY, Math.min(it.y + it.height - height, contentY + step))
+                stick = atYEnd
+                return
+            }
+            if (d < 0 && it.y < contentY - 1) {
+                contentY = Math.max(it.y, contentY - step)
+                stick = false; maybeLoadOlder()
+                return
+            }
+        }
         currentIndex = Math.max(0, Math.min(count - 1, currentIndex + d))
         // Snap fully to the bottom on the last message (Contain only scrolls it
         // just-visible, leaving it short of the end under the composer).
-        if (currentIndex >= count - 1) positionViewAtIndex(count - 1, ListView.End)
-        else positionViewAtIndex(currentIndex, ListView.Contain)
+        if (currentIndex >= count - 1) {
+            positionViewAtIndex(count - 1, ListView.End)
+        } else {
+            positionViewAtIndex(currentIndex, ListView.Contain)
+            // Taller than the viewport: align its leading edge so the next j/k
+            // scrolls through it (top when going down, bottom when going up).
+            const t = itemAtIndex(currentIndex)
+            if (t && t.height > height)
+                positionViewAtIndex(currentIndex, d > 0 ? ListView.Beginning : ListView.End)
+        }
         stick = atYEnd || currentIndex >= count - 1
         if (d < 0) maybeLoadOlder()
     }

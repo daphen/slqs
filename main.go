@@ -336,7 +336,10 @@ func filesCacheDir() string { return filepath.Join(os.Getenv("HOME"), ".cache", 
 func (d *daemon) imagesJSON(w *workspace, channelID, ts string, files []slack.File, attachments []slack.Attachment) string {
 	dir := filesCacheDir()
 	os.MkdirAll(dir, 0755)
-	type task struct{ dst, url string }
+	type task struct {
+		dst, url string
+		video    bool // url is a video → derive the poster via ffmpeg, not download
+	}
 	var pending []task
 	out := []map[string]any{}
 	add := func(id, src, ext, full, mtype string, ww, hh int) {
@@ -348,7 +351,7 @@ func (d *daemon) imagesJSON(w *workspace, channelID, ts string, files []slack.Fi
 		if _, err := os.Stat(dst); err == nil {
 			ready = true
 		} else {
-			pending = append(pending, task{dst, src})
+			pending = append(pending, task{dst, src, false})
 		}
 		// channelID=="" is the post-download re-broadcast: drop images whose file
 		// still isn't there (download failed, e.g. an expired unfurl URL) so the
@@ -381,18 +384,19 @@ func (d *daemon) imagesJSON(w *workspace, channelID, ts string, files []slack.Fi
 			if vw == 0 {
 				vw, vh = f.OriginalW, f.OriginalH
 			}
-			ppath, ready := "", true
-			if poster != "" {
-				pdst := filepath.Join(dir, f.ID+"-poster.jpg")
-				ppath = "file://" + pdst
-				if _, err := os.Stat(pdst); err != nil {
-					pending = append(pending, task{pdst, poster})
-					ready = false
+			pdst := filepath.Join(dir, f.ID+"-poster.jpg")
+			ppath, ready := "file://"+pdst, true
+			if _, err := os.Stat(pdst); err != nil {
+				ready = false
+				if poster != "" {
+					pending = append(pending, task{pdst, poster, false})
+				} else {
+					// Slack generated no still — derive one from the first frame.
+					pending = append(pending, task{pdst, f.URLPrivate, true})
 				}
 			}
-			if channelID == "" && !ready {
-				continue
-			}
+			// Unlike images, keep the video on the re-broadcast even if its poster
+			// is still missing — the card stays playable without one.
 			out = append(out, map[string]any{
 				"path": ppath, "w": vw, "h": vh,
 				"id": f.ID + "-vid", "full": f.URLPrivate, "ext": vext, "type": "video", "pending": !ready,
@@ -468,7 +472,11 @@ func (d *daemon) imagesJSON(w *workspace, channelID, ts string, files []slack.Fi
 					defer wg.Done()
 					imgSem <- struct{}{}
 					defer func() { <-imgSem }()
-					d.downloadFile(t.dst, t.url, w.token, w.cookie)
+					if t.video {
+						d.extractPoster(t.dst, t.url, w.token, w.cookie)
+					} else {
+						d.downloadFile(t.dst, t.url, w.token, w.cookie)
+					}
 				}(t)
 			}
 			wg.Wait()
@@ -502,6 +510,21 @@ func (d *daemon) downloadFile(dst, url, token, cookie string) {
 	if b, err := io.ReadAll(resp.Body); err == nil {
 		os.WriteFile(dst, b, 0644)
 	}
+}
+
+// extractPoster derives a JPEG poster from a video's first frame, for videos
+// Slack never made a still for. ffmpeg streams the URL with the same auth as
+// downloadFile, reading only enough to decode one frame.
+func (d *daemon) extractPoster(dst, videoURL, token, cookie string) {
+	if _, err := os.Stat(dst); err == nil {
+		return
+	}
+	hdr := fmt.Sprintf("Authorization: Bearer %s\r\nCookie: d=%s\r\n", token, cookie)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, "ffmpeg", "-nostdin", "-y",
+		"-headers", hdr, "-i", videoURL, "-frames:v", "1", "-q:v", "4", dst)
+	cmd.Run()
 }
 
 func (d *daemon) avatarPath(uid string) string {
