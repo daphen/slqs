@@ -30,8 +30,16 @@
         runtimeInputs = [ daemon pkgs.quickshell pkgs.procps pkgs.coreutils pkgs.mpv pkgs.imv pkgs.ffmpeg-headless pkgs.jq pkgs.curl pkgs.xdg-utils ];
         text = ''
           export SLK_MEDIA_VIEWER="${daemon}/share/slqs/media-viewer.sh"
-          pgrep -x slqs >/dev/null 2>&1 || \
+          sock="$XDG_RUNTIME_DIR/slqs.sock"
+          if ! pgrep -x slqs >/dev/null 2>&1; then
+            # The daemon binds its socket only after loading all workspaces, so
+            # wait for it before starting the UI — avoids the cold-start empty
+            # render (UI racing a not-yet-ready daemon). Clear any stale socket
+            # first so the wait lands on the fresh daemon.
+            rm -f "$sock"
             setsid nohup ${daemon}/bin/slqs >/tmp/slqs.log 2>&1 </dev/null &
+          fi
+          for _ in $(seq 1 150); do [ -S "$sock" ] && break; sleep 0.1; done
           exec qs -p "${daemon}/share/slqs/ui"
         '';
       };
