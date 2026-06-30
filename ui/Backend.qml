@@ -1178,8 +1178,20 @@ Item {
         id: reconnect
         interval: 1000; repeat: true; running: true
         property bool dropping: false
+        property bool forceRedial: false
+        property double lastTick: 0
         onTriggered: {
-            if ((Date.now() - backend.lastRecv) <= 8000) { dropping = false; return }
+            const now = Date.now()
+            // Large gap = session was frozen (suspend); the socket survives so
+            // staleness won't fire — force a re-dial for a fresh bootstrap.
+            if (lastTick > 0 && (now - lastTick) > 20000) forceRedial = true
+            lastTick = now
+            if (forceRedial) {
+                if (!dropping) { sock.connected = false; dropping = true }
+                else { sock.connected = true; dropping = false; forceRedial = false }
+                return
+            }
+            if ((now - backend.lastRecv) <= 8000) { dropping = false; return }
             if (!dropping) { sock.connected = false; dropping = true }
             else { sock.connected = true; dropping = false }
         }
