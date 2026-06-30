@@ -54,11 +54,15 @@ view_in_mpv() {
     setsid -f mpv --loop --no-terminal --geometry="${win_w}x${win_h}" "$@" >/dev/null 2>&1
 }
 
-# Mixed images + videos in one playlist: stills hold (image-display-duration inf),
-# videos play; < / > step between them.
+# Mixed images + videos in one playlist. Each item HOLDS until you step with
+# h / l: images via image-display-duration, videos via loop-file (else a short
+# video plays once and auto-advances off itself before you can watch it).
 view_in_mpv_mix() {
-    setsid -f mpv --no-terminal --image-display-duration=inf \
-        --geometry="${win_w}x${win_h}" "$@" >/dev/null 2>&1
+    # h/l = prev/next item (vim-style; mpv's default < / > is non-obvious).
+    conf="${XDG_RUNTIME_DIR:-/tmp}/slqs-mpv-mix.conf"
+    printf 'h playlist-prev\nl playlist-next\n' > "$conf"
+    setsid -f mpv --no-terminal --loop-file=inf --image-display-duration=inf \
+        --input-conf="$conf" --geometry="${win_w}x${win_h}" "$@" >/dev/null 2>&1
 }
 
 case "$type" in
