@@ -73,17 +73,22 @@ ListView {
     // Reach the TRUE bottom: realize the last item, then clamp contentY to the
     // exact end (section-safe + includes bottomMargin). Used for auto-pin and the
     // typing-row shrink — not by ctrl+d/u (those only fire goBottomNow via stick).
+    // The true max scroll: Flickable adds bottomMargin BEYOND contentHeight, so
+    // the real bottom is contentHeight - height + bottomMargin. Using
+    // contentHeight - height alone stops bottomMargin short (the wheel, via
+    // returnToBounds, reaches further — keyboard nav must match it).
+    function bottomY() { return Math.max(0, contentHeight - height + bottomMargin) }
     function goBottomNow() {
         if (count <= 0) return
         positionViewAtIndex(count - 1, ListView.End)
-        contentY = Math.max(0, contentHeight - height)
+        contentY = bottomY()
         returnToBounds()
         currentIndex = count - 1; stick = true
     }
     // Scroll the view to the true bottom WITHOUT moving the cursor — for content
     // that resizes in place (reactions, image settling), where goBottomNow would
     // yank the highlight to the last message.
-    function pinBottomView() { if (count > 0) contentY = Math.max(0, contentHeight - height) }
+    function pinBottomView() { if (count > 0) contentY = bottomY() }
     // Keep pinned while at the bottom (stick) — follows new messages and lets
     // content settle (images/wrapped text) without drifting up.
     onContentHeightChanged: if (pinBottom || stick) pinBottomView()
@@ -96,11 +101,10 @@ ListView {
         function onReflowList() {
             // Re-pin the VIEW (not the cursor) if it was at the bottom. atYEnd reads
             // false even at contentY==maxY, so compare contentY to the end directly.
-            const maxY = Math.max(0, list.contentHeight - list.height)
-            const wasBottom = list.stick || list.contentY >= maxY - 8
+            const wasBottom = list.stick || list.contentY >= list.bottomY() - 8
             Qt.callLater(function() {
                 list.forceLayout()
-                if (wasBottom) list.contentY = Math.max(0, list.contentHeight - list.height)
+                if (wasBottom) list.contentY = list.bottomY()
             })
         }
         // A reaction only resizes a row (never changes its day), so skip the
@@ -108,8 +112,7 @@ ListView {
         // the chip grows the row, then let the settle window re-pin via
         // onContentHeightChanged when contentHeight actually updates.
         function onReactionChanged() {
-            const maxY = Math.max(0, list.contentHeight - list.height)
-            if (list.stick || list.contentY >= maxY - 8) {
+            if (list.stick || list.contentY >= list.bottomY() - 8) {
                 list.pinBottom = true
                 pinTimer.restart()
             }
@@ -189,7 +192,7 @@ ListView {
     function move(d) {
         const it = (currentIndex >= 0 && currentIndex < count) ? itemAtIndex(currentIndex) : null
         if (it) {
-            const maxY = Math.max(0, contentHeight - height)
+            const maxY = bottomY()
             const step = height * 0.85
             if (d > 0 && it.y + it.height > contentY + height + 1) {
                 contentY = Math.min(maxY, Math.min(it.y + it.height - height, contentY + step))
@@ -207,7 +210,7 @@ ListView {
         // just-visible, leaving it short of the end under the composer).
         if (currentIndex >= count - 1) {
             positionViewAtIndex(count - 1, ListView.End)
-            contentY = Math.max(0, contentHeight - height)   // true bottom incl. bottomMargin (End alone lands short)
+            contentY = bottomY()   // true bottom incl. bottomMargin (End alone lands short)
         } else {
             positionViewAtIndex(currentIndex, ListView.Contain)
             // Taller than the viewport: align its leading edge so the next j/k
@@ -221,13 +224,13 @@ ListView {
     }
     // ctrl+e / ctrl+y: nudge the view by ~3 lines WITHOUT moving the cursor.
     function scroll(d) {
-        const maxY = Math.max(0, contentHeight - height)
+        const maxY = bottomY()
         contentY = Math.max(0, Math.min(maxY, contentY + d * 48))
         stick = atYEnd
         if (d < 0) maybeLoadOlder()
     }
     function toTop()    { currentIndex = 0; positionViewAtBeginning(); stick = false; maybeLoadOlder() }
-    function toBottom() { currentIndex = count - 1; positionViewAtIndex(count - 1, ListView.End); contentY = Math.max(0, contentHeight - height); stick = true }
+    function toBottom() { currentIndex = count - 1; positionViewAtIndex(count - 1, ListView.End); contentY = bottomY(); stick = true }
     // Half-page scroll by half the viewport height (messages vary in height —
     // a fixed row count was a full screen once images are in play). Cursor
     // follows to a still-visible item without re-scrolling.
@@ -240,7 +243,7 @@ ListView {
         let idx = indexAt(width / 2, baseY + d * height * 0.5)
         if (idx < 0) idx = (d > 0) ? count - 1 : 0
         currentIndex = Math.max(0, Math.min(count - 1, idx))
-        if (currentIndex >= count - 1) { positionViewAtIndex(count - 1, ListView.End); contentY = Math.max(0, contentHeight - height) }
+        if (currentIndex >= count - 1) { positionViewAtIndex(count - 1, ListView.End); contentY = bottomY() }
         else positionViewAtIndex(currentIndex, ListView.Contain)
         stick = atYEnd || currentIndex >= count - 1
         if (d < 0) maybeLoadOlder()
