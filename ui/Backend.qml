@@ -130,7 +130,7 @@ Item {
         if (channelId === currentChannelId) {
             for (let i = 0; i < messagesModel.count; i++)
                 if (messagesModel.get(i).ts === ts) { messagesModel.setProperty(i, "reactionsJson", reactionsJson); break }
-            reflowList()   // reaction changed the row height — re-flow + re-pin if at bottom
+            reactionChanged()   // row height changed in place — re-pin bottom, no full re-flow (day is unchanged)
         }
         for (let i = 0; i < threadModel.count; i++)
             if (threadModel.get(i).ts === ts) { threadModel.setProperty(i, "reactionsJson", reactionsJson); break }
@@ -696,6 +696,7 @@ Item {
 
     signal sentMessage()   // chat should jump to the bottom to show it
     signal reflowList()    // optimistic in-place update → MessageList re-flows so date dividers don't go stale
+    signal reactionChanged()   // a row's reactions changed height in place → re-pin bottom without a full re-flow
     // Tell the server we're typing so others see the indicator — throttled, since
     // the server-side indicator lasts ~10s (re-send while still typing).
     property real _lastTyping: 0

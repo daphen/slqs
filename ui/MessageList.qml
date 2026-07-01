@@ -37,12 +37,12 @@ ListView {
     property string screenSig: Screen.width + "x" + Screen.height + "@" + Screen.devicePixelRatio
     onScreenSigChanged: Qt.callLater(function() {
         list.forceLayout()
-        if (list.stick || list.pinBottom) list.goBottomNow()
+        if (list.stick || list.pinBottom) list.pinBottomView()
     })
 
     // When the viewport shrinks (e.g. the typing row appears above the composer)
     // keep the newest message visible instead of letting it slide under.
-    onHeightChanged: if (stick) Qt.callLater(goBottomNow)
+    onHeightChanged: if (stick) Qt.callLater(pinBottomView)
 
     property real scrollGain: 5.0
     WheelHandler {
@@ -80,9 +80,13 @@ ListView {
         returnToBounds()
         currentIndex = count - 1; stick = true
     }
+    // Scroll the view to the true bottom WITHOUT moving the cursor — for content
+    // that resizes in place (reactions, image settling), where goBottomNow would
+    // yank the highlight to the last message.
+    function pinBottomView() { if (count > 0) contentY = Math.max(0, contentHeight - height) }
     // Keep pinned while at the bottom (stick) — follows new messages and lets
     // content settle (images/wrapped text) without drifting up.
-    onContentHeightChanged: if (pinBottom || stick) Qt.callLater(goBottomNow)
+    onContentHeightChanged: if (pinBottom || stick) pinBottomView()
     Timer { id: pinTimer; interval: 600; onTriggered: list.pinBottom = false }
 
     Connections {
@@ -90,10 +94,25 @@ ListView {
         // optimistic insert/reconcile changed item heights in place → re-flow so
         // section (date) dividers don't render at stale positions over messages.
         function onReflowList() {
-            // Re-pin if the VIEW is at the bottom (regardless of which message is
-            // highlighted) — captured now, before the reaction/edit relayouts.
-            const wasBottom = list.atYEnd || list.stick
-            Qt.callLater(function() { list.forceLayout(); if (wasBottom) list.goBottomNow() })
+            // Re-pin the VIEW (not the cursor) if it was at the bottom. atYEnd reads
+            // false even at contentY==maxY, so compare contentY to the end directly.
+            const maxY = Math.max(0, list.contentHeight - list.height)
+            const wasBottom = list.stick || list.contentY >= maxY - 8
+            Qt.callLater(function() {
+                list.forceLayout()
+                if (wasBottom) list.contentY = Math.max(0, list.contentHeight - list.height)
+            })
+        }
+        // A reaction only resizes a row (never changes its day), so skip the
+        // forceLayout re-flow (that flashed the whole list). Detect bottom BEFORE
+        // the chip grows the row, then let the settle window re-pin via
+        // onContentHeightChanged when contentHeight actually updates.
+        function onReactionChanged() {
+            const maxY = Math.max(0, list.contentHeight - list.height)
+            if (list.stick || list.contentY >= maxY - 8) {
+                list.pinBottom = true
+                pinTimer.restart()
+            }
         }
         function onCurrentChannelChanged() {
             list.pinBottom = true; list.stick = true
@@ -188,6 +207,7 @@ ListView {
         // just-visible, leaving it short of the end under the composer).
         if (currentIndex >= count - 1) {
             positionViewAtIndex(count - 1, ListView.End)
+            contentY = Math.max(0, contentHeight - height)   // true bottom incl. bottomMargin (End alone lands short)
         } else {
             positionViewAtIndex(currentIndex, ListView.Contain)
             // Taller than the viewport: align its leading edge so the next j/k
@@ -207,7 +227,7 @@ ListView {
         if (d < 0) maybeLoadOlder()
     }
     function toTop()    { currentIndex = 0; positionViewAtBeginning(); stick = false; maybeLoadOlder() }
-    function toBottom() { currentIndex = count - 1; positionViewAtIndex(count - 1, ListView.End); stick = true }
+    function toBottom() { currentIndex = count - 1; positionViewAtIndex(count - 1, ListView.End); contentY = Math.max(0, contentHeight - height); stick = true }
     // Half-page scroll by half the viewport height (messages vary in height —
     // a fixed row count was a full screen once images are in play). Cursor
     // follows to a still-visible item without re-scrolling.
@@ -220,7 +240,7 @@ ListView {
         let idx = indexAt(width / 2, baseY + d * height * 0.5)
         if (idx < 0) idx = (d > 0) ? count - 1 : 0
         currentIndex = Math.max(0, Math.min(count - 1, idx))
-        if (currentIndex >= count - 1) positionViewAtIndex(count - 1, ListView.End)
+        if (currentIndex >= count - 1) { positionViewAtIndex(count - 1, ListView.End); contentY = Math.max(0, contentHeight - height) }
         else positionViewAtIndex(currentIndex, ListView.Contain)
         stick = atYEnd || currentIndex >= count - 1
         if (d < 0) maybeLoadOlder()
