@@ -54,6 +54,7 @@ type SlackAPI interface {
 	UploadToURL(ctx context.Context, params slack.UploadToURLParameters) error
 	CompleteUploadExternalContext(ctx context.Context, params slack.CompleteUploadExternalParameters) (*slack.CompleteUploadExternalResponse, error)
 	OpenConversationContext(ctx context.Context, params *slack.OpenConversationParameters) (*slack.Channel, bool, bool, error)
+	InviteUsersToConversationContext(ctx context.Context, channelID string, users ...string) (*slack.Channel, error)
 }
 
 // defaultAPIBaseURL is the canonical Slack Web API root used as a fallback
@@ -844,6 +845,19 @@ func (c *Client) OpenConversation(ctx context.Context, userIDs []string) (string
 		return "", false, fmt.Errorf("opening conversation: %w", err)
 	}
 	return ch.ID, alreadyOpen, nil
+}
+
+// InviteToConversation invites one or more users to a channel
+// (conversations.invite). The caller must be a member. Slack rejects DMs/MPIMs
+// and users already in the channel; those surface as an error.
+func (c *Client) InviteToConversation(ctx context.Context, channelID string, userIDs ...string) error {
+	if channelID == "" || len(userIDs) == 0 {
+		return fmt.Errorf("inviting to conversation: channel and at least one user ID required")
+	}
+	if _, err := c.api.InviteUsersToConversationContext(ctx, channelID, userIDs...); err != nil {
+		return fmt.Errorf("inviting to conversation: %w", err)
+	}
+	return nil
 }
 
 // UploadFile uploads a single file to a channel (and optional thread)

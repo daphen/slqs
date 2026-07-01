@@ -887,8 +887,8 @@ func (d *daemon) readConn(c net.Conn) {
 		// Channel carries a globally-unique Slack channel ID (the wire key),
 		// so it resolves the owning workspace without a separate field.
 		var cmd struct {
-			Type, Channel, Text, Before, Thread, Id, Url, Ext, Mediatype, Ts, Emoji, Workspace, Team, State string
-			Remove, Broadcast                                                                               bool
+			Type, Channel, Text, Before, Thread, Id, Url, Ext, Mediatype, Ts, Emoji, Workspace, Team, State, User string
+			Remove, Broadcast                                                                                     bool
 			Images                                                                                          []struct{ Id, Url, Ext string } // "view" can carry several photos
 		}
 		if json.Unmarshal(sc.Bytes(), &cmd) != nil {
@@ -918,6 +918,47 @@ func (d *daemon) readConn(c net.Conn) {
 			}
 			if jw != nil {
 				go d.joinChannel(jw, cmd.Channel, cmd.Text)
+			}
+			continue
+		}
+		// openDM starts (or reopens) a 1:1 DM with a user we may have no channel
+		// for yet, so it routes by workspace and registers the returned channel.
+		if cmd.Type == "openDM" {
+			dw := d.wss[cmd.Workspace]
+			if dw != nil && cmd.User != "" {
+				user := cmd.User
+				go func(w *workspace) {
+					chID, _, err := w.client.OpenConversation(d.ctx, []string{user})
+					if err != nil {
+						log.Printf("openDM: %v", err)
+						d.broadcast(map[string]any{"type": "toast", "text": "Couldn't open DM"})
+						return
+					}
+					d.registerChannel(w, slack.Channel{
+						GroupConversation: slack.GroupConversation{Conversation: slack.Conversation{ID: chID, User: user, IsIM: true}},
+					})
+					d.broadcast(map[string]any{"type": "open", "workspace": w.teamID, "channel": chID, "thread": ""})
+				}(dw)
+			}
+			continue
+		}
+		// invite adds a user to the current channel (conversations.invite). Route
+		// by workspace, fall back to the channel-id index.
+		if cmd.Type == "invite" {
+			iw := d.wss[cmd.Workspace]
+			if iw == nil {
+				iw = d.idIndex[cmd.Channel]
+			}
+			if iw != nil && cmd.Channel != "" && cmd.User != "" {
+				ch, user := cmd.Channel, cmd.User
+				go func(w *workspace) {
+					if err := w.client.InviteToConversation(d.ctx, ch, user); err != nil {
+						log.Printf("invite: %v", err)
+						d.broadcast(map[string]any{"type": "toast", "text": "Invite failed"})
+						return
+					}
+					d.broadcast(map[string]any{"type": "toast", "text": "Invited to channel"})
+				}(iw)
 			}
 			continue
 		}

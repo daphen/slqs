@@ -115,6 +115,9 @@ FloatingWindow {
             "enter":    { act: () => activate(), help: "Open selected", cat: "chats" },
             "/":        { act: () => sidebar.focusSearch(), help: "Search chats", cat: "chats" },
             "b":        { act: () => browse.show(), help: "Browse channels", cat: "chats" },
+            // slqs only (Discord has no equivalent): d = DM anyone, I = invite to channel.
+            "d":        { act: () => { if (!Backend.railHidden) peoplePicker.showDM() }, help: () => Backend.railHidden ? "" : "Message someone", cat: "chats" },
+            "I":        { act: () => { if (!Backend.railHidden) peoplePicker.showInvite() }, help: () => Backend.railHidden ? "" : "Invite to channel", cat: "chats" },
             "ctrl+k":   { act: () => palette.show(), help: "Jump palette", cat: "chats" },
             "ctrl+s":   { act: () => workspacePicker.show(), help: () => Backend.railHidden ? "Switch server" : "Switch workspace", cat: "chats" },
             "ctrl+l":   { act: () => Backend.cycleWorkspace(1),  help: () => Backend.railHidden ? "Next server" : "Next workspace", cat: "chats" },
@@ -420,6 +423,12 @@ FloatingWindow {
 
             BrowsePicker {
                 id: browse
+                z: 101
+                onOpenChanged: if (!open) win.backToNormal()
+            }
+
+            PeoplePicker {
+                id: peoplePicker
                 z: 101
                 onOpenChanged: if (!open) win.backToNormal()
             }

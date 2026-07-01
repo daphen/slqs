@@ -38,7 +38,9 @@ Item {
             const tbl = keymaps[picks[p][0]] || ({}), cat = picks[p][1]
             for (const id in tbl) {
                 const e = tbl[id]
-                if (e && e.cat === cat) rows.push({ keys: _pretty(id), help: _help(e.help) })
+                // Empty help = app-gated bind hidden in this app (e.g. slqs-only
+                // people actions in dsqrd) — skip so the sheet stays honest.
+                if (e && e.cat === cat && _help(e.help)) rows.push({ keys: _pretty(id), help: _help(e.help) })
             }
         }
         if (extra) for (let i = 0; i < extra.length; i++) rows.push(extra[i])

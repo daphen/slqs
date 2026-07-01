@@ -694,6 +694,12 @@ Item {
     function requestBrowse() { safeWrite(JSON.stringify({ type: "browse", workspace: currentWorkspace }) + "\n") }
     function joinChannel(id, name) { safeWrite(JSON.stringify({ type: "join", workspace: currentWorkspace, channel: id, text: name }) + "\n") }
 
+    // --- people: start a DM / invite to the current channel (slqs only) ---
+    // openDM asks the daemon to open (or reopen) a 1:1 and focus it; invite adds
+    // the user to the current channel. The daemon replies with a "toast".
+    function openDM(userId) { if (userId) safeWrite(JSON.stringify({ type: "openDM", workspace: currentWorkspace, user: userId }) + "\n") }
+    function inviteToChannel(userId) { if (userId && currentChannelId) safeWrite(JSON.stringify({ type: "invite", workspace: currentWorkspace, channel: currentChannelId, user: userId }) + "\n") }
+
     signal sentMessage()   // chat should jump to the bottom to show it
     signal reflowList()    // optimistic in-place update → MessageList re-flows so date dividers don't go stale
     signal reactionChanged()   // a row's reactions changed height in place → re-pin bottom without a full re-flow
@@ -783,6 +789,7 @@ Item {
         else if (e.type === "images") applyImages(e.channel, e.ts, e.imagesJson)
         else if (e.type === "delete") applyDelete(e.channel, e.ts)
         else if (e.type === "browse") { browseResults = e.channels || []; browseLoaded() }
+        else if (e.type === "toast") { if (e.text) toast(e.text) }
         else if (e.type === "channels") setChannels(e.channels, e.subThreads)
         else if (e.type === "recent") {
             // A jump into a channel we haven't joined: adopt it now that its

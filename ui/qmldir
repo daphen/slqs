@@ -11,6 +11,7 @@ ThreadsPage ThreadsPage.qml
 EmojiPicker EmojiPicker.qml
 Autocomplete Autocomplete.qml
 BrowsePicker BrowsePicker.qml
+PeoplePicker PeoplePicker.qml
 WorkspacePicker WorkspacePicker.qml
 ConfirmDialog ConfirmDialog.qml
 KeybindHelp KeybindHelp.qml
