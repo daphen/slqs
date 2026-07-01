@@ -127,9 +127,11 @@ Item {
     function applyReaction(channelId, ts, reactionsJson) {
         const arr = _store[channelId]
         if (arr) for (let i = 0; i < arr.length; i++) if (arr[i].ts === ts) { arr[i].reactionsJson = reactionsJson; break }
-        if (channelId === currentChannelId)
+        if (channelId === currentChannelId) {
             for (let i = 0; i < messagesModel.count; i++)
                 if (messagesModel.get(i).ts === ts) { messagesModel.setProperty(i, "reactionsJson", reactionsJson); break }
+            reflowList()   // reaction changed the row height — re-flow + re-pin if at bottom
+        }
         for (let i = 0; i < threadModel.count; i++)
             if (threadModel.get(i).ts === ts) { threadModel.setProperty(i, "reactionsJson", reactionsJson); break }
     }

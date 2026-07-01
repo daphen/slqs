@@ -89,7 +89,7 @@ ListView {
         target: Backend
         // optimistic insert/reconcile changed item heights in place → re-flow so
         // section (date) dividers don't render at stale positions over messages.
-        function onReflowList() { Qt.callLater(list.forceLayout) }
+        function onReflowList() { Qt.callLater(function() { list.forceLayout(); list.pinIfStuck() }) }
         function onCurrentChannelChanged() {
             list.pinBottom = true; list.stick = true
             Qt.callLater(list.goBottomNow); pinTimer.restart()
