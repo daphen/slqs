@@ -513,6 +513,35 @@ FloatingWindow {
                     }
                 }
             }
+
+            // Bottom-aligned "Copied" badge — pairs with the cursor-bar→copy-icon
+            // morph; driven by copiedTs (held the same ~1.5s as the morph).
+            Rectangle {
+                id: copiedBadge
+                z: 201
+                visible: opacity > 0
+                opacity: Backend.copiedTs !== "" ? 1 : 0
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottom: parent.bottom; anchors.bottomMargin: 30
+                width: cbRow.implicitWidth + 28; height: 32; radius: 8
+                color: Theme.mode === "light" ? Theme.ink : Theme.fg
+                border.width: 1; border.color: Theme.hairline
+                Behavior on opacity { NumberAnimation { duration: 140 } }
+                Row {
+                    id: cbRow; anchors.centerIn: parent; spacing: 8
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: ""; color: Theme.green
+                        font.family: Theme.fontFamily; font.pixelSize: 13
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Copied"; color: Theme.bg
+                        renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13
+                    }
+                }
+            }
         }
     }
 

@@ -675,7 +675,7 @@ Item {
     // ts of the just-copied message — drives a high-contrast "Copied" badge on that
     // row (feedback on the message you acted on, not a low-contrast detached toast).
     property string copiedTs: ""
-    Timer { id: copiedClear; interval: 850; onTriggered: backend.copiedTs = "" }
+    Timer { id: copiedClear; interval: 1500; onTriggered: backend.copiedTs = "" }
     function copyText(msg) {
         if (!msg) return
         const t = plainText(msg.text)

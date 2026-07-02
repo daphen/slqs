@@ -63,7 +63,7 @@ Item {
         anchors { top: parent.top; topMargin: del._dayPad; left: parent.left; right: parent.right; bottom: parent.bottom }
         // No color/opacity animation here: the cursor must snap instantly so fast
         // j/k navigation doesn't catch rows mid-fade (reads as blinking).
-        color: del.cursor ? Theme.selection
+        color: del.cursor ? Qt.rgba(Theme.selection.r, Theme.selection.g, Theme.selection.b, 0.6)
              : hov.hovered ? Qt.rgba(Theme.selection.r, Theme.selection.g, Theme.selection.b, 0.5) : "transparent"
         Rectangle {
             anchors.left: parent.left; width: 2; height: parent.height
@@ -85,8 +85,8 @@ Item {
     Rectangle {
         id: copyFlash
         anchors { top: parent.top; topMargin: del._dayPad; left: parent.left; right: parent.right; bottom: parent.bottom }
-        color: Theme.green
-        opacity: cursorMark.showCopy ? 0.12 : 0
+        color: Qt.darker(Theme.selection, 1.03)   // copy = a touch darker than the full highlight
+        opacity: cursorMark.showCopy ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
     }
 
