@@ -49,7 +49,7 @@ Item {
         opacity: (del.ts.length > 0 && del.ts === Backend.copiedTs) ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: 90 } }
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom; anchors.bottomMargin: 22
+        anchors.top: body.bottom; anchors.topMargin: 2   // hang just below the message text
         width: copiedLbl.implicitWidth + 16; height: 22; radius: 6
         color: Theme.mode === "light" ? Theme.ink : Theme.fg   // neutral dark (light) / light (dark), high contrast both
         Text {
@@ -68,7 +68,7 @@ Item {
         opacity: (del.ts.length > 0 && Backend.mediaLoading && del.ts === Backend.mediaLoadingTs) ? 1 : 0
         Behavior on opacity { NumberAnimation { duration: 90 } }
         anchors.horizontalCenter: parent.horizontalCenter
-        anchors.bottom: parent.bottom; anchors.bottomMargin: 22
+        anchors.top: body.bottom; anchors.topMargin: 2   // hang just below the message text
         width: mlRow.implicitWidth + 16; height: 22; radius: 6
         color: Theme.mode === "light" ? Theme.ink : Theme.fg
         Row {
