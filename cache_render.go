@@ -108,6 +108,7 @@ func (d *daemon) resolveUnknownUsers(w *workspace, ids []string) {
 				return
 			}
 			out <- res{id, nameFor(*u, w.namePref)}
+			d.cacheAvatar(*u) // best-effort; shows on a later render if not this one
 		}(id)
 	}
 	// Bound the wait — users.info has no timeout, and a single hung lookup must not

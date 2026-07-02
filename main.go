@@ -168,6 +168,57 @@ func prefetchAvatars(users []slack.User) {
 	log.Printf("avatar prefetch done (%d fetched)", n)
 }
 
+// cacheAvatar downloads one resolved user's avatar into the same cache
+// prefetchAvatars uses and registers it in d.avatars, so users missing from the
+// startup prefetch (external / Slack-Connect) show a photo instead of initials.
+// Best-effort; the on-disk file also survives a later scanAvatars re-scan.
+func (d *daemon) cacheAvatar(u slack.User) {
+	id := u.ID
+	if id == "" {
+		return
+	}
+	d.avMu.RLock()
+	have := d.avatars[id] != ""
+	d.avMu.RUnlock()
+	if have {
+		return
+	}
+	url := u.Profile.Image512
+	if url == "" {
+		url = u.Profile.ImageOriginal
+	}
+	if url == "" {
+		url = u.Profile.Image192
+	}
+	if url == "" || !strings.HasPrefix(url, "http") {
+		return
+	}
+	ext := "png"
+	if i := strings.LastIndexByte(url, '.'); i >= 0 && len(url)-i <= 5 {
+		ext = strings.ToLower(url[i+1:])
+	}
+	resp, err := http.Get(url)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != 200 {
+		return
+	}
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return
+	}
+	dir := filepath.Join(os.Getenv("HOME"), ".cache", "slqs", "images")
+	path := filepath.Join(dir, "avatar-"+id+"-hi."+ext)
+	if os.WriteFile(path, b, 0644) != nil {
+		return
+	}
+	d.avMu.Lock()
+	d.avatars[id] = "file://" + path
+	d.avMu.Unlock()
+}
+
 // nameFor resolves a user's name per the workspace's preference: "display"
 // prefers their chosen Slack display name, anything else prefers the full real
 // name (consistent "David Karlsson" rather than a mix of casual handles).
