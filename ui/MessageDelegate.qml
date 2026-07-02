@@ -79,24 +79,15 @@ Item {
         Behavior on opacity { NumberAnimation { duration: 320 } }
     }
 
-    // Subtle green pulse on the row you just copied, paired with the cursor-bar morph.
+    // Green row highlight, driven by the SAME state + easing as the cursor-bar
+    // morph (cursorMark.showCopy, 250ms InOutQuad) so the two animate in exact
+    // sync — fade in, hold, and fade out as one motion.
     Rectangle {
         id: copyFlash
         anchors { top: parent.top; topMargin: del._dayPad; left: parent.left; right: parent.right; bottom: parent.bottom }
         color: Theme.green
-        opacity: 0
-        Connections {
-            target: Backend
-            function onCopiedTsChanged() {
-                if (del.ts.length > 0 && Backend.copiedTs === del.ts) copyPulse.restart()
-            }
-        }
-        SequentialAnimation {
-            id: copyPulse
-            NumberAnimation { target: copyFlash; property: "opacity"; to: 0.12; duration: 110 }
-            PauseAnimation { duration: 120 }
-            NumberAnimation { target: copyFlash; property: "opacity"; to: 0; duration: 520; easing.type: Easing.OutQuad }
-        }
+        opacity: cursorMark.showCopy ? 0.12 : 0
+        Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
     }
 
 
