@@ -287,6 +287,8 @@ type daemon struct {
 	mu    sync.Mutex
 	conns map[net.Conn]struct{}
 
+	userMiss map[string]bool // author IDs users.info couldn't resolve — don't refetch (guarded by mu)
+
 	updateEvent map[string]any // latest updateAvailable event, replayed to new clients
 
 	presenceActive atomic.Bool // false while idle (swayidle) — gates the tickle heartbeat
@@ -793,6 +795,7 @@ func (d *daemon) pollWorkspace(ctx context.Context, w *workspace) {
 			if w.chans[chID] == "" {
 				continue // not a channel this workspace knows
 			}
+			d.resolveUnknownUsers(w, []string{uID})
 			d.broadcast(map[string]any{
 				"type": "message", "workspace": w.teamID, "channel": chID, "thread": threadTS,
 				"mention": w.isMention(w.chanKind[chID], text),
@@ -1307,6 +1310,7 @@ func (d *daemon) sendHistory(c net.Conn, w *workspace, channelID, before string)
 		return
 	}
 	sort.Slice(msgs, func(i, j int) bool { return msgs[i].Timestamp < msgs[j].Timestamp })
+	d.resolveMsgAuthors(w, msgs)
 	out := make([]map[string]any, 0, len(msgs))
 	for _, m := range msgs {
 		if m.Text == "" && len(m.Files) == 0 {
@@ -1336,6 +1340,7 @@ func (d *daemon) sendJump(c net.Conn, w *workspace, channelID, ts string) {
 	}
 	log.Printf("JUMP-DBG GetHistoryAround ok: %d msgs, joined=%v", len(msgs), w.chans[channelID] != "")
 	sort.Slice(msgs, func(i, j int) bool { return msgs[i].Timestamp < msgs[j].Timestamp })
+	d.resolveMsgAuthors(w, msgs)
 	out := make([]map[string]any, 0, len(msgs))
 	for _, m := range msgs {
 		if m.Text == "" && len(m.Files) == 0 {
@@ -1410,6 +1415,7 @@ func (d *daemon) sendReplies(c net.Conn, w *workspace, channelID, threadTS strin
 			}()
 		}
 	}
+	d.resolveMsgAuthors(w, msgs)
 	out := make([]map[string]any, 0, len(msgs))
 	for _, m := range msgs {
 		if m.Text == "" && len(m.Files) == 0 {
@@ -1791,6 +1797,7 @@ func main() {
 		uploading:     map[string]chan struct{}{},
 		lastBackfill:  map[string]time.Time{},
 		conns:         map[net.Conn]struct{}{},
+		userMiss:      map[string]bool{},
 	}
 	cachePath := filepath.Join(xdgData(), "cache.db")
 	dsn := "file:" + cachePath + "?mode=ro&_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)"

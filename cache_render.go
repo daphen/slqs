@@ -74,6 +74,87 @@ func imagesFromBlocks(raw string) []slack.Attachment {
 	return out
 }
 
+// resolveUnknownUsers fills in names for author IDs missing from the startup
+// users.list — external / Slack-Connect participants (and occasionally
+// deactivated accounts) — via users.info, so their messages render with a real
+// name instead of "someone". Each ID is fetched at most once; misses are
+// remembered so a genuinely-unresolvable ID isn't refetched on every render.
+// Called before the render loop so the first paint already has real names.
+func (d *daemon) resolveUnknownUsers(w *workspace, ids []string) {
+	d.mu.Lock()
+	var todo []string
+	seen := map[string]bool{}
+	for _, id := range ids {
+		if id == "" || seen[id] || w.users[id] != "" || d.userMiss[id] {
+			continue
+		}
+		seen[id] = true
+		todo = append(todo, id)
+	}
+	d.mu.Unlock()
+	if len(todo) == 0 {
+		return
+	}
+	type res struct{ id, name string }
+	out := make(chan res, len(todo)) // buffered: senders never block, so a slow lookup can't leak
+	sem := make(chan struct{}, 8)
+	for _, id := range todo {
+		go func(id string) {
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			u, err := w.client.GetUserProfile(id)
+			if err != nil || u == nil {
+				out <- res{id, ""}
+				return
+			}
+			out <- res{id, nameFor(*u, w.namePref)}
+		}(id)
+	}
+	// Bound the wait — users.info has no timeout, and a single hung lookup must not
+	// block the whole render. Whatever hasn't resolved in time is simply retried on
+	// the next open (not marked a miss).
+	got := map[string]string{}
+	deadline := time.After(5 * time.Second)
+	for i := 0; i < len(todo); i++ {
+		select {
+		case r := <-out:
+			got[r.id] = r.name
+		case <-deadline:
+			i = len(todo)
+		case <-d.ctx.Done():
+			return
+		}
+	}
+	// Merge copy-on-write (like registerChannel) so lock-free readers never see a
+	// half-written map.
+	d.mu.Lock()
+	nu := make(map[string]string, len(w.users)+len(got))
+	for k, v := range w.users {
+		nu[k] = v
+	}
+	for id, name := range got {
+		if name != "" {
+			nu[id] = name
+		} else {
+			d.userMiss[id] = true // resolved but nameless (visibility-restricted) — don't refetch
+		}
+	}
+	w.users = nu
+	d.mu.Unlock()
+}
+
+// resolveMsgAuthors is resolveUnknownUsers for a batch of live messages (only
+// real user IDs; bot messages resolve via their embedded username in formatMsg).
+func (d *daemon) resolveMsgAuthors(w *workspace, msgs []slack.Message) {
+	ids := make([]string, 0, len(msgs))
+	for i := range msgs {
+		if msgs[i].User != "" {
+			ids = append(ids, msgs[i].User)
+		}
+	}
+	d.resolveUnknownUsers(w, ids)
+}
+
 // msgFromRaw renders one cache.db row into the message shape Backend.qml wants,
 // parsing raw_json for inline images (file uploads + unfurls) and Block Kit text
 // (bot messages like swarmia carry their content in blocks, not the text field).
@@ -493,6 +574,11 @@ func (d *daemon) sendRecent(c net.Conn, w *workspace, channelID string) {
 		}
 	}
 	rows.Close()
+	ids := make([]string, len(rs))
+	for i := range rs {
+		ids[i] = rs[i].uid
+	}
+	d.resolveUnknownUsers(w, ids)
 	// Build messages concurrently — msgFromRaw fetches thumbnails (slow part);
 	// doing them in parallel turns ~N×latency into ~latency so an image-heavy
 	// channel paints fast instead of blanking while files download serially.

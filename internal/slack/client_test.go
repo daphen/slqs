@@ -2139,6 +2139,22 @@ func (m *mockSlackAPI) OpenConversationContext(ctx context.Context, params *slac
 	return nil, false, false, nil
 }
 
+func (m *mockSlackAPI) InviteUsersToConversationContext(ctx context.Context, channelID string, users ...string) (*slack.Channel, error) {
+	return nil, nil
+}
+
+func (m *mockSlackAPI) GetUploadURLExternalContext(ctx context.Context, params slack.GetUploadURLExternalParameters) (*slack.GetUploadURLExternalResponse, error) {
+	return nil, nil
+}
+
+func (m *mockSlackAPI) UploadToURL(ctx context.Context, params slack.UploadToURLParameters) error {
+	return nil
+}
+
+func (m *mockSlackAPI) CompleteUploadExternalContext(ctx context.Context, params slack.CompleteUploadExternalParameters) (*slack.CompleteUploadExternalResponse, error) {
+	return nil, nil
+}
+
 func TestOpenConversation_SingleUserReturnsIMChannelID(t *testing.T) {
 	mock := &mockSlackAPI{
 		openConversationContextFn: func(ctx context.Context, params *slack.OpenConversationParameters) (*slack.Channel, bool, bool, error) {
