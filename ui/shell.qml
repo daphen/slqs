@@ -491,7 +491,7 @@ FloatingWindow {
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.bottom: parent.bottom; anchors.bottomMargin: 30
                 width: mlRow.implicitWidth + 28; height: 32; radius: 8
-                color: Theme.mode === "light" ? Theme.ink : Theme.surface
+                color: Theme.mode === "light" ? Theme.ink : Theme.fg
                 border.width: 1; border.color: Theme.hairline
                 Behavior on opacity { NumberAnimation { duration: 140 } }
                 Row {
@@ -507,7 +507,7 @@ FloatingWindow {
                     }
                     Text {
                         anchors.verticalCenter: parent.verticalCenter
-                        text: "Opening media…"; color: Theme.mode === "light" ? Theme.bg : Theme.fg
+                        text: "Opening media…"; color: Theme.bg
                         renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                         font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13
                     }
