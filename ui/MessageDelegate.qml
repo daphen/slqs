@@ -21,6 +21,7 @@ Item {
     required property int    index
     required property bool   pending
     required property string day
+    required property string ts
     readonly property bool isReply: replyAuthor.length > 0 || replyText.length > 0
     // Per-row date divider: shown when this is the first message of its day (channel
     // only). Replaces the ListView section, which mis-dated rows after image reflows.
@@ -39,6 +40,56 @@ Item {
     readonly property var images: (imagesJson && imagesJson.length) ? JSON.parse(imagesJson) : []
     readonly property bool cursor: ListView.isCurrentItem && ListView.view && ListView.view.active
     readonly property bool emojiOnly: Backend.isEmojiOnly(text)
+
+    // High-contrast "Copied" badge on the row you just copied — feedback anchored
+    // to the message (and scrolling with it), not a faint detached toast.
+    Rectangle {
+        z: 50
+        visible: opacity > 0
+        opacity: (del.ts.length > 0 && del.ts === Backend.copiedTs) ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: 90 } }
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom; anchors.bottomMargin: 22
+        width: copiedLbl.implicitWidth + 16; height: 22; radius: 6
+        color: Theme.mode === "light" ? Theme.ink : Theme.fg   // neutral dark (light) / light (dark), high contrast both
+        Text {
+            id: copiedLbl; anchors.centerIn: parent; text: "Copied"
+            renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+            color: Theme.bg; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
+            font.pixelSize: 12; font.weight: 700
+        }
+    }
+
+    // "Opening media…" badge on the row you pressed v on — same placement/color as
+    // the Copied badge, with a pulsing dot for the ongoing load.
+    Rectangle {
+        z: 50
+        visible: opacity > 0
+        opacity: (del.ts.length > 0 && Backend.mediaLoading && del.ts === Backend.mediaLoadingTs) ? 1 : 0
+        Behavior on opacity { NumberAnimation { duration: 90 } }
+        anchors.horizontalCenter: parent.horizontalCenter
+        anchors.bottom: parent.bottom; anchors.bottomMargin: 22
+        width: mlRow.implicitWidth + 16; height: 22; radius: 6
+        color: Theme.mode === "light" ? Theme.ink : Theme.fg
+        Row {
+            id: mlRow; anchors.centerIn: parent; spacing: 7
+            Rectangle {
+                width: 7; height: 7; radius: 3.5; color: Theme.bg
+                anchors.verticalCenter: parent.verticalCenter
+                SequentialAnimation on opacity {
+                    running: Backend.mediaLoading && del.ts === Backend.mediaLoadingTs; loops: Animation.Infinite
+                    NumberAnimation { from: 1; to: 0.25; duration: 550 }
+                    NumberAnimation { from: 0.25; to: 1; duration: 550 }
+                }
+            }
+            Text {
+                anchors.verticalCenter: parent.verticalCenter; text: "Opening media…"; color: Theme.bg
+                renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
+                font.pixelSize: 12; font.weight: 700
+            }
+        }
+    }
 
     // date divider, rendered as part of this row (the first message of a day)
     Item {

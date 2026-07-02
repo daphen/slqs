@@ -672,10 +672,14 @@ Item {
     }
     // strip mention markers + the @… leading markdown so copied text is clean
     function plainText(s) { return (s || "").replace(/[\ue000\ue001\ue002]/g, "") }
+    // ts of the just-copied message — drives a high-contrast "Copied" badge on that
+    // row (feedback on the message you acted on, not a low-contrast detached toast).
+    property string copiedTs: ""
+    Timer { id: copiedClear; interval: 1400; onTriggered: backend.copiedTs = "" }
     function copyText(msg) {
         if (!msg) return
         const t = plainText(msg.text)
-        if (t.length) { Quickshell.execDetached(["wl-copy", "--", t]); toast("Copied message") }
+        if (t.length) { Quickshell.execDetached(["wl-copy", "--", t]); copiedTs = msg.ts; copiedClear.restart() }
     }
     // A deleted message (echoed back over the websocket) — drop it everywhere.
     function applyDelete(channelId, ts) {
@@ -819,7 +823,12 @@ Item {
         else if (e.type === "replies") setThread(e.channel, e.thread, e.msgs)
         else if (e.type === "unread") setChannelUnread(e.channel, e.count, e.mention)
         else if (e.type === "threadUnread") setThreadUnread(e.channel, e.thread, e.count)
-        else if (e.type === "viewReady") openViewer(e.paths || e.path, e.mediatype)
+        else if (e.type === "viewReady") {
+            mediaLoadTimer.stop()
+            const ps = e.paths || e.path
+            if (!ps || (Array.isArray(ps) && ps.length === 0)) { mediaLoading = false; toast("Couldn’t open media") }
+            else { openViewer(ps, e.mediatype); mediaGraceTimer.restart() }  // keep indicator up while the viewer launches
+        }
         else if (e.type === "open") openFromNotification(e.workspace, e.channel, e.thread)
         else if (e.type === "typing") showTyping(e.channel, e.thread, e.user)
         else if (e.type === "reactors") applyReactors(e.ts, e.reactions)
@@ -872,12 +881,24 @@ Item {
     // Open a focused message's first image in the custom media viewer (same
     // script the endcord fork uses). slkd downloads the full-res original,
     // then replies viewReady → we launch the script with the local path.
+    // True from pressing `v` until the daemon finishes downloading full-res media
+    // (viewReady). Drives the loading indicator and guards re-presses — without it
+    // a slow video download looks dead, so you re-press v and queue duplicate
+    // downloads + viewer windows. Self-clears via mediaLoadTimer if nothing comes.
+    property bool mediaLoading: false
+    property string mediaLoadingTs: ""   // ts of the message being opened → on-row "Opening media…" badge
+    Timer { id: mediaLoadTimer; interval: 20000; onTriggered: { backend.mediaLoading = false; backend.toast("Media didn’t open — try again") } }
+    // Media is often cached, so the download (view→viewReady) is instant — but the
+    // viewer (mpv especially) still takes a beat to appear. Hold the indicator for a
+    // grace window after viewReady so it's visible on cached opens too.
+    Timer { id: mediaGraceTimer; interval: 2500; onTriggered: backend.mediaLoading = false }
     function viewImage(msg) {
         if (!msg) return
         let imgs
         try { imgs = JSON.parse(msg.imagesJson || "[]") } catch (e) { return }
         imgs = imgs.filter(function (i) { return i.full })
         if (!imgs.length) return
+        if (mediaLoading) return   // already opening — indicator is up; don't queue another
         const items = imgs.map(function (i) {
             return { id: i.id, url: i.full, ext: i.ext, type: i.type }
         })
@@ -886,6 +907,9 @@ Item {
         // navigable in a single viewer; a lone video keeps the plain mpv path.
         const hasVideo = items.some(function (i) { return i.type === "video" })
         const mediatype = !hasVideo ? "img" : (items.length > 1 ? "mix" : "video")
+        mediaLoadingTs = msg.ts
+        mediaLoading = true
+        mediaLoadTimer.restart()
         safeWrite(JSON.stringify({ type: "view", channel: currentChannelId,
             images: items, mediatype: mediatype }) + "\n")
     }
