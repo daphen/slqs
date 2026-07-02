@@ -41,56 +41,6 @@ Item {
     readonly property bool cursor: ListView.isCurrentItem && ListView.view && ListView.view.active
     readonly property bool emojiOnly: Backend.isEmojiOnly(text)
 
-    // High-contrast "Copied" badge on the row you just copied — feedback anchored
-    // to the message (and scrolling with it), not a faint detached toast.
-    Rectangle {
-        z: 50
-        visible: opacity > 0
-        opacity: (del.ts.length > 0 && del.ts === Backend.copiedTs) ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: 90 } }
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: body.bottom; anchors.topMargin: 2   // hang just below the message text
-        width: copiedLbl.implicitWidth + 16; height: 22; radius: 6
-        color: Theme.mode === "light" ? Theme.ink : Theme.fg   // neutral dark (light) / light (dark), high contrast both
-        Text {
-            id: copiedLbl; anchors.centerIn: parent; text: "Copied"
-            renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
-            color: Theme.bg; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
-            font.pixelSize: 12; font.weight: 700
-        }
-    }
-
-    // "Opening media…" badge on the row you pressed v on — same placement/color as
-    // the Copied badge, with a pulsing dot for the ongoing load.
-    Rectangle {
-        z: 50
-        visible: opacity > 0
-        opacity: (del.ts.length > 0 && Backend.mediaLoading && del.ts === Backend.mediaLoadingTs) ? 1 : 0
-        Behavior on opacity { NumberAnimation { duration: 90 } }
-        anchors.horizontalCenter: parent.horizontalCenter
-        anchors.top: body.bottom; anchors.topMargin: 2   // hang just below the message text
-        width: mlRow.implicitWidth + 16; height: 22; radius: 6
-        color: Theme.mode === "light" ? Theme.ink : Theme.fg
-        Row {
-            id: mlRow; anchors.centerIn: parent; spacing: 7
-            Rectangle {
-                width: 7; height: 7; radius: 3.5; color: Theme.bg
-                anchors.verticalCenter: parent.verticalCenter
-                SequentialAnimation on opacity {
-                    running: Backend.mediaLoading && del.ts === Backend.mediaLoadingTs; loops: Animation.Infinite
-                    NumberAnimation { from: 1; to: 0.25; duration: 550 }
-                    NumberAnimation { from: 0.25; to: 1; duration: 550 }
-                }
-            }
-            Text {
-                anchors.verticalCenter: parent.verticalCenter; text: "Opening media…"; color: Theme.bg
-                renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
-                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
-                font.pixelSize: 12; font.weight: 700
-            }
-        }
-    }
-
     // date divider, rendered as part of this row (the first message of a day)
     Item {
         id: dayDiv
@@ -129,6 +79,27 @@ Item {
         Behavior on opacity { NumberAnimation { duration: 320 } }
     }
 
+    // Subtle green pulse on the row you just copied, paired with the cursor-bar morph.
+    Rectangle {
+        id: copyFlash
+        anchors { top: parent.top; topMargin: del._dayPad; left: parent.left; right: parent.right; bottom: parent.bottom }
+        color: Theme.green
+        opacity: 0
+        Connections {
+            target: Backend
+            function onCopiedTsChanged() {
+                if (del.ts.length > 0 && Backend.copiedTs === del.ts) copyPulse.restart()
+            }
+        }
+        SequentialAnimation {
+            id: copyPulse
+            NumberAnimation { target: copyFlash; property: "opacity"; to: 0.12; duration: 110 }
+            PauseAnimation { duration: 120 }
+            NumberAnimation { target: copyFlash; property: "opacity"; to: 0; duration: 520; easing.type: Easing.OutQuad }
+        }
+    }
+
+
     // vim relative line numbers (only while this list is the focused panel):
     // an orange bar (matching the sidebar's current-channel marker) marks the
     // cursor row, the others show distance-from-cursor — so "8j"/"3k" jumps are
@@ -141,9 +112,37 @@ Item {
         anchors.top: parent.top
         anchors.topMargin: (del.grouped ? 3 : 9) + del._dayPad
         height: del.grouped ? 20 : 36
-        Rectangle {
+        // Cursor marker that briefly morphs into a copy icon when this row is
+        // copied — transitions.dev icon-swap (250ms ease-in-out, scale 0.25).
+        Item {
+            id: cursorMark
             visible: del.cursor; anchors.centerIn: parent
-            width: 3; height: 16; radius: 2; color: Theme.cursor
+            width: 16; height: 16
+            property bool showCopy: false
+            Connections {
+                target: Backend
+                function onCopiedTsChanged() {
+                    if (del.ts.length > 0 && Backend.copiedTs === del.ts) { cursorMark.showCopy = true; copyRevert.restart() }
+                }
+            }
+            Timer { id: copyRevert; interval: 1500; onTriggered: cursorMark.showCopy = false }
+            Rectangle {   // the bar (resting state)
+                anchors.centerIn: parent
+                width: 3; height: 16; radius: 2; color: Theme.cursor
+                opacity: cursorMark.showCopy ? 0 : 1
+                scale: cursorMark.showCopy ? 0.25 : 1
+                Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
+                Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
+            }
+            Text {   // the copy icon (nf-fa-copy)
+                anchors.centerIn: parent
+                text: ""; color: Theme.cursor
+                font.family: Theme.fontFamily; font.pixelSize: 16
+                opacity: cursorMark.showCopy ? 1 : 0
+                scale: cursorMark.showCopy ? 1 : 0.25
+                Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
+                Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
+            }
         }
         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
             visible: !del.cursor

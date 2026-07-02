@@ -480,6 +480,39 @@ FloatingWindow {
                     function onToast(message) { toast.message = message; toast.opacity = 1; toastTimer.restart() }
                 }
             }
+
+            // Bottom-aligned "Opening media…" badge — v starts an async full-res
+            // fetch, so show immediate persistent feedback until the viewer appears.
+            Rectangle {
+                id: mediaLoad
+                z: 201
+                visible: opacity > 0
+                opacity: Backend.mediaLoading ? 1 : 0
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.bottom: parent.bottom; anchors.bottomMargin: 30
+                width: mlRow.implicitWidth + 28; height: 32; radius: 8
+                color: Theme.mode === "light" ? Theme.ink : Theme.surface
+                border.width: 1; border.color: Theme.hairline
+                Behavior on opacity { NumberAnimation { duration: 140 } }
+                Row {
+                    id: mlRow; anchors.centerIn: parent; spacing: 8
+                    Rectangle {
+                        width: 8; height: 8; radius: 4; color: Theme.cursor
+                        anchors.verticalCenter: parent.verticalCenter
+                        SequentialAnimation on opacity {
+                            running: Backend.mediaLoading; loops: Animation.Infinite
+                            NumberAnimation { from: 1; to: 0.25; duration: 550 }
+                            NumberAnimation { from: 0.25; to: 1; duration: 550 }
+                        }
+                    }
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: "Opening media…"; color: Theme.mode === "light" ? Theme.bg : Theme.fg
+                        renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13
+                    }
+                }
+            }
         }
     }
 
