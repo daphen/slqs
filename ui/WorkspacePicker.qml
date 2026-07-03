@@ -112,17 +112,18 @@ Item {
                         anchors.topMargin: 1; anchors.bottomMargin: 1; radius: 8
                         color: index === wp.sel ? Theme.selection : hov.hovered ? Theme.hover : "transparent"
                     }
-                    // Same accent-dot marker the worktree picker uses for
-                    // the active entry — replaces the "current" text tag.
+                    // Same accent-dot marker the worktree picker uses for the
+                    // active entry — right-aligned here so the avatar chips
+                    // stay on one column.
                     Rectangle {
                         visible: row.active
                         width: 6; height: 6; radius: 3
                         color: Theme.cursor
-                        anchors.left: parent.left; anchors.leftMargin: 22
+                        anchors.right: parent.right; anchors.rightMargin: 22
                         anchors.verticalCenter: parent.verticalCenter
                     }
                     Row {
-                        anchors.fill: parent; anchors.leftMargin: row.active ? 38 : 22; anchors.rightMargin: 22; spacing: 11
+                        anchors.fill: parent; anchors.leftMargin: 22; anchors.rightMargin: 22; spacing: 11
                         ClippingRectangle {
                             anchors.verticalCenter: parent.verticalCenter
                             width: 28; height: 28; radius: 8; color: Theme.hover
