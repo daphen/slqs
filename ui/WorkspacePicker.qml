@@ -112,8 +112,17 @@ Item {
                         anchors.topMargin: 1; anchors.bottomMargin: 1; radius: 8
                         color: index === wp.sel ? Theme.selection : hov.hovered ? Theme.hover : "transparent"
                     }
+                    // Same accent-dot marker the worktree picker uses for
+                    // the active entry — replaces the "current" text tag.
+                    Rectangle {
+                        visible: row.active
+                        width: 6; height: 6; radius: 3
+                        color: Theme.cursor
+                        anchors.left: parent.left; anchors.leftMargin: 22
+                        anchors.verticalCenter: parent.verticalCenter
+                    }
                     Row {
-                        anchors.fill: parent; anchors.leftMargin: 22; anchors.rightMargin: 22; spacing: 11
+                        anchors.fill: parent; anchors.leftMargin: row.active ? 38 : 22; anchors.rightMargin: 22; spacing: 11
                         ClippingRectangle {
                             anchors.verticalCenter: parent.verticalCenter
                             width: 28; height: 28; radius: 8; color: Theme.hover
@@ -133,10 +142,6 @@ Item {
                                font.family: wp.sans
                                font.pixelSize: 14; font.weight: row.active ? 600 : 500 }
                     }
-                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
-                           anchors.right: parent.right; anchors.rightMargin: 14; anchors.verticalCenter: parent.verticalCenter
-                           text: row.active ? "current" : ""; color: Theme.fg_muted
-                           font.family: wp.sans; font.pixelSize: 11; font.weight: 600; font.letterSpacing: 0.5 }
                     HoverHandler { id: hov }
                     TapHandler { onTapped: { wp.sel = row.index; wp.accept() } }
                 }
