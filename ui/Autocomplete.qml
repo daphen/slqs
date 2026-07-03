@@ -76,9 +76,18 @@ Item {
     }
 
     Rectangle {
+        id: popup
         visible: ac.active
-        anchors.left: parent.left; anchors.bottom: parent.top; anchors.bottomMargin: 6
-        width: 340
+        // Center the popup above the cursor instead of pinning to the input's
+        // left edge; clamp so it stays fully on-screen. Vertical stays above.
+        readonly property int w: 340
+        anchors.bottom: parent.top; anchors.bottomMargin: 6
+        x: {
+            if (!ac.input) return 0
+            const cx = ac.input.mapToItem(ac, ac.input.cursorRectangle.x, 0).x
+            return Math.max(0, Math.min(cx - popup.w / 2, ac.width - popup.w))
+        }
+        width: popup.w
         height: visible ? Math.min(acList.contentHeight + 8, 248) : 0
         color: Theme.bg_alt; radius: Theme.radius
         border.color: Theme.hairline; border.width: 1
