@@ -125,14 +125,14 @@ func (n *Notifier) Close() error {
 // conversation: a new message for the same key replaces the prior
 // notification in place (via ReplacesID) so the tray shows the latest
 // message rather than piling up stale ones. Returns nil if disabled.
-func (n *Notifier) Notify(key, title, body string) error {
+func (n *Notifier) Notify(key, title, body, image string) error {
 	if !n.enabled {
 		return nil
 	}
 	n.sendMu.Lock()
 	defer n.sendMu.Unlock()
 	if n.conn != nil {
-		id, err := n.sendDBus(key, title, body)
+		id, err := n.sendDBus(key, title, body, image)
 		if err != nil {
 			// godbus never auto-reconnects: a dropped/stale session bus makes
 			// every send fail (and the error used to be swallowed), so the daemon
@@ -140,7 +140,7 @@ func (n *Notifier) Notify(key, title, body string) error {
 			// self-heals.
 			log.Printf("[notify] dbus send failed (%v); reconnecting", err)
 			if n.reconnect() {
-				id, err = n.sendDBus(key, title, body)
+				id, err = n.sendDBus(key, title, body, image)
 			}
 		}
 		if err == nil {
@@ -156,21 +156,26 @@ func (n *Notifier) Notify(key, title, body string) error {
 		log.Printf("[notify] dbus still failing after reconnect key=%q: %v; using beeep", key, err)
 	}
 	// beeep fallback carries no actions — activation routing needs D-Bus.
-	return beeep.Notify(title, body, "")
+	return beeep.Notify(title, body, image)
 }
 
 // sendDBus builds and sends one notification over the current bus connection.
-func (n *Notifier) sendDBus(key, title, body string) (uint32, error) {
+func (n *Notifier) sendDBus(key, title, body, image string) (uint32, error) {
 	n.mu.Lock()
 	replaces := n.lastID[key]
 	n.mu.Unlock()
 	note := enotify.Notification{
-		AppName:       "slk",
-		ReplacesID:    replaces,
-		Summary:       title,
-		Body:          body,
-		Actions:       []enotify.Action{enotify.NewDefaultAction("Open")},
+		AppName:    "slk",
+		ReplacesID: replaces,
+		Summary:    title,
+		Body:       body,
+		// Blank label on the default action: keeps click-to-open (invoked by
+		// identifier, not label) but renders no "Open" button on any daemon.
+		Actions:       []enotify.Action{enotify.NewDefaultAction("")},
 		ExpireTimeout: enotify.ExpireTimeoutSetByNotificationServer,
+	}
+	if image != "" {
+		note.Hints = map[string]dbus.Variant{"image-path": dbus.MakeVariant(image)}
 	}
 	if n.notifier != nil {
 		return n.notifier.SendNotification(note)

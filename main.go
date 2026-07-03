@@ -949,7 +949,7 @@ func (d *daemon) readConn(c net.Conn) {
 			continue
 		}
 		if cmd.Type == "testnotify" {
-			log.Printf("testnotify -> err=%v", d.notifier.Notify("__test__", "slqs self-test", "if you see this, the daemon notifier delivers"))
+			log.Printf("testnotify -> err=%v", d.notifier.Notify("__test__", "slqs self-test", "if you see this, the daemon notifier delivers", ""))
 			continue
 		}
 		// browse/join act on channels we may not be a member of yet, so they
@@ -1536,7 +1536,7 @@ func (d *daemon) maybeNotify(w *workspace, chID, uID, text, threadTS string) {
 		body = "sent an attachment"
 	}
 	log.Printf("notify: [%s] ch=%s kind=%s from=%s", w.teamName, chName, kind, uID)
-	d.notifier.Notify(notify.RouteKey(w.teamID, chID, threadTS), title, body)
+	d.notifier.Notify(notify.RouteKey(w.teamID, chID, threadTS), title, body, d.avatarPath(uID))
 }
 
 // onNotifActivate fires when a notification is clicked: open that channel
