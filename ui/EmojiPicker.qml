@@ -52,7 +52,7 @@ Item {
         sel = 0; list.positionViewAtBeginning()
     }
     function move(d) { if (rows.length) sel = Math.max(0, Math.min(rows.length - 1, sel + d)); list.positionViewAtIndex(sel, ListView.Contain) }
-    function accept() { const r = rows[sel]; if (r) { hide(); picker.picked(r.name) } }
+    function accept() { const r = rows[sel]; if (r) { hide(); Backend.recordEmojiUse(r.name); picker.picked(r.name) } }
 
     MouseArea { anchors.fill: parent; onClicked: picker.hide() }
     Rectangle { anchors.fill: parent; color: Theme.ink; opacity: 0.45 }
@@ -116,7 +116,10 @@ Item {
                     required property var modelData
                     required property int index
                     readonly property bool isReaction: row.modelData.kind === "reaction"
-                    width: list.width; height: 36
+                    // A selected reaction row unfolds to show every reactor (wrapped).
+                    readonly property bool expanded: row.isReaction && index === picker.sel
+                    width: list.width
+                    height: expanded ? Math.max(36, usersText.implicitHeight + 14) : 36
                     color: "transparent"
                     // inset, rounded highlight (matches the other pickers — never touches the box corners)
                     Rectangle {
@@ -124,30 +127,42 @@ Item {
                         anchors.topMargin: 1; anchors.bottomMargin: 1; radius: 8
                         color: index === picker.sel ? Theme.selection : hov.hovered ? Theme.hover : "transparent"
                     }
-                    Rectangle { anchors.left: parent.left; anchors.leftMargin: 8; anchors.verticalCenter: parent.verticalCenter
+                    // Content is top-anchored (not centered) so a selected reaction row can
+                    // grow downward as its reactor list wraps, without overlapping neighbours.
+                    // Row children carry no anchors — anchoring them breaks Row's height.
+                    Rectangle { anchors.left: parent.left; anchors.leftMargin: 8
+                        anchors.top: parent.top; anchors.topMargin: 7
                         width: 3; height: 22; radius: 2; color: Theme.cursor; visible: index === picker.sel }
                     Row {
+                        id: contentRow
                         anchors.left: parent.left; anchors.right: parent.right
-                        anchors.leftMargin: 18; anchors.rightMargin: 16; anchors.verticalCenter: parent.verticalCenter
+                        anchors.leftMargin: 18; anchors.rightMargin: 16
+                        anchors.top: parent.top; anchors.topMargin: 7
                         spacing: 10
                         Item {
-                            width: 22; height: 22; anchors.verticalCenter: parent.verticalCenter
+                            width: 22; height: 22
                             Image { anchors.fill: parent; visible: row.modelData.custom; source: row.modelData.path || ""
                                     fillMode: Image.PreserveAspectFit; sourceSize.width: 44; sourceSize.height: 44 }
                             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent; visible: !row.modelData.custom
                                    text: row.modelData.glyph || ""; font.pixelSize: 19 }
                         }
                         // reaction row: count + who reacted; the mine ones are bold/accent
-                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: row.isReaction; anchors.verticalCenter: parent.verticalCenter
-                               width: 26; text: row.modelData.count
+                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: row.isReaction
+                               height: 22; verticalAlignment: Text.AlignVCenter
+                               width: 26; text: row.isReaction ? ("" + row.modelData.count) : ""
                                color: row.modelData.mine ? Theme.sky : Theme.fg
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 14; font.weight: 700 }
-                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: row.isReaction; anchors.verticalCenter: parent.verticalCenter
-                               width: row.width - 90; elide: Text.ElideRight
+                        Text { id: usersText; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: row.isReaction
+                               width: row.width - 90
+                               height: row.expanded ? implicitHeight : 22
+                               verticalAlignment: Text.AlignVCenter
+                               wrapMode: row.expanded ? Text.WordWrap : Text.NoWrap
+                               elide: row.expanded ? Text.ElideNone : Text.ElideRight
                                text: (row.modelData.users || []).join(", "); color: Theme.fg_muted
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13 }
                         // emoji row: :name:
-                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: !row.isReaction; anchors.verticalCenter: parent.verticalCenter
+                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: !row.isReaction
+                               height: 22; verticalAlignment: Text.AlignVCenter
                                text: ":" + row.modelData.name + ":"; color: Theme.fg
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 14 }
                     }

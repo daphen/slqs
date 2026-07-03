@@ -71,6 +71,10 @@ Item {
     property var _codemap: ({})
     // teamID -> [{id,name}] for @-mention autocomplete.
     property var _usersByWs: ({})
+    // Personalized emoji use counts so the picker floats your most-used first.
+    // { name: { n: count, t: lastUsedSeq } }, persisted per-app (emoji-freq.json).
+    property var _emojiFreq: ({})
+    property int _emojiSeq: 0
 
     // --- reactions ---
     function react(channelId, ts, name, remove) {
@@ -146,6 +150,25 @@ Item {
             if (threadModel.get(i).ts === ts) { threadModel.setProperty(i, "imagesJson", imagesJson); break }
     }
 
+    // Bump an emoji's use count (called when you pick a reaction or insert one
+    // via the composer). Persisted so "frequently used" survives restarts.
+    function recordEmojiUse(name) {
+        if (!name) return
+        const f = _emojiFreq
+        const e = f[name] || { n: 0, t: 0 }
+        e.n += 1; e.t = ++_emojiSeq
+        f[name] = e
+        _emojiFreq = f
+        emojiFreqFile.setText(JSON.stringify({ seq: _emojiSeq, freq: f }))
+    }
+    // Emoji names sorted by use — count desc, then most-recent.
+    function _freqNames() {
+        const f = _emojiFreq
+        const names = Object.keys(f)
+        names.sort(function(a, b) { return (f[b].n - f[a].n) || (f[b].t - f[a].t) })
+        return names
+    }
+
     // Emoji search for the picker: returns {name, custom, path, glyph}. Custom
     // (workspace) emoji first, then standard. Empty query returns a sample.
     // Relevance rank for a candidate name against the query: lower is better.
@@ -164,8 +187,17 @@ Item {
         const cust = _emojiByWs[currentWorkspace] || ({})   // only this workspace's customs
         if (!q) {
             const out = []
-            for (const name in cust) { out.push({ name: name, custom: true, path: cust[name], glyph: "" }); if (out.length >= limit) return out }
-            for (const key in _codemap) { out.push({ name: key.slice(1, -1), custom: false, path: "", glyph: _codemap[key] }); if (out.length >= limit) return out }
+            const seen = ({})
+            // Your most-used emoji first, resolved to a current custom or standard glyph.
+            const fn = _freqNames()
+            for (let i = 0; i < fn.length && out.length < limit; i++) {
+                const name = fn[i]
+                if (seen[name]) continue
+                if (cust[name]) { out.push({ name: name, custom: true, path: cust[name], glyph: "" }); seen[name] = true }
+                else if (_codemap[":" + name + ":"]) { out.push({ name: name, custom: false, path: "", glyph: _codemap[":" + name + ":"] }); seen[name] = true }
+            }
+            for (const name in cust) { if (seen[name]) continue; out.push({ name: name, custom: true, path: cust[name], glyph: "" }); seen[name] = true; if (out.length >= limit) return out }
+            for (const key in _codemap) { const n = key.slice(1, -1); if (seen[n]) continue; out.push({ name: n, custom: false, path: "", glyph: _codemap[key] }); seen[n] = true; if (out.length >= limit) return out }
             return out
         }
         // Score every match across customs + standard, then sort — can't bail early
@@ -180,8 +212,12 @@ Item {
             const r = _emojiRank(name, q)
             if (r >= 0) scored.push({ r: r, name: name, custom: false, path: "", glyph: _codemap[key] })
         }
+        const freq = _emojiFreq
         scored.sort(function(a, b) {
             if (a.r !== b.r) return a.r - b.r
+            const fa = (freq[a.name] || {}).n || 0
+            const fb = (freq[b.name] || {}).n || 0
+            if (fa !== fb) return fb - fa   // among equally-relevant matches, prefer your most-used
             if (a.name.length !== b.name.length) return a.name.length - b.name.length
             if (a.custom !== b.custom) return a.custom ? -1 : 1   // workspace customs win ties
             return a.name < b.name ? -1 : 1
@@ -1175,6 +1211,20 @@ Item {
         watchChanges: true
         onFileChanged: reload()
         onLoaded: { try { backend._codemap = JSON.parse(text()) } catch (e) {} }
+    }
+
+    // Personalized emoji use counts (written by recordEmojiUse). Sole writer,
+    // so no watchChanges — load once at startup.
+    FileView {
+        id: emojiFreqFile
+        path: backend._dataDir + "/emoji-freq.json"
+        onLoaded: {
+            try {
+                const d = JSON.parse(text())
+                backend._emojiFreq = d.freq || ({})
+                backend._emojiSeq = d.seq || 0
+            } catch (e) {}
+        }
     }
 
     function safeWrite(s) {

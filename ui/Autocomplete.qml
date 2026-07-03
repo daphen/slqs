@@ -50,7 +50,7 @@ Item {
         const r = rows[sel]
         if (!r) { reset(); return }
         let insert
-        if (mode === "emoji") insert = r.custom ? (":" + r.name + ":") : r.glyph
+        if (mode === "emoji") { insert = r.custom ? (":" + r.name + ":") : r.glyph; Backend.recordEmojiUse(r.name) }
         else { insert = "@" + r.name + " "; Backend.registerMention(r.name, r.id) }
         const before = input.text.substring(0, startPos)
         const after = input.text.substring(input.cursorPosition)
