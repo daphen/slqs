@@ -917,8 +917,15 @@ Item {
         if (workspace && workspace !== currentWorkspace) {
             currentWorkspace = workspace
             rebuildChannelModel()
+            selectChannel(id, ch.name, ch.topic)
+        } else if (id !== currentChannelId || threadsView) {
+            selectChannel(id, ch.name, ch.topic)
+        } else {
+            // Already viewing this channel — it's live, so skip the clear +
+            // refetch (a visible white blink). Just clear unread and re-focus.
+            applyUnread(id, 0)
+            sendFocus()
         }
-        selectChannel(id, ch.name, ch.topic)
         // A thread-reply notification opens that thread on top of the channel.
         if (thread) {
             threadOpenToLatest = true   // you were pinged about a reply → land at the latest
