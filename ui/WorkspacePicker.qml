@@ -25,7 +25,9 @@ Item {
         for (let i = 0; i < all.length; i++)
             if (!q || (all[i].name || "").toLowerCase().indexOf(q) >= 0) out.push(all[i])
         rows = out; sel = 0
-        if (list) list.positionViewAtBeginning()
+        // positionViewAtBeginning clamps to the first item, ignoring
+        // topMargin — snap contentY so the margin under the hairline shows.
+        if (list) Qt.callLater(() => list.contentY = -list.topMargin)
     }
     function move(d) { if (rows.length) sel = Math.max(0, Math.min(rows.length - 1, sel + d)); list.positionViewAtIndex(sel, ListView.Contain) }
     function accept() {
@@ -38,14 +40,19 @@ Item {
     MouseArea { anchors.fill: parent; onClicked: wp.hide() }
     Rectangle { anchors.fill: parent; color: Theme.ink; opacity: 0.45 }
 
+    readonly property string sans: "sans-serif"
+    readonly property color panelBorder:
+        Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, Theme.mode === "light" ? 0.5 : 0.10)
+
     Rectangle {
         width: Math.round(Math.min(480, parent.width - 80))
         height: header.height + list.height
         x: Math.round((parent.width - width) / 2)
         y: Math.round(parent.height * 0.16)
-        radius: Theme.radius
-        color: Theme.bg_alt
-        border.color: Theme.hairline; border.width: 1
+        radius: 14
+        color: Theme.bg
+        border.color: wp.panelBorder; border.width: 1
+        clip: true
         MouseArea { anchors.fill: parent }
 
         Column {
@@ -62,7 +69,7 @@ Item {
                         id: search
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - 36; color: Theme.fg; clip: true
-                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 17
+                        font.family: wp.sans; font.pixelSize: 17
                         onTextChanged: wp.rebuild()
                         Keys.onDownPressed: wp.move(1)
                         Keys.onUpPressed: wp.move(-1)
@@ -82,7 +89,9 @@ Item {
             ListView {
                 id: list
                 width: parent.width
-                height: Math.round(Math.min(440, contentHeight))
+                height: Math.round(Math.min(440, contentHeight + 20))
+                topMargin: 10
+                bottomMargin: 10
                 clip: true
                 model: wp.rows
                 currentIndex: wp.sel
@@ -99,14 +108,12 @@ Item {
                     // inset, rounded highlight so it never touches the box's
                     // rounded corners or border
                     Rectangle {
-                        anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8
+                        anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 10
                         anchors.topMargin: 1; anchors.bottomMargin: 1; radius: 8
                         color: index === wp.sel ? Theme.selection : hov.hovered ? Theme.hover : "transparent"
                     }
-                    Rectangle { anchors.left: parent.left; anchors.leftMargin: 8; anchors.verticalCenter: parent.verticalCenter
-                        width: 3; height: 24; radius: 2; color: Theme.cursor; visible: index === wp.sel }
                     Row {
-                        anchors.fill: parent; anchors.leftMargin: 18; anchors.rightMargin: 18; spacing: 11
+                        anchors.fill: parent; anchors.leftMargin: 22; anchors.rightMargin: 22; spacing: 11
                         ClippingRectangle {
                             anchors.verticalCenter: parent.verticalCenter
                             width: 28; height: 28; radius: 8; color: Theme.hover
@@ -123,13 +130,13 @@ Item {
                         }
                         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                                text: (row.modelData.id === "@me") ? "Direct Messages" : row.modelData.name; color: Theme.fg
-                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
-                               font.pixelSize: 15; font.weight: row.active ? 700 : 500 }
+                               font.family: wp.sans
+                               font.pixelSize: 14; font.weight: row.active ? 600 : 500 }
                     }
                     Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                            anchors.right: parent.right; anchors.rightMargin: 14; anchors.verticalCenter: parent.verticalCenter
                            text: row.active ? "current" : ""; color: Theme.fg_muted
-                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12; font.weight: 700 }
+                           font.family: wp.sans; font.pixelSize: 11; font.weight: 600; font.letterSpacing: 0.5 }
                     HoverHandler { id: hov }
                     TapHandler { onTapped: { wp.sel = row.index; wp.accept() } }
                 }
