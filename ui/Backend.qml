@@ -517,8 +517,31 @@ Item {
         const d = new Date(parseInt(key.substr(0, 4)), parseInt(key.substr(4, 2)) - 1, parseInt(key.substr(6, 2)))
         return Qt.formatDate(d, "dddd, MMM d")
     }
+    // An empty reset for a channel that already has content is almost always a
+    // stale answer — the daemon's upstream/network is still down right after a
+    // suspend/hibernate resume. Keep what we have and re-ask on a short timer
+    // (bounded) instead of blanking the view; a genuinely emptied channel still
+    // wins once the retries are exhausted.
+    property var _recentRetry: ({})   // channel -> failed attempts
+    Timer {
+        id: recentRetry
+        interval: 4000
+        property string channel: ""
+        onTriggered: if (channel !== "") safeWrite(JSON.stringify({ type: "recent", channel: channel }) + "\n")
+    }
     function loadRecent(id, msgs, reset, isFinal, jump) {
         msgs = msgs || []
+        if (reset && isFinal && msgs.length === 0 && !jump
+                && _store[id] && _store[id].length > 0) {
+            const tries = _recentRetry[id] || 0
+            if (tries < 8) {
+                _recentRetry[id] = tries + 1
+                recentRetry.channel = id
+                recentRetry.restart()
+                return
+            }
+        }
+        if (msgs.length > 0) delete _recentRetry[id]
         if (reset) {
             _store[id] = []
             _noMore[id] = false
@@ -954,6 +977,20 @@ Item {
         // strip file://; newline-join so the script opens them all together.
         const raw = arr.map(function (p) { return p.indexOf("file://") === 0 ? p.slice(7) : p })
         Quickshell.execDetached([(Quickshell.env("SLK_MEDIA_VIEWER") || (Quickshell.env("HOME") + "/.config/endcord/media-viewer.sh")), raw.join("\n"), mediatype || "img"])
+    }
+    // Enter on a message with exactly one obvious action performs it:
+    // media → viewer, link/#channel → open. Both or neither → false, so the
+    // caller can fall back (thread / no-op).
+    function enterAction(msg) {
+        if (!msg) return false
+        let imgs = []
+        try { imgs = JSON.parse(msg.imagesJson || "[]").filter(function (i) { return i.full }) } catch (e) {}
+        const hasMedia = imgs.length > 0
+        const hasLink = !!msg.link || !!(msg.channelRef && _findChannel(msg.channelRef))
+        if (hasMedia === hasLink) return false
+        if (hasMedia) viewImage(msg)
+        else openChannelRef(msg)
+        return true
     }
     // `o` — open the focused message's link: Slack permalinks jump in-client,
     // everything else goes to the browser.

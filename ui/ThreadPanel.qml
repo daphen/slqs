@@ -11,6 +11,7 @@ Rectangle {
     bottomLeftRadius: 10
     signal exitReply()
     signal openPalette()   // Ctrl+K from the reply input → jump palette (drops to normal)
+    signal panelMove(int d)   // Ctrl+H/L from the reply input → drop to normal + panel left/right
     property bool alsoToChannel: false   // Slack "also send to channel" (thread broadcast); reset after each send
 
     function focusReply() { replyInput.forceActiveFocus() }
@@ -230,6 +231,11 @@ Rectangle {
                     // Ctrl+D/U: drop to normal mode and scroll the thread.
                     if ((e.modifiers & Qt.ControlModifier) && (e.key === Qt.Key_D || e.key === Qt.Key_U)) {
                         panel.exitReply(); panel.move(e.key === Qt.Key_D ? 8 : -8)
+                        e.accepted = true; return
+                    }
+                    // Ctrl+H/L: drop to normal mode; H moves left (back to the channel).
+                    if ((e.modifiers & Qt.ControlModifier) && (e.key === Qt.Key_H || e.key === Qt.Key_L)) {
+                        panel.exitReply(); panel.panelMove(e.key === Qt.Key_H ? -1 : 1)
                         e.accepted = true; return
                     }
                     if (replyAc.handleKey(e)) { e.accepted = true; return }

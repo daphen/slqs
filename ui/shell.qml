@@ -44,10 +44,15 @@ FloatingWindow {
         if (focusedPanel === "sidebar") { sidebar.openCurrent(); focusPanel("messages") }
         else if (focusedPanel === "messages") {
             const m = msgs.currentMessage()
-            // A Discord reply → jump the cursor to the message it replied to;
-            // otherwise (Slack) Enter opens the thread.
-            if (m && m.replyToTs) msgs.jumpToTs(m.replyToTs)
-            else if (m && Backend.hasThreads) Backend.openThread(m)
+            if (!m) return
+            // A Discord reply → jump the cursor to the message it replied to.
+            if (m.replyToTs) { msgs.jumpToTs(m.replyToTs); return }
+            // A thread with replies keeps Enter = open it.
+            if (Backend.hasThreads && m.reply_count > 0) { Backend.openThread(m); return }
+            // A single obvious action (one of: media, link) → perform it.
+            if (Backend.enterAction(m)) return
+            // Else (Slack) Enter starts the message's thread.
+            if (Backend.hasThreads) Backend.openThread(m)
         }
     }
     function backToNormal() { appRoot.forceActiveFocus() }
@@ -120,8 +125,10 @@ FloatingWindow {
             "I":        { act: () => { if (!Backend.railHidden) peoplePicker.showInvite() }, help: () => Backend.railHidden ? "" : "Invite to channel", cat: "chats" },
             "ctrl+k":   { act: () => palette.show(), help: "Jump palette", cat: "chats" },
             "ctrl+s":   { act: () => workspacePicker.show(), help: () => Backend.railHidden ? "Switch server" : "Switch workspace", cat: "chats" },
-            "ctrl+l":   { act: () => Backend.cycleWorkspace(1),  help: () => Backend.railHidden ? "Next server" : "Next workspace", cat: "chats" },
-            "ctrl+h":   { act: () => Backend.cycleWorkspace(-1), help: () => Backend.railHidden ? "Previous server" : "Previous workspace", cat: "chats" },
+            // Directional panel focus, insert-mode friendly (the composer maps the
+            // same chords through panelMove). Workspace switching stays on ctrl+s.
+            "ctrl+l":   { act: () => focusPanel("messages"), help: "Focus messages", cat: "nav" },
+            "ctrl+h":   { act: () => focusPanel("sidebar"),  help: "Focus sidebar", cat: "nav" },
             // messages
             "i":        { act: () => { focusPanel("messages"); composer.focusInput() }, help: "Compose", cat: "msg" },
             "R":        { act: () => { if (focusedPanel === "messages") { composer.startReply(msgs.currentMessage()); focusPanel("messages") } }, help: () => Backend.hasThreads ? "Reply in thread" : "Reply to message", cat: "msg" },
@@ -146,6 +153,7 @@ FloatingWindow {
             "ctrl+e": { act: () => thread.scroll(1),  help: "Scroll down, keep cursor", cat: "nav" },
             "ctrl+y": { act: () => thread.scroll(-1), help: "Scroll up, keep cursor", cat: "nav" },
             "ctrl+g": { act: () => thread.move(9999), help: "Jump to bottom", cat: "nav" },
+            "enter":  { act: () => Backend.enterAction(thread.currentMessage()), help: "Open media/link", cat: "msg" },
             "v":      { act: () => Backend.viewImage(thread.currentMessage()), help: "View image", cat: "msg" },
             "o":      { act: () => Backend.openChannelRef(thread.currentMessage()), help: "Open link", cat: "msg" },
             "r":      { act: () => reactTo(thread.currentMessage()), help: "React", cat: "msg" },
@@ -154,8 +162,7 @@ FloatingWindow {
             "D":      { act: () => askDelete(thread.currentMessage()), help: "Delete your message", cat: "msg" },
             "ctrl+k": { act: () => palette.show(), help: "Jump palette", cat: "chats" },
             "ctrl+s": { act: () => workspacePicker.show(), help: "Switch workspace", cat: "chats" },
-            "ctrl+l": { act: () => Backend.cycleWorkspace(1),  help: "Next workspace", cat: "chats" },
-            "ctrl+h": { act: () => Backend.cycleWorkspace(-1), help: "Previous workspace", cat: "chats" },
+            "ctrl+h": { act: () => closeThreadAction(), help: "Back to channel", cat: "nav" },
             // thread-specific (feeds the THREADS section of the cheat sheet)
             "i":      { act: () => thread.focusReply(), help: "Reply in thread", cat: "thread" },
             "q":      { act: () => closeThreadAction(), help: "Close thread", cat: "thread" },
@@ -330,6 +337,7 @@ FloatingWindow {
                             onExitInsert: win.backToNormal()
                             onOpenPalette: palette.show()
                             onPageScroll: (d) => win.halfPage(d)
+                            onPanelMove: (d) => win.focusPanel(d < 0 ? "sidebar" : "messages")
                             // Clicking into the composer makes the messages panel the
                             // focused one, so the state machine is in sync on Esc.
                             onInputHasFocusChanged: if (inputHasFocus) win.focusPanel("messages")
@@ -352,6 +360,8 @@ FloatingWindow {
                         z: 5
                         onExitReply: win.backToNormal()
                         onOpenPalette: palette.show()
+                        // H = back to the channel (closes the thread panel); L = rightmost, just normal mode.
+                        onPanelMove: (d) => { if (d < 0) win.closeThreadAction(); else win.backToNormal() }
                     }
                 }
             }
@@ -514,34 +524,6 @@ FloatingWindow {
                 }
             }
 
-            // Bottom-aligned "Copied" badge — pairs with the cursor-bar→copy-icon
-            // morph; driven by copiedTs (held the same ~1.5s as the morph).
-            Rectangle {
-                id: copiedBadge
-                z: 201
-                visible: opacity > 0
-                opacity: Backend.copiedTs !== "" ? 1 : 0
-                anchors.horizontalCenter: parent.horizontalCenter
-                anchors.bottom: parent.bottom; anchors.bottomMargin: 30
-                width: cbRow.implicitWidth + 28; height: 32; radius: 8
-                color: Theme.mode === "light" ? Theme.ink : Theme.fg
-                border.width: 1; border.color: Theme.hairline
-                Behavior on opacity { NumberAnimation { duration: 140 } }
-                Row {
-                    id: cbRow; anchors.centerIn: parent; spacing: 8
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: ""; color: Theme.green
-                        font.family: Theme.fontFamily; font.pixelSize: 13
-                    }
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        text: "Copied"; color: Theme.bg
-                        renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
-                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13
-                    }
-                }
-            }
         }
     }
 

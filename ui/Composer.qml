@@ -18,6 +18,7 @@ Rectangle {
     signal exitInsert()
     signal openPalette()   // Ctrl+K from insert mode → jump palette (drops to normal)
     signal pageScroll(int d)   // Ctrl+D/U from insert mode → drop to normal + half-page scroll
+    signal panelMove(int d)    // Ctrl+H/L from insert mode → drop to normal + focus panel left/right
     // `focus` (not `activeFocus`): the input keeps focus when the window is
     // backgrounded, so insert mode (and the hidden line numbers) persist instead
     // of snapping back to normal mode just because you switched apps.
@@ -143,6 +144,11 @@ Rectangle {
                 // Ctrl+D/U: drop to normal mode and half-page scroll the chat.
                 if ((e.modifiers & Qt.ControlModifier) && (e.key === Qt.Key_D || e.key === Qt.Key_U)) {
                     root.exitInsert(); root.pageScroll(e.key === Qt.Key_D ? 1 : -1)
+                    e.accepted = true; return
+                }
+                // Ctrl+H/L: drop to normal mode and focus the panel in that direction.
+                if ((e.modifiers & Qt.ControlModifier) && (e.key === Qt.Key_H || e.key === Qt.Key_L)) {
+                    root.exitInsert(); root.panelMove(e.key === Qt.Key_H ? -1 : 1)
                     e.accepted = true; return
                 }
                 if (ac.handleKey(e)) { e.accepted = true; return }

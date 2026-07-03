@@ -177,6 +177,22 @@ Item {
             text: del.time; color: Theme.fg_muted
             font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 11
         }
+        // "copied" overlay over the pfp slot — same driver and timing as the
+        // cursor-bar→icon morph so all the copy feedback moves as one.
+        Rectangle {
+            visible: opacity > 0
+            opacity: cursorMark.showCopy ? 1 : 0
+            width: 36; height: 36; radius: 8
+            color: Theme.mode === "light" ? Theme.ink : Theme.fg
+            Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
+            Text {
+                anchors.centerIn: parent
+                text: "copied"; color: Theme.bg
+                renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
+                font.pixelSize: 9; font.weight: 700
+            }
+        }
     }
 
     Column {
