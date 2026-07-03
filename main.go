@@ -518,21 +518,43 @@ func (d *daemon) imagesJSON(w *workspace, channelID, ts string, files []slack.Fi
 	}
 	if len(pending) > 0 && channelID != "" {
 		go func(tasks []task) {
+			run := func(t task) bool {
+				imgSem <- struct{}{}
+				defer func() { <-imgSem }()
+				if t.video {
+					return d.extractPoster(t.dst, t.url, w.token, w.cookie)
+				}
+				return d.downloadFile(t.dst, t.url, w.token, w.cookie)
+			}
 			var wg sync.WaitGroup
+			failedCh := make(chan task, len(tasks))
 			for _, t := range tasks {
 				wg.Add(1)
 				go func(t task) {
 					defer wg.Done()
-					imgSem <- struct{}{}
-					defer func() { <-imgSem }()
-					if t.video {
-						d.extractPoster(t.dst, t.url, w.token, w.cookie)
-					} else {
-						d.downloadFile(t.dst, t.url, w.token, w.cookie)
+					if !run(t) {
+						failedCh <- t
 					}
 				}(t)
 			}
 			wg.Wait()
+			close(failedCh)
+			var failed []task
+			for t := range failedCh {
+				failed = append(failed, t)
+			}
+			// Thumbnails for a just-uploaded video 404 until Slack generates
+			// them — give transient failures two more passes before giving up.
+			for attempt := 0; len(failed) > 0 && attempt < 2; attempt++ {
+				time.Sleep(time.Duration(5+15*attempt) * time.Second)
+				var still []task
+				for _, t := range failed {
+					if !run(t) {
+						still = append(still, t)
+					}
+				}
+				failed = still
+			}
 			d.broadcast(map[string]any{"type": "images", "workspace": w.teamID,
 				"channel": channelID, "ts": ts, "imagesJson": d.imagesJSON(w, "", "", files, attachments)})
 		}(pending)
@@ -542,42 +564,65 @@ func (d *daemon) imagesJSON(w *workspace, channelID, ts string, files []slack.Fi
 }
 
 // downloadFile fetches an authed Slack file to dst (no-op if already present).
-func (d *daemon) downloadFile(dst, url, token, cookie string) {
+// Reports success so the caller can retry transient failures (a just-uploaded
+// video's thumbnail URL 404s until Slack finishes generating it).
+func (d *daemon) downloadFile(dst, url, token, cookie string) bool {
 	if _, err := os.Stat(dst); err == nil {
-		return
+		return true
 	}
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
-		return
+		return false
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Cookie", "d="+cookie)
 	resp, err := fileHTTP.Do(req)
 	if err != nil || resp.StatusCode != 200 {
+		status := 0
 		if resp != nil {
+			status = resp.StatusCode
 			resp.Body.Close()
 		}
-		return
+		log.Printf("download failed %s: status=%d err=%v", filepath.Base(dst), status, err)
+		return false
 	}
 	defer resp.Body.Close()
-	if b, err := io.ReadAll(resp.Body); err == nil {
-		os.WriteFile(dst, b, 0644)
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		log.Printf("download failed %s: %v", filepath.Base(dst), err)
+		return false
 	}
+	// tmp+rename so the UI never reads a half-written image.
+	tmp := dst + ".tmp"
+	if os.WriteFile(tmp, b, 0644) != nil {
+		os.Remove(tmp)
+		return false
+	}
+	return os.Rename(tmp, dst) == nil
 }
 
 // extractPoster derives a JPEG poster from a video's first frame, for videos
 // Slack never made a still for. ffmpeg streams the URL with the same auth as
 // downloadFile, reading only enough to decode one frame.
-func (d *daemon) extractPoster(dst, videoURL, token, cookie string) {
+func (d *daemon) extractPoster(dst, videoURL, token, cookie string) bool {
 	if _, err := os.Stat(dst); err == nil {
-		return
+		return true
 	}
 	hdr := fmt.Sprintf("Authorization: Bearer %s\r\nCookie: d=%s\r\n", token, cookie)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
+	// Render to a tmp then rename: a timeout mid-write would otherwise leave a
+	// truncated poster whose existence blocks regeneration forever.
+	tmp := dst + ".tmp"
 	cmd := exec.CommandContext(ctx, "ffmpeg", "-nostdin", "-y",
-		"-headers", hdr, "-i", videoURL, "-frames:v", "1", "-q:v", "4", dst)
-	cmd.Run()
+		"-headers", hdr, "-i", videoURL, "-frames:v", "1", "-q:v", "4", "-f", "image2", tmp)
+	err := cmd.Run()
+	if st, serr := os.Stat(tmp); err != nil || serr != nil || st.Size() == 0 {
+		os.Remove(tmp)
+		log.Printf("poster extract failed %s: %v", filepath.Base(dst), err)
+		return false
+	}
+	return os.Rename(tmp, dst) == nil
 }
 
 func (d *daemon) avatarPath(uid string) string {
