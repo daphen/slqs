@@ -62,7 +62,19 @@ ListView {
         }
     }
 
-    function pinIfStuck() { if (stick && count > 0) goBottomNow() }
+    // New arrivals: keep the VIEW pinned while stuck, but only follow with
+    // the CURSOR if it already sat on the newest message. stick's atYEnd
+    // heuristic stays true whenever the bottom is visible (always, in a
+    // short channel), so it can't decide cursor-follow on its own — j/k'ing
+    // up to an older message must keep its highlight when someone posts.
+    property int _prevCount: 0
+    function pinIfStuck() {
+        const wasAtEnd = currentIndex >= _prevCount - 1
+        _prevCount = count
+        if (!stick || count <= 0) return
+        if (wasAtEnd) goBottomNow()
+        else pinBottomView()
+    }
     onCountChanged: Qt.callLater(pinIfStuck)
 
     // Opening a channel should land at the newest message. Content height keeps
