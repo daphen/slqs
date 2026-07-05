@@ -47,12 +47,11 @@ FloatingWindow {
             if (!m) return
             // A Discord reply → jump the cursor to the message it replied to.
             if (m.replyToTs) { msgs.jumpToTs(m.replyToTs); return }
-            // A thread with replies keeps Enter = open it.
-            if (Backend.hasThreads && m.reply_count > 0) { Backend.openThread(m); return }
-            // A single obvious action (one of: media, link) → perform it.
+            // Slack: Enter is ALWAYS the thread (the reply flow) — media stays
+            // on `v`, links on `o`. The single-action Enter is Discord-only,
+            // where messages have no thread to open.
+            if (Backend.hasThreads) { Backend.openThread(m); return }
             if (Backend.enterAction(m)) return
-            // Else (Slack) Enter starts the message's thread.
-            if (Backend.hasThreads) Backend.openThread(m)
         }
     }
     function backToNormal() { appRoot.forceActiveFocus() }
