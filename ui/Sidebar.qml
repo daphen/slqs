@@ -75,6 +75,8 @@ Rectangle {
                         // Snap, don't animate: a color fade on the active tab reads as a
                         // "blink" when switching workspaces (same reason the msg cursor snaps).
                         color: active ? Theme.selection : tabHov.hovered ? Theme.hover : "transparent"
+                        border.width: 1
+                        border.color: active ? Theme.hairline : "transparent"
                         Text { id: tabLbl; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                             anchors.centerIn: parent; width: parent.width - 12; elide: Text.ElideRight
                             horizontalAlignment: Text.AlignHCenter
@@ -139,6 +141,8 @@ Rectangle {
             width: parent.width; height: Backend.hasThreads ? 30 : 0; clip: true; radius: Theme.radiusSm
             color: (sidebar.threadsSelected && sidebar.active) ? Theme.selection
                  : thHov.hovered ? Theme.hover : "transparent"
+            border.width: 1
+            border.color: (sidebar.threadsSelected && sidebar.active) ? Theme.hairline : "transparent"
             Row {
                 anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 8; spacing: 7
                 Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
@@ -220,6 +224,10 @@ Rectangle {
                 color: primary ? Theme.selection
                      : (isOpen ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.06)
                                : hov.hovered ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.04) : "transparent")
+                // Hairpin border like the picker cards — the selection fill
+                // alone is near-invisible on the light bg.
+                border.width: 1
+                border.color: primary ? Theme.hairline : "transparent"
 
                 Rectangle {
                     anchors.left: parent.left; anchors.leftMargin: 2
