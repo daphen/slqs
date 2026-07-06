@@ -242,16 +242,24 @@ Rectangle {
                 // relative line number (vim hybrid: absolute on cursor row),
                 // shown only while the sidebar is focused — drives N j/k jumps.
                 Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
-                    visible: sidebar.active
+                    visible: sidebar.active && !row.cursor
                     anchors.left: parent.left; anchors.leftMargin: 12
                     width: 18; horizontalAlignment: Text.AlignRight
                     anchors.verticalCenter: parent.verticalCenter
-                    text: row.cursor ? (row.index + 1) : Math.abs(row.index - list.currentIndex)
+                    text: Math.abs(row.index - list.currentIndex)
                     color: row.primary ? Theme.bg : Theme.fg
-                    opacity: row.cursor ? 1 : 0.65   // dim non-cursor, but still white & legible
+                    opacity: 0.65
                     font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                     font.pixelSize: 12
                     font.features: ({ "tnum": 1 })
+                }
+                // Cursor row: the same small accent bar the chat gutter uses,
+                // centered in the number column.
+                Rectangle {
+                    visible: sidebar.active && row.cursor
+                    anchors.left: parent.left; anchors.leftMargin: 20
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 3; height: 16; radius: 2; color: Theme.cursor
                 }
 
                 Row {
