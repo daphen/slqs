@@ -74,7 +74,7 @@ Rectangle {
                         width: Math.min(tabLbl.implicitWidth + 20, 110)
                         // Snap, don't animate: a color fade on the active tab reads as a
                         // "blink" when switching workspaces (same reason the msg cursor snaps).
-                        color: active ? Theme.selection : tabHov.hovered ? Theme.hover : "transparent"
+                        color: active ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.10) : tabHov.hovered ? Theme.hover : "transparent"
                         border.width: 1
                         border.color: active ? Theme.hairline : "transparent"
                         Text { id: tabLbl; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
@@ -139,7 +139,7 @@ Rectangle {
         Rectangle {
             visible: Backend.hasThreads
             width: parent.width; height: Backend.hasThreads ? 30 : 0; clip: true; radius: Theme.radiusSm
-            color: (sidebar.threadsSelected && sidebar.active) ? Theme.selection
+            color: (sidebar.threadsSelected && sidebar.active) ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.10)
                  : thHov.hovered ? Theme.hover : "transparent"
             border.width: 1
             border.color: (sidebar.threadsSelected && sidebar.active) ? Theme.hairline : "transparent"
@@ -221,7 +221,10 @@ Rectangle {
                 // Focus highlight matches the chat: subtle overlay + accent bar
                 // (90ms / 120ms). Open channel stays faintly findable when the
                 // cursor is elsewhere, but isn't a second "active" marker.
-                color: primary ? Theme.selection
+                // fg-relative tints, not the opaque selection: the sidebar is
+                // translucent+blurred, so an absolute fill blends into the
+                // backdrop while a tint always contrasts.
+                color: primary ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.10)
                      : (isOpen ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.06)
                                : hov.hovered ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.04) : "transparent")
                 // Hairpin border like the picker cards — the selection fill
