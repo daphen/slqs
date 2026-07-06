@@ -258,7 +258,7 @@ Rectangle {
                     anchors.fill: parent; anchors.leftMargin: sidebar.active ? 36 : 18
                     // reserve the badge's footprint on the right so long names
                     // elide before it instead of running underneath.
-                    anchors.rightMargin: 8 + (row.unread > 0 ? 32 : 0)
+                    anchors.rightMargin: 8 + (row.unread > 0 ? 38 : 0)
                     spacing: 7
                     Item {
                         id: chIcon
@@ -300,7 +300,7 @@ Rectangle {
                 // Mentions flip the count to the accent.
                 Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                     visible: row.unread > 0
-                    anchors.right: parent.right; anchors.rightMargin: 16
+                    anchors.right: parent.right; anchors.rightMargin: 22
                     anchors.verticalCenter: parent.verticalCenter
                     text: row.unread
                     color: row.primary ? Theme.bg : row.mention ? Theme.cursor : Theme.fg_muted
