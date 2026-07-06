@@ -11,6 +11,9 @@ Item {
     property string mode: ""   // "" | "emoji" | "user"
     property int startPos: -1
     property var rows: []
+    // Popup anchor, captured once when a completion OPENS (at the trigger
+    // char) — binding to the live cursor made the popup slide while typing.
+    property real anchorX: 0
     property int sel: 0
     readonly property bool active: mode !== "" && rows.length > 0
 
@@ -31,6 +34,9 @@ Item {
                     // emoji needs >= 2 chars after ':' (":jo" yes, ":p" no — too noisy);
                     // mentions ('@') open immediately.
                     if (/^[A-Za-z0-9_+'.\-]*$/.test(token) && (ch === "@" || token.length >= 2)) {
+                        const opening = (mode === "" || startPos !== i)
+                        if (opening)
+                            anchorX = input.mapToItem(ac, input.positionToRectangle(i).x, 0).x
                         mode = ch === ":" ? "emoji" : "user"
                         startPos = i
                         rows = mode === "emoji" ? Backend.searchEmoji(token.toLowerCase(), 8)
@@ -82,11 +88,7 @@ Item {
         // left edge; clamp so it stays fully on-screen. Vertical stays above.
         readonly property int w: 340
         anchors.bottom: parent.top; anchors.bottomMargin: 6
-        x: {
-            if (!ac.input) return 0
-            const cx = ac.input.mapToItem(ac, ac.input.cursorRectangle.x, 0).x
-            return Math.max(0, Math.min(cx - popup.w / 2, ac.width - popup.w))
-        }
+        x: Math.max(0, Math.min(ac.anchorX - popup.w / 2, ac.width - popup.w))
         width: popup.w
         height: visible ? Math.min(acList.contentHeight + 8, 248) : 0
         color: Theme.bg_alt; radius: Theme.radius
