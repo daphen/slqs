@@ -7,6 +7,31 @@ FloatingWindow {
     id: win
     implicitWidth: 1180
     implicitHeight: 760
+
+    // Keycap chip + muted label — same styling as the desktop picker footer.
+    component StatusCap: Rectangle {
+        property alias text: capText.text
+        width: Math.max(capText.implicitWidth + 12, 22)
+        height: 22
+        radius: 7
+        anchors.verticalCenter: parent.verticalCenter
+        color: Theme.mode === "light" ? Theme.bg : Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.07)
+        border.width: 1
+        border.color: Theme.hairline
+        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+            id: capText; anchors.centerIn: parent
+            color: Theme.fg_muted
+            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
+            font.pixelSize: 11; font.weight: 500
+        }
+    }
+    component CapLabel: Text {
+        renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+        anchors.verticalCenter: parent.verticalCenter
+        color: Theme.fg_muted
+        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
+        font.pixelSize: 11
+    }
     // Distinct per-backend title so niri-jump-or-exec can tell the Slack and
     // Discord instances apart (both share the org.quickshell app-id).
     title: (Quickshell.env("SLK_SOCK") === "dsqrd") ? "discord-client" : "slk-client"
@@ -399,19 +424,19 @@ FloatingWindow {
                 }
             }
 
-            // ── statusbar (vim-style) ──────────────────────────────────────
+            // ── statusbar (picker-footer style) ────────────────────────────
             Rectangle {
                 id: statusbar
                 anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
-                // Footer cohesive with the sidebar (bg_alt) in both themes,
-                // divided by the hairline rather than a heavy block.
-                height: 22; color: Theme.bg_alt
+                height: 36; color: Theme.bg_alt
                 Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.hairline }
                 Row {
-                    anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
-                    spacing: 0
+                    anchors.left: parent.left; anchors.leftMargin: 14
+                    anchors.verticalCenter: parent.verticalCenter
+                    spacing: 10
                     Rectangle {
-                        width: modeLabel.implicitWidth + 18; height: 22
+                        width: modeLabel.implicitWidth + 16; height: 22; radius: 7
+                        anchors.verticalCenter: parent.verticalCenter
                         color: win.insertMode ? Theme.cursor : Theme.green
                         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
                             id: modeLabel; anchors.centerIn: parent
@@ -421,10 +446,9 @@ FloatingWindow {
                             // (light-mode green) — fixes dark-on-dark-green in light mode.
                             color: (parent.color.r * 0.299 + parent.color.g * 0.587 + parent.color.b * 0.114) > 0.5 ? Theme.ink : Theme.brightWhite
                             font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
-                            font.pixelSize: 12; font.weight: 800
+                            font.pixelSize: 11; font.weight: 600; font.letterSpacing: 0.5
                         }
                     }
-                    Item { width: 10; height: 1 }
                     Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
                         anchors.verticalCenter: parent.verticalCenter
                         text: "panel: " + win.focusedPanel + "   #" + Backend.currentChannel
@@ -432,13 +456,40 @@ FloatingWindow {
                         color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12
                     }
                 }
-                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
-                    anchors.right: parent.right; anchors.rightMargin: 12
+                Row {
+                    visible: !Backend.updateAvailable
+                    anchors.right: parent.right; anchors.rightMargin: 14
                     anchors.verticalCenter: parent.verticalCenter
-                    text: Backend.updateAvailable
-                          ? ("⟳ update available · " + Backend.updateCurrent + " → " + Backend.updateLatest + " · U to apply")
-                          : "ctrl+k jump · j/k move · h/l panel · ⏎ open · i insert · esc normal · ? help"
-                    color: Backend.updateAvailable ? Theme.orange : Theme.fg_muted
+                    spacing: 6
+                    StatusCap { text: "⌃k" }
+                    CapLabel { text: "jump" }
+                    Item { width: 8; height: 1 }
+                    StatusCap { text: "j" }
+                    StatusCap { text: "k" }
+                    CapLabel { text: "move" }
+                    Item { width: 8; height: 1 }
+                    StatusCap { text: "h" }
+                    StatusCap { text: "l" }
+                    CapLabel { text: "panel" }
+                    Item { width: 8; height: 1 }
+                    StatusCap { text: "↵" }
+                    CapLabel { text: "open" }
+                    Item { width: 8; height: 1 }
+                    StatusCap { text: "i" }
+                    CapLabel { text: "insert" }
+                    Item { width: 8; height: 1 }
+                    StatusCap { text: "esc" }
+                    CapLabel { text: "normal" }
+                    Item { width: 8; height: 1 }
+                    StatusCap { text: "?" }
+                    CapLabel { text: "help" }
+                }
+                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
+                    visible: Backend.updateAvailable
+                    anchors.right: parent.right; anchors.rightMargin: 14
+                    anchors.verticalCenter: parent.verticalCenter
+                    text: "⟳ update available · " + Backend.updateCurrent + " → " + Backend.updateLatest + " · U to apply"
+                    color: Theme.orange
                     font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12
                 }
             }
