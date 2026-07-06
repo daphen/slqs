@@ -259,7 +259,7 @@ FloatingWindow {
 
                 Sidebar {
                     id: sidebar
-                    width: 240; height: parent.height
+                    width: 264; height: parent.height
                     onSearchClosed: win.backToNormal()
                     onThreadsClicked: { Backend.showThreadsView(); win.focusPanel("messages") }
                     onWorkspacePickerRequested: workspacePicker.show()
