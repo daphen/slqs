@@ -65,10 +65,6 @@ Item {
         // j/k navigation doesn't catch rows mid-fade (reads as blinking).
         color: del.cursor ? Qt.rgba(Theme.selection.r, Theme.selection.g, Theme.selection.b, 0.6)
              : hov.hovered ? Qt.rgba(Theme.selection.r, Theme.selection.g, Theme.selection.b, 0.5) : "transparent"
-        Rectangle {
-            anchors.left: parent.left; width: 2; height: parent.height
-            color: Theme.cursor; opacity: del.cursor ? 1 : 0
-        }
     }
 
     // Brief accent pulse when this row is jumped to via a permalink.

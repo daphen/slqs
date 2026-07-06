@@ -696,6 +696,37 @@ Item {
         messagesModel.append(m)
         reflowList()
     }
+    // Thread flavor of the same: append a pending reply to the open thread
+    // instantly; the echo swaps into its slot below.
+    function _insertThreadOptimistic(text) {
+        if (!threadOpen) return
+        const p = _selfProfile || {}
+        const now = new Date()
+        const m = normMsg({
+            ts: "topt-" + (++_optSeq), user: "", mine: true, pending: true,
+            author: p.author || "You", initials: p.initials || "·",
+            color: p.color || "#9aa0a6", avatar: p.avatar || "",
+            time: Qt.formatDateTime(now, "HH:mm"), text: text,
+            reactionsJson: "[]", imagesJson: "[]", replyAuthor: "", replyText: "",
+            subtype: "", reply_count: 0, thread_ts: threadParentTs, channelRef: "",
+            day: _dk(now)
+        })
+        m.grouped = threadModel.count > 0 && _grp(threadModel.get(threadModel.count - 1), m)
+        threadModel.append(m)
+    }
+    function _reconcileThreadOptimistic(msg) {
+        for (let i = 0; i < threadModel.count; i++) {
+            const m = threadModel.get(i)
+            if (m.pending && m.mine) {
+                msg.pending = false
+                msg.grouped = m.grouped
+                threadModel.set(i, msg)
+                return true
+            }
+        }
+        return false
+    }
+
     // The server echoed one of our messages → swap it into its optimistic slot
     // (oldest pending with matching text; echoes arrive in send order).
     function _reconcileOptimistic(id, msg) {
@@ -1040,6 +1071,7 @@ Item {
                 let done = false
                 for (let i = 0; i < threadModel.count; i++)   // edit: replace in place
                     if (threadModel.get(i).ts === msg.ts) { msg.grouped = threadModel.get(i).grouped; threadModel.set(i, msg); done = true; break }
+                if (!done && msg.mine && _reconcileThreadOptimistic(msg)) done = true
                 if (!done) {
                     msg.grouped = threadModel.count > 0 && _grp(threadModel.get(threadModel.count - 1), msg)
                     threadModel.append(msg)
@@ -1215,6 +1247,8 @@ Item {
         const t = (text || "").trim()
         if ((t.length === 0 && attachState === "none") || !threadParentTs) return
         safeWrite(JSON.stringify({ type: "send", channel: currentChannelId, text: resolveMentions(t), thread: threadParentTs, broadcast: !!broadcast }) + "\n")
+        // Typed text, not resolved markup — same as the channel send.
+        if (t.length > 0) _insertThreadOptimistic(t)
         clearAttach()
     }
     function showTyping(id, thread, who) {
