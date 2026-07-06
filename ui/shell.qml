@@ -278,7 +278,7 @@ FloatingWindow {
                         topRightRadius: 10   // only the window-edge corner; the left edge is internal
                         border.width: 2
                         // orange while typing in this panel (insert mode), else the normal accent
-                        border.color: composer.inputHasFocus ? Theme.cursor : Theme.fg
+                        border.color: composer.inputHasFocus ? Theme.cursor : (Theme.mode === "light" ? Theme.hairline : Theme.fg)
                         visible: win.focusedPanel === "messages" && !Backend.threadOpen
                     }
 

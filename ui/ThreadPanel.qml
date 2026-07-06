@@ -70,7 +70,7 @@ Rectangle {
         bottomLeftRadius: 10
         border.width: 2
         // orange while typing a reply in this panel (insert mode)
-        border.color: replyInput.focus ? Theme.cursor : Theme.fg
+        border.color: replyInput.focus ? Theme.cursor : (Theme.mode === "light" ? Theme.hairline : Theme.fg)
     }
 
     Rectangle {

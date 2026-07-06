@@ -37,15 +37,15 @@ Rectangle {
 
     Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.hairline }
 
-    // focused-panel accent: a full border around the active panel. Theme.fg is
-    // theme-adaptive (light on dark theme, dark on light) — orange didn't read.
+    // focused-panel accent: a full border around the active panel. Hairline in
+    // light mode (near-black fg reads harsh there); fg in dark — orange didn't read.
     Rectangle {
         anchors.fill: parent; z: 10
         color: "transparent"
         topLeftRadius: 10   // only the window-edge corner; the right edge is internal
         border.width: 2
         // orange while the search field is focused (sidebar insert mode)
-        border.color: search.activeFocus ? Theme.cursor : Theme.fg
+        border.color: search.activeFocus ? Theme.cursor : (Theme.mode === "light" ? Theme.hairline : Theme.fg)
         visible: sidebar.active
     }
 
