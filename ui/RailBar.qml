@@ -47,7 +47,7 @@ Rectangle {
                     text: rail.glyphFor(modelData)
                     color: parent.active ? Theme.fg : Theme.fg_muted
                     visible: icon.status !== Image.Ready
-                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
+                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                     font.pixelSize: modelData.id === "@me" ? 18 : 13; font.weight: 600
                 }
                 ClippingRectangle {

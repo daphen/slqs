@@ -56,12 +56,12 @@ Item {
                 Row {
                     anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 10
                     Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter; text: "#"
-                           color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 19 }
+                           color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 19 }
                     TextInput { renderType: TextInput.QtRendering;
                         id: search
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - 36; color: Theme.fg; clip: true
-                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 17
+                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 17
                         onTextChanged: bp.rebuild()
                         Keys.onDownPressed: bp.move(1)
                         Keys.onUpPressed: bp.move(-1)
@@ -105,16 +105,16 @@ Item {
                         anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 14; spacing: 9
                         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                                text: "#"; color: Theme.fg_muted
-                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 15 }
+                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15 }
                         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                                text: row.modelData.name; color: Theme.fg
-                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 15 }
+                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15 }
                     }
                     Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                            anchors.right: parent.right; anchors.rightMargin: 14; anchors.verticalCenter: parent.verticalCenter
                            text: row.modelData.member ? "joined" : "join"
                            color: row.modelData.member ? Theme.fg_muted : Theme.green
-                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12; font.weight: 600 }
+                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12; font.weight: 600 }
                     HoverHandler { id: hov }
                     TapHandler { onTapped: { bp.sel = row.index; bp.accept() } }
                 }

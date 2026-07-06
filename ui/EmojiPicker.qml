@@ -76,12 +76,12 @@ Item {
                 Row {
                     anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 10
                     Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter; text: "☺"
-                           color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 18 }
+                           color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 18 }
                     TextInput { renderType: TextInput.QtRendering;
                         id: search
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - 36; color: Theme.fg; clip: true
-                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 16
+                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 16
                         onTextChanged: picker.rebuild()
                         Keys.onDownPressed: picker.move(1)
                         Keys.onUpPressed: picker.move(-1)
@@ -151,7 +151,7 @@ Item {
                                height: 22; verticalAlignment: Text.AlignVCenter
                                width: 26; text: row.isReaction ? ("" + row.modelData.count) : ""
                                color: row.modelData.mine ? Theme.sky : Theme.fg
-                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 14; font.weight: 600 }
+                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14; font.weight: 600 }
                         Text { id: usersText; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: row.isReaction
                                width: row.width - 90
                                height: row.expanded ? implicitHeight : 22
@@ -159,12 +159,12 @@ Item {
                                wrapMode: row.expanded ? Text.WordWrap : Text.NoWrap
                                elide: row.expanded ? Text.ElideNone : Text.ElideRight
                                text: (row.modelData.users || []).join(", "); color: Theme.fg_muted
-                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13 }
+                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
                         // emoji row: :name:
                         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: !row.isReaction
                                height: 22; verticalAlignment: Text.AlignVCenter
                                text: ":" + row.modelData.name + ":"; color: Theme.fg
-                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 14 }
+                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14 }
                     }
                     HoverHandler { id: hov }
                     TapHandler { onTapped: { picker.sel = row.index; picker.accept() } }

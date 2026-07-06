@@ -82,15 +82,15 @@ Rectangle {
             anchors.left: parent.left; anchors.leftMargin: 16
             anchors.verticalCenter: parent.verticalCenter; spacing: 8
             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: "Thread"; color: Theme.fg
-                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 16; font.weight: 600 }
+                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 16; font.weight: 600 }
             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: "— " + Backend.threadTitle; color: Theme.fg_muted
                    anchors.verticalCenter: parent.verticalCenter
-                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 14 }
+                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14 }
         }
         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
             anchors.right: parent.right; anchors.rightMargin: 14; anchors.verticalCenter: parent.verticalCenter
             text: "q to close"; color: Theme.fg_muted
-            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12
+            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12
         }
     }
 
@@ -152,7 +152,7 @@ Rectangle {
         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; x: 16
                anchors.top: parent.top; anchors.bottom: parent.bottom; verticalAlignment: Text.AlignVCenter
                text: Backend.threadTypingWho + " is typing…"; color: Theme.fg_muted
-               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13 }
+               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
     }
 
     Rectangle {
@@ -179,7 +179,7 @@ Rectangle {
             }
             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                    text: "Also send to channel"; color: panel.alsoToChannel ? Theme.fg : Theme.fg_muted
-                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12 }
+                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12 }
             TapHandler { onTapped: panel.alsoToChannel = !panel.alsoToChannel }
         }
         Rectangle {
@@ -209,7 +209,7 @@ Rectangle {
                 width: replyFlick.width
                 onCursorRectangleChanged: replyFlick.ensureVisible(cursorRectangle)
                 wrapMode: TextArea.Wrap; color: Theme.fg
-                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 15
+                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15
                 placeholderText: panel.editingTs !== "" ? "Editing… (Esc to cancel)" : "Reply…"
                 placeholderTextColor: Theme.fg_muted
                 background: null

@@ -21,7 +21,7 @@ FloatingWindow {
         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
             id: capText; anchors.centerIn: parent
             color: Theme.fg_muted
-            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
+            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
             font.pixelSize: 11; font.weight: 500
         }
     }
@@ -29,7 +29,7 @@ FloatingWindow {
         renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
         anchors.verticalCenter: parent.verticalCenter
         color: Theme.fg_muted
-        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
+        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
         font.pixelSize: 11
     }
     // Distinct per-backend title so niri-jump-or-exec can tell the Slack and
@@ -290,9 +290,9 @@ FloatingWindow {
                             anchors.left: parent.left; anchors.leftMargin: 18
                             anchors.verticalCenter: parent.verticalCenter; spacing: 9
                             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: "#"; color: Theme.fg_muted; anchors.verticalCenter: parent.verticalCenter
-                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 19 }
+                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 19 }
                             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: Backend.currentChannel; color: Theme.fg; anchors.verticalCenter: parent.verticalCenter
-                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 17; font.weight: 600 }
+                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 17; font.weight: 600 }
                             Rectangle { visible: Backend.currentTopic.length > 0; width: 1; height: 16; color: Theme.hairline
                                         anchors.verticalCenter: parent.verticalCenter }
                             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
@@ -301,7 +301,7 @@ FloatingWindow {
                                    color: Theme.fg_muted; elide: Text.ElideRight
                                    maximumLineCount: 1; wrapMode: Text.NoWrap
                                    width: Math.max(0, header.width - 240)
-                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 14 }
+                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14 }
                         }
                         // Previewing a channel we haven't joined (opened via a permalink):
                         // offer to join so it sticks in the sidebar and you can reply.
@@ -314,7 +314,7 @@ FloatingWindow {
                             border.width: 1; border.color: Theme.sky
                             Text { id: joinLbl; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent
                                    text: "+ Join channel"; color: Theme.sky
-                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13; font.weight: 600 }
+                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 600 }
                             MouseArea { id: joinMA; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                         onClicked: Backend.joinCurrent() }
                         }
@@ -349,7 +349,7 @@ FloatingWindow {
                                 verticalAlignment: Text.AlignVCenter
                                 text: Backend.typingWho + " is typing…"
                                 color: Theme.fg_muted
-                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13
+                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13
                             }
                         }
 
@@ -397,7 +397,7 @@ FloatingWindow {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: "Opening media…"; color: Theme.bg
                                 renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
-                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13
+                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13
                             }
                         }
                     }
@@ -445,7 +445,7 @@ FloatingWindow {
                             // chip (dark-mode green / orange), light text on a dark chip
                             // (light-mode green) — fixes dark-on-dark-green in light mode.
                             color: (parent.color.r * 0.299 + parent.color.g * 0.587 + parent.color.b * 0.114) > 0.5 ? Theme.ink : Theme.brightWhite
-                            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
+                            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                             font.pixelSize: 11; font.weight: 600; font.letterSpacing: 0.5
                         }
                     }
@@ -453,7 +453,7 @@ FloatingWindow {
                         anchors.verticalCenter: parent.verticalCenter
                         text: "panel: " + win.focusedPanel + "   #" + Backend.currentChannel
                               + (win.pendingCount > 0 ? "      " + win.pendingCount : "")
-                        color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12
+                        color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12
                     }
                 }
                 Row {
@@ -490,7 +490,7 @@ FloatingWindow {
                     anchors.verticalCenter: parent.verticalCenter
                     text: "⟳ update available · " + Backend.updateCurrent + " → " + Backend.updateLatest + " · U to apply"
                     color: Theme.orange
-                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12
+                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12
                 }
             }
 
@@ -566,7 +566,7 @@ FloatingWindow {
                 Text {
                     id: toastLbl; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent
                     text: toast.message; color: Theme.fg
-                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13
+                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13
                 }
                 Timer { id: toastTimer; interval: 1400; onTriggered: toast.opacity = 0 }
                 Connections {

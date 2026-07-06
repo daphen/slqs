@@ -84,7 +84,7 @@ Item {
                 spacing: 22
                 Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                        text: "Keybindings"; color: Theme.fg
-                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
+                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                        font.pixelSize: 20; font.bold: true }
                 Row {
                     spacing: 48
@@ -121,7 +121,7 @@ Item {
                                             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                                                    anchors.verticalCenter: parent.verticalCenter
                                                    text: rowRoot.modelData.help; color: Theme.fg
-                                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 14 }
+                                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14 }
                                         }
                                     }
                                 }

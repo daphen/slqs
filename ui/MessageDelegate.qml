@@ -55,7 +55,7 @@ Item {
             color: Theme.bg; border.color: Theme.hairline; border.width: 1
             Text { id: dayLbl; anchors.centerIn: parent; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                    text: Backend.dayLabel(del.day); color: Theme.fg_muted
-                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12; font.weight: 600 }
+                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12; font.weight: 600 }
         }
     }
 
@@ -141,7 +141,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: Math.abs(del.index - del.ListView.view.currentIndex)
             color: Theme.fg_secondary
-            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 11; font.weight: 600
+            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 11; font.weight: 600
         }
     }
 
@@ -159,7 +159,7 @@ Item {
             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
                 anchors.centerIn: parent; text: del.initials; color: Theme.ink
                 visible: avatarImg.status !== Image.Ready
-                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 14; font.weight: 800
+                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14; font.weight: 800
             }
             Image {
                 id: avatarImg
@@ -174,8 +174,8 @@ Item {
         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
             visible: del.grouped && hov.hovered
             anchors.horizontalCenter: parent.horizontalCenter; y: 1
-            text: del.time; color: Theme.fg_muted
-            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 11
+            text: del.time; color: Theme.fg_muted; font.features: ({ "tnum": 1 })
+            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 11
         }
     }
 
@@ -192,22 +192,22 @@ Item {
             width: parent.width
             spacing: 5
             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: "↰"; color: Theme.fg_muted
-                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13 }
+                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: del.replyAuthor; color: Theme.sky
                    visible: del.replyAuthor.length > 0
-                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13; font.weight: 600 }
+                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 600 }
             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: del.replyText; color: Theme.fg_muted
                    width: Math.max(0, body.width - 140); elide: Text.ElideRight
-                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13 }
+                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
         }
 
         Row {
             visible: !del.grouped
             spacing: 8
             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: del.author; color: Theme.mode === "light" ? Theme.ink : Theme.fg
-                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 15; font.weight: 600 }
-            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: del.time; color: Theme.fg_muted; anchors.bottom: parent.bottom; anchors.bottomMargin: 1
-                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12 }
+                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15; font.weight: 600 }
+            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: del.time; color: Theme.fg_muted; font.features: ({ "tnum": 1 }); anchors.bottom: parent.bottom; anchors.bottomMargin: 1
+                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12 }
         }
 
         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
@@ -220,7 +220,7 @@ Item {
             color: Theme.mode === "light" ? Theme.ink : Theme.fg
             textFormat: Text.RichText
             wrapMode: Text.Wrap
-            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 15
+            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15
             onLinkActivated: (link) => Backend.openUrl(link)
         }
 
@@ -252,7 +252,7 @@ Item {
                         anchors.verticalCenter: parent.verticalCenter
                         renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                         color: Theme.mode === "light" ? Theme.ink : Theme.fg
-                        font.family: "Noto Color Emoji"; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 36
+                        font.family: "Noto Color Emoji"; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 36
                     }
                 }
             }
@@ -340,7 +340,7 @@ Item {
                                anchors.verticalCenter: parent.verticalCenter }
                         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: modelData.n; color: Theme.fg_muted
                                anchors.verticalCenter: parent.verticalCenter
-                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12; font.weight: 600 }
+                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12; font.weight: 600 }
                     }
                 }
             }
@@ -353,7 +353,7 @@ Item {
             topPadding: 3
             text: del.inThread ? "↪ also sent to channel" : "↪ replied to a thread"
             color: Theme.fg_muted
-            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12; font.italic: true
+            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12; font.italic: true
         }
         // thread indicator — Enter opens it
         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
@@ -361,7 +361,7 @@ Item {
             topPadding: 3
             text: "  " + del.reply_count + (del.reply_count === 1 ? " reply" : " replies")
             color: Theme.sky
-            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13; font.weight: 600
+            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 600
         }
     }
 

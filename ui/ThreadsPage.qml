@@ -35,13 +35,13 @@ Item {
             anchors.verticalCenter: parent.verticalCenter; spacing: 9
             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: "↳"; color: Theme.fg_muted
                    anchors.verticalCenter: parent.verticalCenter
-                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 17 }
+                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 17 }
             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: "Threads"; color: Theme.fg
                    anchors.verticalCenter: parent.verticalCenter
-                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 17; font.weight: 600 }
+                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 17; font.weight: 600 }
             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: Backend.currentSubThreads.length + " followed"
                    color: Theme.fg_muted; anchors.verticalCenter: parent.verticalCenter
-                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 14 }
+                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14 }
         }
     }
 
@@ -101,29 +101,29 @@ Item {
                             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent
                                    visible: img.status !== Image.Ready
                                    text: modelData.initials || "?"; color: Theme.ink
-                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 11; font.weight: 800 }
+                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 11; font.weight: 800 }
                             Image { id: img; anchors.fill: parent; source: modelData.avatar || ""
                                     visible: status === Image.Ready; asynchronous: true; cache: true
                                     fillMode: Image.PreserveAspectCrop; sourceSize.width: 48; sourceSize.height: 48 }
                         }
                         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                                text: modelData.title || ""; color: Theme.mode === "light" ? Theme.ink : Theme.fg
-                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 15; font.weight: 600 }
+                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15; font.weight: 600 }
                         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                                text: "#" + (modelData.channelName || ""); color: Theme.fg_muted
-                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13 }
+                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
                     }
                     Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                            anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
                            text: modelData.lastTime || ""; color: Theme.fg_muted
-                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12 }
+                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12 }
                 }
 
                 // parent preview
                 Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                        width: parent.width; text: modelData.preview || ""
                        color: Theme.mode === "light" ? Theme.fg_muted : Theme.fg_secondary; wrapMode: Text.Wrap; maximumLineCount: 2; elide: Text.ElideRight
-                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 14 }
+                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14 }
 
                 // footer: reply count + unread
                 Row {
@@ -131,10 +131,10 @@ Item {
                     Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                            text: (modelData.replyCount || 0) + (modelData.replyCount === 1 ? " reply" : " replies")
                            color: Theme.sky
-                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13; font.weight: 600 }
+                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 600 }
                     Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: (modelData.unread || 0) > 0
                            text: modelData.unread + " new"; color: Theme.cursor
-                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13; font.weight: 600 }
+                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 600 }
                 }
             }
 
@@ -150,7 +150,7 @@ Item {
             renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
             anchors.centerIn: parent; visible: list.count === 0
             text: "No followed threads"; color: Theme.fg_muted
-            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 15
+            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15
         }
     }
 }

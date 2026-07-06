@@ -118,7 +118,7 @@ Item {
                     Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                            text: ac.mode === "emoji" ? (":" + arow.modelData.name + ":") : ("@" + arow.modelData.name)
                            color: Theme.fg
-                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 14 }
+                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14 }
                 }
                 HoverHandler { id: ahov }
                 TapHandler { onTapped: { ac.sel = arow.index; ac.accept(); if (ac.input) ac.input.forceActiveFocus() } }

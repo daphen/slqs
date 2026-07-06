@@ -82,8 +82,8 @@ Rectangle {
                             horizontalAlignment: Text.AlignHCenter
                             text: modelData.name
                             color: active ? Theme.fg : Theme.fg_muted
-                            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
-                            font.pixelSize: 14; font.weight: active ? 700 : 500
+                            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
+                            font.pixelSize: 14; font.weight: active ? 600 : 500
                         }
                         HoverHandler { id: tabHov }
                         TapHandler { onTapped: Backend.switchWorkspace(modelData.id) }
@@ -100,15 +100,15 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter; spacing: 6
                     Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                         text: Backend.currentWorkspaceName || "Direct Messages"; color: Theme.fg
-                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
+                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                         font.pixelSize: 15; font.weight: 600 }
                     Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                         text: "⌄"; color: Theme.fg_muted
-                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13 }
+                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
                 }
                 Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.right: parent.right; anchors.rightMargin: 4
                     anchors.verticalCenter: parent.verticalCenter; text: "⌃S"; color: Theme.fg_muted
-                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 11 }
+                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 11 }
                 HoverHandler { id: wsHdrHov }
                 TapHandler { onTapped: sidebar.workspacePickerRequested() }
             }
@@ -121,12 +121,12 @@ Rectangle {
             Row {
                 anchors.fill: parent; anchors.leftMargin: 9; spacing: 7
                 Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter; text: "⌕"
-                       color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 16 }
+                       color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 16 }
                 TextInput { renderType: TextInput.QtRendering;
                     id: search
                     anchors.verticalCenter: parent.verticalCenter
                     width: parent.width - 30; color: Theme.fg; clip: true
-                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 14
+                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14
                     Keys.onEscapePressed: { text = ""; sidebar.searchClosed() }
                     Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: !search.text && !search.activeFocus; text: "Jump to…"
                            color: Theme.fg_muted; font: search.font }
@@ -147,11 +147,11 @@ Rectangle {
                 anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 8; spacing: 7
                 Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                        text: "↳"; color: Theme.fg_muted
-                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 15 }
+                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15 }
                 Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                        text: "Threads"; color: Theme.fg
-                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
-                       font.pixelSize: 14; font.weight: Backend.threadUnreadTotal > 0 ? 700 : Theme.fontWeight }
+                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
+                       font.pixelSize: 14; font.weight: Backend.threadUnreadTotal > 0 ? 600 : Theme.fontWeight }
             }
             Rectangle {
                 visible: Backend.threadUnreadTotal > 0
@@ -159,7 +159,7 @@ Rectangle {
                 height: 17; width: Math.max(17, tb.implicitWidth + 10); radius: 9; color: Theme.cursor
                 Text { id: tb; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent
                        text: Backend.threadUnreadTotal; color: Theme.ink
-                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
+                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                        font.pixelSize: 12; font.weight: 600 }
             }
             HoverHandler { id: thHov }
@@ -193,7 +193,7 @@ Rectangle {
                 required property string section
                 topPadding: 12; bottomPadding: 4; leftPadding: 6
                 text: section.toUpperCase()
-                color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
+                color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                 font.pixelSize: 12; font.weight: 600
             }
 
@@ -249,8 +249,9 @@ Rectangle {
                     text: row.cursor ? (row.index + 1) : Math.abs(row.index - list.currentIndex)
                     color: Theme.fg
                     opacity: row.cursor ? 1 : 0.65   // dim non-cursor, but still white & legible
-                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
+                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                     font.pixelSize: 12
+                    font.features: ({ "tnum": 1 })
                 }
 
                 Row {
@@ -269,7 +270,7 @@ Rectangle {
                             visible: !(row.kind === "dm" && dmAv.status === Image.Ready)
                             text: row.kind === "dm" ? "●" : "#"
                             color: row.kind === "dm" ? Theme.green : Theme.fg_muted
-                            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: row.kind === "dm" ? 10 : 14
+                            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: row.kind === "dm" ? 10 : 14
                         }
                         ClippingRectangle {
                             anchors.centerIn: parent; width: 18; height: 18; radius: 9
@@ -288,8 +289,8 @@ Rectangle {
                         width: parent.width - chIcon.width - parent.spacing
                         text: row.name; elide: Text.ElideRight
                         color: (row.unread > 0 || row.isOpen || row.cursor) ? Theme.fg : Theme.dimmedFg
-                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 14
-                        font.weight: row.unread > 0 ? 700 : Theme.fontWeight
+                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14
+                        font.weight: row.unread > 0 ? 600 : Theme.fontWeight
                     }
                 }
 
@@ -303,7 +304,7 @@ Rectangle {
                     Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
                         id: badge; anchors.centerIn: parent; text: row.unread
                         color: Theme.fg
-                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12; font.weight: 600
+                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12; font.weight: 600
                     }
                 }
 

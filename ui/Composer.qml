@@ -69,7 +69,7 @@ Rectangle {
         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                text: root.editingTs !== "" ? "✎  Editing message" : ("↰  Replying to " + root.replyAuthor)
                color: Theme.fg
-               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13 }
+               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                text: "  ✕"; color: Theme.fg_muted
                font.family: Theme.fontFamily; font.pixelSize: 13
@@ -91,7 +91,7 @@ Rectangle {
         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                text: Backend.attachState === "uploading" ? "uploading image…" : (Backend.attachName || "image")
                color: Backend.attachState === "uploading" ? Theme.fg_muted : Theme.fg
-               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13 }
+               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                text: Backend.attachState === "ready" ? "✓" : ""; color: Theme.green
                font.family: Theme.fontFamily; font.pixelSize: 13 }
@@ -117,7 +117,7 @@ Rectangle {
             onCursorRectangleChanged: flick.ensureVisible(cursorRectangle)
             wrapMode: TextArea.Wrap
             color: Theme.fg
-            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 15
+            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15
             placeholderText: root.editingTs !== "" ? "Editing message… (Esc to cancel)"
                            : root.replyTs !== "" ? "Replying to " + root.replyAuthor + "… (Esc to cancel)"
                            : "Message #" + Backend.currentChannel
@@ -180,7 +180,7 @@ Rectangle {
         Behavior on color { ColorAnimation { duration: 120 } }
         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent; text: "➤"
                color: parent.on ? Theme.ink : Theme.fg_muted
-               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 15 }
+               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15 }
         TapHandler { onTapped: root.send() }
     }
 }

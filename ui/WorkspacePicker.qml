@@ -64,7 +64,7 @@ Item {
                 Row {
                     anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 10
                     Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter; text: "⇄"
-                           color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 17 }
+                           color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 17 }
                     TextInput { renderType: TextInput.QtRendering;
                         id: search
                         anchors.verticalCenter: parent.verticalCenter
@@ -132,7 +132,7 @@ Item {
                                    readonly property bool dm: row.modelData.id === "@me"
                                    text: dm ? "" : (row.modelData.name || "?").slice(0, 2).toUpperCase()   // nf-fa-comments for DMs
                                    color: dm ? Theme.fg : Theme.fg_muted
-                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
+                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                                    font.pixelSize: dm ? 15 : 12; font.weight: 600 }
                             Image { id: wsIcon; anchors.fill: parent; source: row.modelData.icon || ""
                                     visible: status === Image.Ready; asynchronous: true; cache: true

@@ -119,12 +119,12 @@ Item {
                 Row {
                     anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 10
                     Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter; text: "⌕"
-                           color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 19 }
+                           color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 19 }
                     TextInput { renderType: TextInput.QtRendering;
                         id: search
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - 36; color: Theme.fg; clip: true
-                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 17
+                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 17
                         onTextChanged: palette.rebuild()
                         Keys.onDownPressed: palette.move(1)
                         Keys.onUpPressed: palette.move(-1)
@@ -168,7 +168,7 @@ Item {
                         visible: del.isDivider
                         x: 16; y: 12
                         text: del.isDivider ? modelData.label.toUpperCase() : ""
-                        color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
+                        color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                         font.pixelSize: 12; font.weight: 600
                     }
 
@@ -191,17 +191,17 @@ Item {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: modelData.kind === "dm" ? "●" : (modelData.kind === "thread" ? "" : "#")
                                 color: modelData.kind === "dm" ? Theme.green : Theme.fg_muted
-                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: modelData.kind === "dm" ? 10 : 14
+                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: modelData.kind === "dm" ? 10 : 14
                             }
                             Column {
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: parent.width - 40 - (badge.visible ? 32 : 0); spacing: 3
                                 Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: modelData.name || ""; color: Theme.fg
                                        elide: Text.ElideRight; width: parent.width; maximumLineCount: 1; wrapMode: Text.NoWrap
-                                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 15; font.weight: 600 }
+                                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15; font.weight: 600 }
                                 Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: !!modelData.sub; text: modelData.sub || ""
                                        color: Theme.fg_muted; elide: Text.ElideRight; width: parent.width; maximumLineCount: 1; wrapMode: Text.NoWrap
-                                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12 }
+                                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12 }
                             }
                         }
                         Rectangle {   // unread badge (e.g. thread replies)
@@ -213,7 +213,7 @@ Item {
                             color: Theme.cursor
                             Text { id: bt; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent
                                    text: modelData.unread || ""; color: Theme.ink
-                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
+                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                                    font.pixelSize: 12; font.weight: 600 }
                         }
                         HoverHandler { id: hov }
