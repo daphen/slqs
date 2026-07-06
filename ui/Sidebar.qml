@@ -182,9 +182,10 @@ Rectangle {
             section.delegate: Item {
                 required property string section
                 width: ListView.view.width
-                height: 40
+                height: 48
+                // Air on BOTH sides of the divider — flush pills read broken.
                 Rectangle {
-                    anchors.top: parent.top
+                    anchors.top: parent.top; anchors.topMargin: 10
                     width: parent.width; height: 1
                     color: Theme.hairline
                 }
