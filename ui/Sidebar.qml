@@ -101,7 +101,7 @@ Rectangle {
                     Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                         text: Backend.currentWorkspaceName || "Direct Messages"; color: Theme.fg
                         font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
-                        font.pixelSize: 15; font.weight: 700 }
+                        font.pixelSize: 15; font.weight: 600 }
                     Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                         text: "⌄"; color: Theme.fg_muted
                         font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 13 }
@@ -160,7 +160,7 @@ Rectangle {
                 Text { id: tb; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent
                        text: Backend.threadUnreadTotal; color: Theme.ink
                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
-                       font.pixelSize: 12; font.weight: 700 }
+                       font.pixelSize: 12; font.weight: 600 }
             }
             HoverHandler { id: thHov }
             TapHandler { onTapped: { sidebar.threadsSelected = true; sidebar.threadsClicked() } }
@@ -194,7 +194,7 @@ Rectangle {
                 topPadding: 12; bottomPadding: 4; leftPadding: 6
                 text: section.toUpperCase()
                 color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
-                font.pixelSize: 12; font.weight: 700
+                font.pixelSize: 12; font.weight: 600
             }
 
             delegate: Rectangle {
@@ -303,7 +303,7 @@ Rectangle {
                     Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
                         id: badge; anchors.centerIn: parent; text: row.unread
                         color: Theme.fg
-                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12; font.weight: 700
+                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12; font.weight: 600
                     }
                 }
 

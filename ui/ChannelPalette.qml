@@ -169,7 +169,7 @@ Item {
                         x: 16; y: 12
                         text: del.isDivider ? modelData.label.toUpperCase() : ""
                         color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
-                        font.pixelSize: 12; font.weight: 700
+                        font.pixelSize: 12; font.weight: 600
                     }
 
                     // selectable row — inset + rounded so the highlight never
@@ -214,7 +214,7 @@ Item {
                             Text { id: bt; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent
                                    text: modelData.unread || ""; color: Theme.ink
                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
-                                   font.pixelSize: 12; font.weight: 700 }
+                                   font.pixelSize: 12; font.weight: 600 }
                         }
                         HoverHandler { id: hov }
                         TapHandler { onTapped: { palette.sel = del.index; palette.accept() } }

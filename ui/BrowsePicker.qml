@@ -114,7 +114,7 @@ Item {
                            anchors.right: parent.right; anchors.rightMargin: 14; anchors.verticalCenter: parent.verticalCenter
                            text: row.modelData.member ? "joined" : "join"
                            color: row.modelData.member ? Theme.fg_muted : Theme.green
-                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12; font.weight: 700 }
+                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 12; font.weight: 600 }
                     HoverHandler { id: hov }
                     TapHandler { onTapped: { bp.sel = row.index; bp.accept() } }
                 }

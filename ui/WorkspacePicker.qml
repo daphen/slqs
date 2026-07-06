@@ -133,7 +133,7 @@ Item {
                                    text: dm ? "" : (row.modelData.name || "?").slice(0, 2).toUpperCase()   // nf-fa-comments for DMs
                                    color: dm ? Theme.fg : Theme.fg_muted
                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting
-                                   font.pixelSize: dm ? 15 : 12; font.weight: 700 }
+                                   font.pixelSize: dm ? 15 : 12; font.weight: 600 }
                             Image { id: wsIcon; anchors.fill: parent; source: row.modelData.icon || ""
                                     visible: status === Image.Ready; asynchronous: true; cache: true
                                     fillMode: Image.PreserveAspectCrop; sourceSize.width: 56; sourceSize.height: 56 }

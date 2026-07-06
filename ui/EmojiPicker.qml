@@ -151,7 +151,7 @@ Item {
                                height: 22; verticalAlignment: Text.AlignVCenter
                                width: 26; text: row.isReaction ? ("" + row.modelData.count) : ""
                                color: row.modelData.mine ? Theme.sky : Theme.fg
-                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 14; font.weight: 700 }
+                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferFullHinting; font.pixelSize: 14; font.weight: 600 }
                         Text { id: usersText; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: row.isReaction
                                width: row.width - 90
                                height: row.expanded ? implicitHeight : 22
