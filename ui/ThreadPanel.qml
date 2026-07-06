@@ -9,8 +9,16 @@ Rectangle {
     color: Theme.bg
     topLeftRadius: 10     // card edges over the channel (right side meets the window)
     bottomLeftRadius: 10
-    border.width: 1
-    border.color: Theme.hairline
+
+    // Hairpin outline drawn ABOVE the content — rows and the reply footer
+    // fill flush to the edge and would paint over a root border.
+    Rectangle {
+        anchors.fill: parent; z: 999
+        color: "transparent"
+        topLeftRadius: 10; bottomLeftRadius: 10
+        border.width: 1
+        border.color: Theme.hairline
+    }
     signal exitReply()
     signal openPalette()   // Ctrl+K from the reply input → jump palette (drops to normal)
     signal panelMove(int d)   // Ctrl+H/L from the reply input → drop to normal + panel left/right
