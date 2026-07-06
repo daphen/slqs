@@ -182,22 +182,22 @@ Rectangle {
             section.delegate: Item {
                 required property string section
                 width: ListView.view.width
-                height: 36
+                height: 40
                 Rectangle {
                     anchors.top: parent.top
                     width: parent.width; height: 1
                     color: Theme.hairline
                 }
                 Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
-                    anchors.left: parent.left; anchors.leftMargin: 6
-                    anchors.bottom: parent.bottom; anchors.bottomMargin: 4
+                    anchors.left: parent.left; anchors.leftMargin: 12
+                    anchors.bottom: parent.bottom; anchors.bottomMargin: 8
                     text: section.toUpperCase()
                     color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                     font.pixelSize: 11; font.weight: 600; font.letterSpacing: 1.2
                 }
             }
 
-            delegate: Rectangle {
+            delegate: Item {
                 id: row
                 required property int index
                 required property string id
@@ -208,7 +208,7 @@ Rectangle {
                 required property string topic
                 required property string avatar
                 width: ListView.view.width
-                height: 36; radius: height / 2
+                height: 36
                 readonly property bool cursor: list.currentIndex === index
                 // Not "open" while the Threads view covers the message pane — its
                 // indicator would read as a second highlight next to the threads cursor.
@@ -226,16 +226,24 @@ Rectangle {
                 // backdrop while a tint always contrasts.
                 // Reference style: the focused row is an inverted ink pill —
                 // its own contrast is the cursor signal (no accent bar, no
-                // hairpin). Idle open channel keeps the faint tint.
-                color: primary ? Theme.fg
-                     : (isOpen && !sidebar.active ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.06)
-                               : hov.hovered ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.04) : "transparent")
+                // hairpin). Idle open channel keeps the faint tint. Inner
+                // rect: rows are full-bleed in the ListView, and a filled
+                // pill needs the same inset the search field has.
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.leftMargin: 6
+                    anchors.rightMargin: 6
+                    radius: height / 2
+                    color: row.primary ? Theme.fg
+                         : (row.isOpen && !sidebar.active ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.06)
+                                   : hov.hovered ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.04) : "transparent")
+                }
 
                 // relative line number (vim hybrid: absolute on cursor row),
                 // shown only while the sidebar is focused — drives N j/k jumps.
                 Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                     visible: sidebar.active
-                    anchors.left: parent.left; anchors.leftMargin: 6
+                    anchors.left: parent.left; anchors.leftMargin: 12
                     width: 18; horizontalAlignment: Text.AlignRight
                     anchors.verticalCenter: parent.verticalCenter
                     text: row.cursor ? (row.index + 1) : Math.abs(row.index - list.currentIndex)
@@ -247,7 +255,7 @@ Rectangle {
                 }
 
                 Row {
-                    anchors.fill: parent; anchors.leftMargin: sidebar.active ? 30 : 12
+                    anchors.fill: parent; anchors.leftMargin: sidebar.active ? 36 : 18
                     // reserve the badge's footprint on the right so long names
                     // elide before it instead of running underneath.
                     anchors.rightMargin: 8 + (row.unread > 0 ? 32 : 0)
@@ -292,7 +300,7 @@ Rectangle {
                 // Mentions flip the count to the accent.
                 Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                     visible: row.unread > 0
-                    anchors.right: parent.right; anchors.rightMargin: 10
+                    anchors.right: parent.right; anchors.rightMargin: 16
                     anchors.verticalCenter: parent.verticalCenter
                     text: row.unread
                     color: row.primary ? Theme.bg : row.mention ? Theme.cursor : Theme.fg_muted
