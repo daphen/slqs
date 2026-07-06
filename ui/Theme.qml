@@ -97,7 +97,7 @@ Singleton {
     readonly property int padding:   12
     readonly property int paddingSm: 6
     readonly property int fontSize:  14
-    readonly property string fontFamily: "Inter"
+    readonly property string fontFamily: "Geist"
     readonly property int fontWeight: 500
 
     readonly property var avatarColors: [
