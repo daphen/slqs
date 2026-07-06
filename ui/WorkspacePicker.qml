@@ -42,7 +42,7 @@ Item {
 
     readonly property string sans: "sans-serif"
     readonly property color panelBorder:
-        Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, Theme.mode === "light" ? 0.5 : 0.10)
+        Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, Theme.mode === "light" ? 0.15 : 0.10)
 
     Rectangle {
         width: Math.round(Math.min(480, parent.width - 80))

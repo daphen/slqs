@@ -17,15 +17,15 @@ Singleton {
 
     readonly property var palettes: ({
         "light": {
-            "bg":          "#FAF9F6",
-            "bg_alt":      "#F2F1EE",
-            "selection":   "#E7E5E1",
-            "surface":     "#EDECE9",
-            "overlay":     "#E0DFDC",
-            "prompt":      "#E8EAED",
-            "fg":          "#2D4A3D",
-            "fg_secondary":"#575279",
-            "fg_muted":    "#6B6E7A",
+            "bg":          "#FFFFFF",
+            "bg_alt":      "#F6F7F4",
+            "selection":   "#F4F5F2",
+            "surface":     "#F7F8F5",
+            "overlay":     "#E9EAE7",
+            "prompt":      "#EEEFEC",
+            "fg":          "#10100E",
+            "fg_secondary":"#3C3C3A",
+            "fg_muted":    "#959693",
             "red":         "#7c3438",
             "orange":      "#e16511",
             "yellow":      "#df9001",
@@ -35,7 +35,7 @@ Singleton {
             "ink":         "#1C1C1C",
             "warning":     "#F5DECE",
             "brightWhite": "#D5D1C5",
-            "hairlineAlpha": 0.5,
+            "hairlineAlpha": 0.12,
             "dimmedFgAlpha": 0.55
         },
         "dark": {
