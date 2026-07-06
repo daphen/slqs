@@ -88,7 +88,9 @@ Item {
             ListView {
                 id: list
                 width: parent.width
-                height: Math.round(Math.min(440, contentHeight))
+                height: Math.round(Math.min(440, contentHeight + 18))
+                topMargin: 8
+                bottomMargin: 10
                 clip: true
                 model: bp.rows
                 currentIndex: bp.sel
@@ -102,14 +104,12 @@ Item {
                     required property int index
                     width: list.width; height: 38
                     Rectangle {   // inset + rounded highlight, clear of the box corners/border
-                        anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8
-                        anchors.topMargin: 1; anchors.bottomMargin: 1; radius: 8
+                        anchors.fill: parent; anchors.leftMargin: 14; anchors.rightMargin: 14
+                        anchors.topMargin: 1; anchors.bottomMargin: 1; radius: 13
                         color: index === bp.sel ? Theme.selection : hov.hovered ? Theme.hover : "transparent"
                         border.width: 1
                         border.color: index === bp.sel ? Theme.hairline : "transparent"
                     }
-                    Rectangle { anchors.left: parent.left; anchors.leftMargin: 8; anchors.verticalCenter: parent.verticalCenter
-                        width: 3; height: 20; radius: 2; color: Theme.cursor; visible: index === bp.sel }
                     Row {
                         anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 14; spacing: 9
                         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter

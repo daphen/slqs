@@ -110,7 +110,9 @@ Item {
             ListView {
                 id: list
                 width: parent.width
-                height: Math.round(Math.min(360, contentHeight))
+                height: Math.round(Math.min(360, contentHeight + 18))
+                topMargin: 8
+                bottomMargin: 10
                 clip: true
                 model: picker.rows
                 currentIndex: picker.sel
@@ -130,8 +132,8 @@ Item {
                     color: "transparent"
                     // inset, rounded highlight (matches the other pickers — never touches the box corners)
                     Rectangle {
-                        anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8
-                        anchors.topMargin: 1; anchors.bottomMargin: 1; radius: 8
+                        anchors.fill: parent; anchors.leftMargin: 14; anchors.rightMargin: 14
+                        anchors.topMargin: 1; anchors.bottomMargin: 1; radius: 13
                         color: index === picker.sel ? Theme.selection : hov.hovered ? Theme.hover : "transparent"
                         border.width: 1
                         border.color: index === picker.sel ? Theme.hairline : "transparent"
@@ -139,9 +141,6 @@ Item {
                     // Content is top-anchored (not centered) so a selected reaction row can
                     // grow downward as its reactor list wraps, without overlapping neighbours.
                     // Row children carry no anchors — anchoring them breaks Row's height.
-                    Rectangle { anchors.left: parent.left; anchors.leftMargin: 8
-                        anchors.top: parent.top; anchors.topMargin: 7
-                        width: 3; height: 22; radius: 2; color: Theme.cursor; visible: index === picker.sel }
                     Row {
                         id: contentRow
                         anchors.left: parent.left; anchors.right: parent.right
