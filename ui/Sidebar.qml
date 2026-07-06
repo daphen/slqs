@@ -225,7 +225,7 @@ Rectangle {
                 // translucent+blurred, so an absolute fill blends into the
                 // backdrop while a tint always contrasts.
                 color: primary ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.10)
-                     : (isOpen ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.06)
+                     : (isOpen && !sidebar.active ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.06)
                                : hov.hovered ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.04) : "transparent")
                 // Hairpin border like the picker cards — the selection fill
                 // alone is near-invisible on the light bg.
