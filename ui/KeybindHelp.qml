@@ -82,7 +82,7 @@ Item {
                 id: body
                 anchors.fill: parent; anchors.margins: 28
                 spacing: 22
-                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                Text { renderType: Text.NativeRendering
                        text: "Keybindings"; color: Theme.fg
                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                        font.pixelSize: 20; font.bold: true }
@@ -102,7 +102,7 @@ Item {
                                     required property var modelData
                                     width: colRoot.width
                                     spacing: 6
-                                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                                    Text { renderType: Text.NativeRendering
                                            text: secRoot.modelData.title; color: Theme.fg_muted
                                            font.family: Theme.fontFamily; font.pixelSize: 11; font.letterSpacing: 1 }
                                     Repeater {
@@ -114,11 +114,11 @@ Item {
                                             Rectangle {
                                                 width: 76; height: 24; radius: Theme.radiusSm
                                                 color: Theme.surface; border.color: Theme.hairline; border.width: 1
-                                                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                                                Text { renderType: Text.NativeRendering
                                                        anchors.centerIn: parent; text: rowRoot.modelData.keys; color: Theme.fg
                                                        font.family: Theme.fontFamily; font.pixelSize: 13 }
                                             }
-                                            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                                            Text { renderType: Text.NativeRendering
                                                    anchors.verticalCenter: parent.verticalCenter
                                                    text: rowRoot.modelData.help; color: Theme.fg
                                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14 }
@@ -129,7 +129,7 @@ Item {
                         }
                     }
                 }
-                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                Text { renderType: Text.NativeRendering
                        anchors.horizontalCenter: parent.horizontalCenter
                        text: "press ?, esc or q to close"; color: Theme.fg_muted
                        font.family: Theme.fontFamily; font.pixelSize: 12 }

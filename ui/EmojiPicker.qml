@@ -82,9 +82,9 @@ Item {
                 }
                 Row {
                     anchors.fill: searchField; anchors.leftMargin: 14; anchors.rightMargin: 14; spacing: 10
-                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter; text: "☺"
+                    Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter; text: "☺"
                            color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 18 }
-                    TextInput { renderType: TextInput.QtRendering;
+                    TextInput { renderType: TextInput.NativeRendering;
                         id: search
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - 36; color: Theme.fg; clip: true
@@ -101,7 +101,7 @@ Item {
                                 else if (e.key === Qt.Key_K) { picker.move(-1); e.accepted = true }
                             }
                         }
-                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: !search.text; text: "React with…"
+                        Text { renderType: Text.NativeRendering; visible: !search.text; text: "React with…"
                                color: Theme.fg_muted; font: search.font }
                     }
                 }
@@ -151,16 +151,16 @@ Item {
                             width: 22; height: 22
                             Image { anchors.fill: parent; visible: row.modelData.custom; source: row.modelData.path || ""
                                     fillMode: Image.PreserveAspectFit; sourceSize.width: 44; sourceSize.height: 44 }
-                            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent; visible: !row.modelData.custom
+                            Text { renderType: Text.NativeRendering; anchors.centerIn: parent; visible: !row.modelData.custom
                                    text: row.modelData.glyph || ""; font.pixelSize: 19 }
                         }
                         // reaction row: count + who reacted; the mine ones are bold/accent
-                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: row.isReaction
+                        Text { renderType: Text.NativeRendering; visible: row.isReaction
                                height: 22; verticalAlignment: Text.AlignVCenter
                                width: 26; text: row.isReaction ? ("" + row.modelData.count) : ""
                                color: row.modelData.mine ? Theme.sky : Theme.fg
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14; font.weight: 600 }
-                        Text { id: usersText; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: row.isReaction
+                        Text { id: usersText; renderType: Text.NativeRendering; visible: row.isReaction
                                width: row.width - 90
                                height: row.expanded ? implicitHeight : 22
                                verticalAlignment: Text.AlignVCenter
@@ -169,7 +169,7 @@ Item {
                                text: (row.modelData.users || []).join(", "); color: Theme.fg_muted
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
                         // emoji row: :name:
-                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: !row.isReaction
+                        Text { renderType: Text.NativeRendering; visible: !row.isReaction
                                height: 22; verticalAlignment: Text.AlignVCenter
                                text: ":" + row.modelData.name + ":"; color: Theme.fg
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14 }

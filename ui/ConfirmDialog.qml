@@ -41,18 +41,18 @@ Item {
             Column {
                 id: col
                 anchors.centerIn: parent; width: parent.width - 36; spacing: 12
-                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; width: parent.width; wrapMode: Text.Wrap
+                Text { renderType: Text.NativeRendering; width: parent.width; wrapMode: Text.Wrap
                        text: dlg.title; color: Theme.fg
                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 16; font.weight: 600 }
-                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: dlg.preview.length > 0
+                Text { renderType: Text.NativeRendering; visible: dlg.preview.length > 0
                        width: parent.width; wrapMode: Text.Wrap; maximumLineCount: 4; elide: Text.ElideRight
                        text: dlg.preview; color: Theme.fg_muted
                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14 }
                 Row {
                     spacing: 16
-                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: "⏎ / y  delete"; color: Theme.fg
+                    Text { renderType: Text.NativeRendering; text: "⏎ / y  delete"; color: Theme.fg
                            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 600 }
-                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: "esc / n  cancel"; color: Theme.fg_muted
+                    Text { renderType: Text.NativeRendering; text: "esc / n  cancel"; color: Theme.fg_muted
                            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
                 }
             }

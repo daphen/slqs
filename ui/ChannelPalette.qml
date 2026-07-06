@@ -125,9 +125,9 @@ Item {
                 }
                 Row {
                     anchors.fill: searchField; anchors.leftMargin: 14; anchors.rightMargin: 14; spacing: 10
-                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter; text: "⌕"
+                    Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter; text: "⌕"
                            color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 19 }
-                    TextInput { renderType: TextInput.QtRendering;
+                    TextInput { renderType: TextInput.NativeRendering;
                         id: search
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - 36; color: Theme.fg; clip: true
@@ -143,7 +143,7 @@ Item {
                                 else if (e.key === Qt.Key_K) { palette.move(-1); e.accepted = true }
                             }
                         }
-                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: !search.text; text: "Jump to a channel or DM…"
+                        Text { renderType: Text.NativeRendering; visible: !search.text; text: "Jump to a channel or DM…"
                                color: Theme.fg_muted; font: search.font }
                     }
                 }
@@ -173,7 +173,7 @@ Item {
                     height: isDivider ? 34 : 52
 
                     // divider
-                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                    Text { renderType: Text.NativeRendering
                         visible: del.isDivider
                         x: 16; y: 12
                         text: del.isDivider ? modelData.label.toUpperCase() : ""
@@ -193,7 +193,7 @@ Item {
                         border.color: del.ListView.isCurrentItem ? Theme.hairline : "transparent"
                         Row {
                             anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 12; spacing: 9
-                            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                            Text { renderType: Text.NativeRendering
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: modelData.kind === "dm" ? "●" : (modelData.kind === "thread" ? "" : "#")
                                 color: modelData.kind === "dm" ? Theme.green : Theme.fg_muted
@@ -202,10 +202,10 @@ Item {
                             Column {
                                 anchors.verticalCenter: parent.verticalCenter
                                 width: parent.width - 40 - (badge.visible ? 32 : 0); spacing: 3
-                                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: modelData.name || ""; color: Theme.fg
+                                Text { renderType: Text.NativeRendering; text: modelData.name || ""; color: Theme.fg
                                        elide: Text.ElideRight; width: parent.width; maximumLineCount: 1; wrapMode: Text.NoWrap
                                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15; font.weight: 600 }
-                                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: !!modelData.sub; text: modelData.sub || ""
+                                Text { renderType: Text.NativeRendering; visible: !!modelData.sub; text: modelData.sub || ""
                                        color: Theme.fg_muted; elide: Text.ElideRight; width: parent.width; maximumLineCount: 1; wrapMode: Text.NoWrap
                                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12 }
                             }
@@ -217,7 +217,7 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                             height: 18; width: Math.max(18, bt.implicitWidth + 10); radius: 9
                             color: Theme.cursor
-                            Text { id: bt; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent
+                            Text { id: bt; renderType: Text.NativeRendering; anchors.centerIn: parent
                                    text: modelData.unread || ""; color: Theme.ink
                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                                    font.pixelSize: 12; font.weight: 600 }

@@ -70,9 +70,9 @@ Item {
                 }
                 Row {
                     anchors.fill: searchField; anchors.leftMargin: 14; anchors.rightMargin: 14; spacing: 10
-                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter; text: "⇄"
+                    Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter; text: "⇄"
                            color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 17 }
-                    TextInput { renderType: TextInput.QtRendering;
+                    TextInput { renderType: TextInput.NativeRendering;
                         id: search
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - 36; color: Theme.fg; clip: true
@@ -88,7 +88,7 @@ Item {
                                 else if (e.key === Qt.Key_K) { wp.move(-1); e.accepted = true }
                             }
                         }
-                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: !search.text; text: "Switch workspace…"
+                        Text { renderType: Text.NativeRendering; visible: !search.text; text: "Switch workspace…"
                                color: Theme.fg_muted; font: search.font }
                     }
                 }
@@ -138,7 +138,7 @@ Item {
                         Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
                             width: 28; height: 28; radius: 8; color: Theme.hover
-                            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent
+                            Text { renderType: Text.NativeRendering; anchors.centerIn: parent
                                    visible: wsIcon.status !== Image.Ready
                                    readonly property bool dm: row.modelData.id === "@me"
                                    text: dm ? "" : (row.modelData.name || "?").slice(0, 2).toUpperCase()   // nf-fa-comments for DMs
@@ -152,7 +152,7 @@ Item {
                                         fillMode: Image.PreserveAspectCrop; sourceSize.width: 56; sourceSize.height: 56 }
                             }
                         }
-                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
+                        Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
                                text: (row.modelData.id === "@me") ? "Direct Messages" : row.modelData.name; color: Theme.fg
                                font.family: wp.sans
                                font.pixelSize: 14; font.weight: row.active ? 600 : 500 }

@@ -18,7 +18,7 @@ FloatingWindow {
         color: Theme.mode === "light" ? Theme.bg : Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.07)
         border.width: 1
         border.color: Theme.hairline
-        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+        Text { renderType: Text.NativeRendering
             id: capText; anchors.centerIn: parent
             color: Theme.fg_muted
             font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
@@ -26,7 +26,7 @@ FloatingWindow {
         }
     }
     component CapLabel: Text {
-        renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+        renderType: Text.NativeRendering
         anchors.verticalCenter: parent.verticalCenter
         color: Theme.fg_muted
         font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
@@ -279,13 +279,13 @@ FloatingWindow {
                         Row {
                             anchors.left: parent.left; anchors.leftMargin: 18
                             anchors.verticalCenter: parent.verticalCenter; spacing: 9
-                            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: "#"; color: Theme.fg_muted; anchors.verticalCenter: parent.verticalCenter
+                            Text { renderType: Text.NativeRendering; text: "#"; color: Theme.fg_muted; anchors.verticalCenter: parent.verticalCenter
                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 19 }
-                            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: Backend.currentChannel; color: Theme.fg; anchors.verticalCenter: parent.verticalCenter
+                            Text { renderType: Text.NativeRendering; text: Backend.currentChannel; color: Theme.fg; anchors.verticalCenter: parent.verticalCenter
                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 17; font.weight: 600 }
                             Rectangle { visible: Backend.currentTopic.length > 0; width: 1; height: 16; color: Theme.hairline
                                         anchors.verticalCenter: parent.verticalCenter }
-                            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
+                            Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
                                    // collapse the (often multi-line) topic to one elided line
                                    text: Backend.currentTopic.replace(/[\r\n]+/g, "  ")
                                    color: Theme.fg_muted; elide: Text.ElideRight
@@ -302,7 +302,7 @@ FloatingWindow {
                             width: joinLbl.implicitWidth + 22; height: 26; radius: 6
                             color: joinMA.containsMouse ? Theme.selection : Theme.surface
                             border.width: 1; border.color: Theme.sky
-                            Text { id: joinLbl; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent
+                            Text { id: joinLbl; renderType: Text.NativeRendering; anchors.centerIn: parent
                                    text: "+ Join channel"; color: Theme.sky
                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 600 }
                             MouseArea { id: joinMA; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
@@ -334,7 +334,7 @@ FloatingWindow {
                             height: Backend.typing ? 22 : 0
                             clip: true
                             Behavior on height { NumberAnimation { duration: 120 } }
-                            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
+                            Text { renderType: Text.NativeRendering;
                                 x: 20; anchors.top: parent.top; anchors.bottom: parent.bottom
                                 verticalAlignment: Text.AlignVCenter
                                 text: Backend.typingWho + " is typing…"
@@ -386,7 +386,7 @@ FloatingWindow {
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: "Opening media…"; color: Theme.bg
-                                renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                                renderType: Text.NativeRendering
                                 font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13
                             }
                         }
@@ -428,7 +428,7 @@ FloatingWindow {
                         width: modeLabel.implicitWidth + 16; height: 22; radius: 7
                         anchors.verticalCenter: parent.verticalCenter
                         color: win.insertMode ? Theme.cursor : Theme.green
-                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
+                        Text { renderType: Text.NativeRendering;
                             id: modeLabel; anchors.centerIn: parent
                             text: win.insertMode ? "INSERT" : "NORMAL"
                             // Contrast against the chip's own bg: dark text on a light
@@ -439,7 +439,7 @@ FloatingWindow {
                             font.pixelSize: 11; font.weight: 600; font.letterSpacing: 0.5
                         }
                     }
-                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
+                    Text { renderType: Text.NativeRendering;
                         anchors.verticalCenter: parent.verticalCenter
                         text: "panel: " + win.focusedPanel + "   #" + Backend.currentChannel
                               + (win.pendingCount > 0 ? "      " + win.pendingCount : "")
@@ -474,7 +474,7 @@ FloatingWindow {
                     StatusCap { text: "?" }
                     CapLabel { text: "help" }
                 }
-                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
+                Text { renderType: Text.NativeRendering;
                     visible: Backend.updateAvailable
                     anchors.right: parent.right; anchors.rightMargin: 14
                     anchors.verticalCenter: parent.verticalCenter
@@ -554,7 +554,7 @@ FloatingWindow {
                 color: Theme.surface; border.width: 1; border.color: Theme.hairline
                 Behavior on opacity { NumberAnimation { duration: 140 } }
                 Text {
-                    id: toastLbl; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent
+                    id: toastLbl; renderType: Text.NativeRendering; anchors.centerIn: parent
                     text: toast.message; color: Theme.fg
                     font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13
                 }

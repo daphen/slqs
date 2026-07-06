@@ -66,11 +66,11 @@ Rectangle {
         anchors.left: parent.left; anchors.leftMargin: 14
         anchors.top: parent.top; anchors.topMargin: 8
         spacing: 6
-        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
+        Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
                text: root.editingTs !== "" ? "✎  Editing message" : ("↰  Replying to " + root.replyAuthor)
                color: Theme.fg
                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
-        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
+        Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
                text: "  ✕"; color: Theme.fg_muted
                font.family: Theme.fontFamily; font.pixelSize: 13
                TapHandler { onTapped: { if (root.editingTs !== "") root.cancelEdit(); else { root.replyTs = ""; root.replyAuthor = "" } } } }
@@ -86,16 +86,16 @@ Rectangle {
         anchors.leftMargin: root.replying ? 16 : 14
         anchors.top: parent.top; anchors.topMargin: 8
         spacing: 6
-        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: "📎"; anchors.verticalCenter: parent.verticalCenter
+        Text { renderType: Text.NativeRendering; text: "📎"; anchors.verticalCenter: parent.verticalCenter
                font.family: Theme.fontFamily; font.pixelSize: 13 }
-        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
+        Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
                text: Backend.attachState === "uploading" ? "uploading image…" : (Backend.attachName || "image")
                color: Backend.attachState === "uploading" ? Theme.fg_muted : Theme.fg
                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
-        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
+        Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
                text: Backend.attachState === "ready" ? "✓" : ""; color: Theme.green
                font.family: Theme.fontFamily; font.pixelSize: 13 }
-        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
+        Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
                text: "  ✕"; color: Theme.fg_muted
                font.family: Theme.fontFamily; font.pixelSize: 13
                TapHandler { onTapped: Backend.dropAttach() } }
@@ -111,7 +111,7 @@ Rectangle {
             if (contentY >= r.y) contentY = r.y
             else if (contentY + height <= r.y + r.height) contentY = r.y + r.height - height
         }
-        TextArea { renderType: TextArea.QtRendering;
+        TextArea { renderType: TextArea.NativeRendering;
             id: input
             width: flick.width
             onCursorRectangleChanged: flick.ensureVisible(cursorRectangle)
@@ -180,7 +180,7 @@ Rectangle {
         readonly property bool on: input.text.trim().length > 0
         color: on ? Theme.cursor : Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.06)
         Behavior on color { ColorAnimation { duration: 120 } }
-        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent; text: "➤"
+        Text { renderType: Text.NativeRendering; anchors.centerIn: parent; text: "➤"
                color: parent.on ? Theme.ink : Theme.fg_muted
                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15 }
         TapHandler { onTapped: root.send() }

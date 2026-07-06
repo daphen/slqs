@@ -120,10 +120,10 @@ Item {
                         visible: ac.mode === "emoji"
                         Image { anchors.fill: parent; visible: !!arow.modelData.custom; source: arow.modelData.path || ""
                                 fillMode: Image.PreserveAspectFit; sourceSize.width: 40; sourceSize.height: 40 }
-                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent; visible: !arow.modelData.custom
+                        Text { renderType: Text.NativeRendering; anchors.centerIn: parent; visible: !arow.modelData.custom
                                text: arow.modelData.glyph || ""; font.pixelSize: 18 }
                     }
-                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
+                    Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
                            text: ac.mode === "emoji" ? (":" + arow.modelData.name + ":") : ("@" + arow.modelData.name)
                            color: Theme.fg
                            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14 }
