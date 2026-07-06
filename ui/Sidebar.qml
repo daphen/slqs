@@ -70,7 +70,7 @@ Rectangle {
                     delegate: Rectangle {
                         required property var modelData
                         readonly property bool active: modelData.id === Backend.currentWorkspace
-                        height: 26; radius: 6
+                        height: 26; radius: 13
                         width: Math.min(tabLbl.implicitWidth + 20, 110)
                         // Snap, don't animate: a color fade on the active tab reads as a
                         // "blink" when switching workspaces (same reason the msg cursor snaps).
@@ -138,18 +138,17 @@ Rectangle {
         // Hidden when the backend has no threads (Discord).
         Rectangle {
             visible: Backend.hasThreads
-            width: parent.width; height: Backend.hasThreads ? 36 : 0; clip: true; radius: Theme.radiusSm
-            color: (sidebar.threadsSelected && sidebar.active) ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.10)
-                 : thHov.hovered ? Theme.hover : "transparent"
-            border.width: 1
-            border.color: (sidebar.threadsSelected && sidebar.active) ? Theme.hairline : "transparent"
+            width: parent.width; height: Backend.hasThreads ? 36 : 0; clip: true; radius: height / 2
+            readonly property bool thPrimary: sidebar.threadsSelected && sidebar.active
+            // Reference style: the focused row is an inverted ink pill.
+            color: thPrimary ? Theme.fg : thHov.hovered ? Theme.hover : "transparent"
             Row {
                 anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 8; spacing: 7
                 Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
-                       text: "↳"; color: Theme.fg_muted
+                       text: "↳"; color: parent.parent.thPrimary ? Theme.bg : Theme.fg_muted
                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15 }
                 Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
-                       text: "Threads"; color: Theme.fg
+                       text: "Threads"; color: parent.parent.thPrimary ? Theme.bg : Theme.fg
                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                        font.pixelSize: 14; font.weight: Backend.threadUnreadTotal > 0 ? 600 : Theme.fontWeight }
             }
@@ -220,7 +219,7 @@ Rectangle {
                 required property string topic
                 required property string avatar
                 width: ListView.view.width
-                height: 36; radius: Theme.radiusSm
+                height: 36; radius: height / 2
                 readonly property bool cursor: list.currentIndex === index
                 // Not "open" while the Threads view covers the message pane — its
                 // indicator would read as a second highlight next to the threads cursor.
@@ -236,20 +235,12 @@ Rectangle {
                 // fg-relative tints, not the opaque selection: the sidebar is
                 // translucent+blurred, so an absolute fill blends into the
                 // backdrop while a tint always contrasts.
-                color: primary ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.10)
+                // Reference style: the focused row is an inverted ink pill —
+                // its own contrast is the cursor signal (no accent bar, no
+                // hairpin). Idle open channel keeps the faint tint.
+                color: primary ? Theme.fg
                      : (isOpen && !sidebar.active ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.06)
                                : hov.hovered ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.04) : "transparent")
-                // Hairpin border like the picker cards — the selection fill
-                // alone is near-invisible on the light bg.
-                border.width: 1
-                border.color: primary ? Theme.hairline : "transparent"
-
-                Rectangle {
-                    anchors.left: parent.left; anchors.leftMargin: 2
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: 3; height: 16; radius: 2; color: Theme.cursor
-                    opacity: row.primary ? 1 : 0
-                }
 
                 // relative line number (vim hybrid: absolute on cursor row),
                 // shown only while the sidebar is focused — drives N j/k jumps.
@@ -259,7 +250,7 @@ Rectangle {
                     width: 18; horizontalAlignment: Text.AlignRight
                     anchors.verticalCenter: parent.verticalCenter
                     text: row.cursor ? (row.index + 1) : Math.abs(row.index - list.currentIndex)
-                    color: Theme.fg
+                    color: row.primary ? Theme.bg : Theme.fg
                     opacity: row.cursor ? 1 : 0.65   // dim non-cursor, but still white & legible
                     font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                     font.pixelSize: 12
@@ -281,7 +272,7 @@ Rectangle {
                             anchors.centerIn: parent
                             visible: !(row.kind === "dm" && dmAv.status === Image.Ready)
                             text: row.kind === "dm" ? "●" : "#"
-                            color: row.kind === "dm" ? Theme.green : Theme.fg_muted
+                            color: row.kind === "dm" ? Theme.green : (row.primary ? Theme.bg : Theme.fg_muted)
                             font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: row.kind === "dm" ? 10 : 14
                         }
                         ClippingRectangle {
@@ -300,7 +291,8 @@ Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - chIcon.width - parent.spacing
                         text: row.name; elide: Text.ElideRight
-                        color: (row.unread > 0 || row.isOpen || row.cursor) ? Theme.fg : Theme.dimmedFg
+                        color: row.primary ? Theme.bg
+                             : (row.unread > 0 || row.isOpen || row.cursor) ? Theme.fg : Theme.dimmedFg
                         font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14
                         font.weight: row.unread > 0 ? 600 : Theme.fontWeight
                     }
@@ -314,7 +306,7 @@ Rectangle {
                     anchors.right: parent.right; anchors.rightMargin: 10
                     anchors.verticalCenter: parent.verticalCenter
                     text: row.unread
-                    color: row.mention ? Theme.cursor : Theme.fg_muted
+                    color: row.primary ? Theme.bg : row.mention ? Theme.cursor : Theme.fg_muted
                     font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                     font.pixelSize: 13; font.weight: row.mention ? 600 : 500
                 }
