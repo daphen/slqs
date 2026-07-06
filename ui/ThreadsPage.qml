@@ -95,16 +95,21 @@ Item {
                     width: parent.width; height: 28
                     Row {
                         anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter; spacing: 8
-                        ClippingRectangle {
+                        // Text OUTSIDE the clip: ClippingRectangle rasterizes children
+                        // at 1x DPR, blurring glyphs on a fractional-scale monitor.
+                        Rectangle {
                             width: 24; height: 24; radius: 6; color: modelData.color || Theme.surface
                             anchors.verticalCenter: parent.verticalCenter
                             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent
                                    visible: img.status !== Image.Ready
                                    text: modelData.initials || "?"; color: Theme.ink
                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 11; font.weight: 800 }
-                            Image { id: img; anchors.fill: parent; source: modelData.avatar || ""
-                                    visible: status === Image.Ready; asynchronous: true; cache: true
-                                    fillMode: Image.PreserveAspectCrop; sourceSize.width: 48; sourceSize.height: 48 }
+                            ClippingRectangle {
+                                anchors.fill: parent; radius: parent.radius; color: "transparent"
+                                Image { id: img; anchors.fill: parent; source: modelData.avatar || ""
+                                        visible: status === Image.Ready; asynchronous: true; cache: true
+                                        fillMode: Image.PreserveAspectCrop; sourceSize.width: 48; sourceSize.height: 48 }
+                            }
                         }
                         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                                text: modelData.title || ""; color: Theme.mode === "light" ? Theme.ink : Theme.fg

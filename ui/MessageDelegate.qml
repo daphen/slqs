@@ -147,7 +147,9 @@ Item {
         x: 26; width: 40
         anchors.top: parent.top; anchors.topMargin: (del.grouped ? 3 : 9) + del._dayPad
         height: 40
-        ClippingRectangle {
+        // Text OUTSIDE the clip: ClippingRectangle rasterizes children at
+        // 1x DPR, blurring glyphs on a fractional-scale monitor.
+        Rectangle {
             visible: !del.grouped
             width: 36; height: 36; radius: 8
             color: del.color                    // colored fallback behind the image
@@ -157,14 +159,17 @@ Item {
                 visible: avatarImg.status !== Image.Ready
                 font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14; font.weight: 800
             }
-            Image {
-                id: avatarImg
-                anchors.fill: parent
-                source: del.avatar           // straight from the model row
-                visible: status === Image.Ready
-                asynchronous: true; cache: true
-                fillMode: Image.PreserveAspectCrop
-                sourceSize.width: 96; sourceSize.height: 96
+            ClippingRectangle {
+                anchors.fill: parent; radius: parent.radius; color: "transparent"
+                Image {
+                    id: avatarImg
+                    anchors.fill: parent
+                    source: del.avatar           // straight from the model row
+                    visible: status === Image.Ready
+                    asynchronous: true; cache: true
+                    fillMode: Image.PreserveAspectCrop
+                    sourceSize.width: 96; sourceSize.height: 96
+                }
             }
         }
         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;

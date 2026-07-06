@@ -133,7 +133,9 @@ Item {
                     }
                     Row {
                         anchors.fill: parent; anchors.leftMargin: 22; anchors.rightMargin: 22; spacing: 11
-                        ClippingRectangle {
+                        // Text OUTSIDE the clip: ClippingRectangle rasterizes children
+                        // at 1x DPR, blurring glyphs on a fractional-scale monitor.
+                        Rectangle {
                             anchors.verticalCenter: parent.verticalCenter
                             width: 28; height: 28; radius: 8; color: Theme.hover
                             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.centerIn: parent
@@ -143,9 +145,12 @@ Item {
                                    color: dm ? Theme.fg : Theme.fg_muted
                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                                    font.pixelSize: dm ? 15 : 12; font.weight: 600 }
-                            Image { id: wsIcon; anchors.fill: parent; source: row.modelData.icon || ""
-                                    visible: status === Image.Ready; asynchronous: true; cache: true
-                                    fillMode: Image.PreserveAspectCrop; sourceSize.width: 56; sourceSize.height: 56 }
+                            ClippingRectangle {
+                                anchors.fill: parent; radius: parent.radius; color: "transparent"
+                                Image { id: wsIcon; anchors.fill: parent; source: row.modelData.icon || ""
+                                        visible: status === Image.Ready; asynchronous: true; cache: true
+                                        fillMode: Image.PreserveAspectCrop; sourceSize.width: 56; sourceSize.height: 56 }
+                            }
                         }
                         Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter
                                text: (row.modelData.id === "@me") ? "Direct Messages" : row.modelData.name; color: Theme.fg
