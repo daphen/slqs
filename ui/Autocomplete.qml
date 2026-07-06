@@ -104,7 +104,13 @@ Item {
                 required property var modelData
                 required property int index
                 width: acList.width; height: 32
-                color: index === ac.sel ? Theme.selection : ahov.hovered ? Theme.hover : "transparent"
+                radius: 9
+                // fg tint + hairpin — Theme.selection is near-invisible on the
+                // light popup bg.
+                color: index === ac.sel ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.08)
+                     : ahov.hovered ? Theme.hover : "transparent"
+                border.width: 1
+                border.color: index === ac.sel ? Theme.hairline : "transparent"
                 Row {
                     anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 10; spacing: 9
                     Item {

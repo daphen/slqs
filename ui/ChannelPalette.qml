@@ -152,7 +152,9 @@ Item {
             ListView {
                 id: list
                 width: parent.width
-                height: Math.round(Math.min(440, contentHeight))
+                height: Math.round(Math.min(440, contentHeight + 18))
+                topMargin: 8
+                bottomMargin: 10
                 clip: true
                 model: palette.rows
                 interactive: contentHeight > height
@@ -183,15 +185,12 @@ Item {
                     // touches the box's rounded corners or border
                     Rectangle {
                         visible: !del.isDivider
-                        anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8
-                        anchors.topMargin: 1; anchors.bottomMargin: 1; radius: 8
+                        anchors.fill: parent; anchors.leftMargin: 14; anchors.rightMargin: 14
+                        anchors.topMargin: 1; anchors.bottomMargin: 1; radius: 13
                         color: del.ListView.isCurrentItem ? Theme.selection
                              : hov.hovered ? Theme.hover : "transparent"
-                        Rectangle {   // accent bar on the selected row
-                            anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
-                            width: 3; height: 32; radius: 2; color: Theme.cursor
-                            visible: del.ListView.isCurrentItem
-                        }
+                        border.width: 1
+                        border.color: del.ListView.isCurrentItem ? Theme.hairline : "transparent"
                         Row {
                             anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 12; spacing: 9
                             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
