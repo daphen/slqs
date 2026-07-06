@@ -404,7 +404,7 @@ FloatingWindow {
                         id: thread
                         visible: Backend.threadOpen
                         anchors.right: parent.right; anchors.top: parent.top; anchors.bottom: parent.bottom
-                        width: Math.min(480, parent.width * 0.52)
+                        width: Math.min(560, parent.width * 0.58)
                         z: 5
                         onExitReply: win.backToNormal()
                         onOpenPalette: palette.show()
