@@ -213,8 +213,9 @@ Rectangle {
                         const m = Backend.lastMineInThread(); if (m) panel.startEdit(m)
                         e.accepted = true; return
                     }
-                    // Ctrl+K: jump palette from the reply input too (drops to normal).
-                    if ((e.modifiers & Qt.ControlModifier) && e.key === Qt.Key_K) {
+                    // Ctrl+K: jump palette from the reply input too (drops to
+                    // normal) — unless the autocomplete popup is open (ctrl+k = up).
+                    if ((e.modifiers & Qt.ControlModifier) && e.key === Qt.Key_K && !replyAc.active) {
                         panel.openPalette(); e.accepted = true; return
                     }
                     // Ctrl+D/U: drop to normal mode and scroll the thread.

@@ -138,7 +138,9 @@ Rectangle {
                 }
                 // Ctrl+K: the jump palette also opens from insert mode (it grabs
                 // focus, so you drop to normal mode, and stay there when it closes).
-                if ((e.modifiers & Qt.ControlModifier) && e.key === Qt.Key_K) {
+                // The autocomplete gets first refusal — ctrl+k is "up" while
+                // its popup is open.
+                if ((e.modifiers & Qt.ControlModifier) && e.key === Qt.Key_K && !ac.active) {
                     root.openPalette(); e.accepted = true; return
                 }
                 // Ctrl+D/U: drop to normal mode and half-page scroll the chat.
