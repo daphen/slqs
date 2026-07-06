@@ -61,17 +61,6 @@ Rectangle {
         }
     }
 
-    // focused-panel accent: full border (the thread panel has focus while open)
-    Rectangle {
-        anchors.fill: parent; z: 10
-        color: "transparent"
-        topRightRadius: 10   // window-edge corner
-        topLeftRadius: 10    // card edge over the channel
-        bottomLeftRadius: 10
-        border.width: 2
-        // orange while typing a reply in this panel (insert mode)
-        border.color: replyInput.focus ? Theme.cursor : (Theme.mode === "light" ? Theme.hairline : Theme.fg)
-    }
 
     Rectangle {
         id: thHeader

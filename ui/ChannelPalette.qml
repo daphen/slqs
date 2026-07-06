@@ -102,9 +102,9 @@ Item {
         height: header.height + list.height   // exact fit — no bottom gap
         x: Math.round((parent.width - width) / 2)
         y: Math.round(parent.height * 0.16)
-        radius: Theme.radius
-        color: Theme.bg_alt
-        border.color: Theme.hairline; border.width: 1
+        radius: 24
+        color: Theme.bg
+        border.color: Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, Theme.mode === "light" ? 0.15 : 0.10); border.width: 1
 
         MouseArea { anchors.fill: parent }   // swallow clicks (don't close)
 
@@ -114,10 +114,17 @@ Item {
             // search box
             Item {
                 id: header
-                width: parent.width; height: 52
-                Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.hairline }
+                width: parent.width; height: 66
+                Rectangle {
+                    id: searchField
+                    anchors.fill: parent
+                    anchors.leftMargin: 14; anchors.rightMargin: 14
+                    anchors.topMargin: 14; anchors.bottomMargin: 6
+                    radius: 15
+                    color: Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.07)
+                }
                 Row {
-                    anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 10
+                    anchors.fill: searchField; anchors.leftMargin: 14; anchors.rightMargin: 14; spacing: 10
                     Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter; text: "⌕"
                            color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 19 }
                     TextInput { renderType: TextInput.QtRendering;

@@ -273,16 +273,6 @@ FloatingWindow {
 
                     // focused-panel accent: full border (message pane, no thread open)
                     Rectangle {
-                        anchors.fill: parent; z: 10
-                        color: "transparent"
-                        topRightRadius: 10   // only the window-edge corner; the left edge is internal
-                        border.width: 2
-                        // orange while typing in this panel (insert mode), else the normal accent
-                        border.color: composer.inputHasFocus ? Theme.cursor : (Theme.mode === "light" ? Theme.hairline : Theme.fg)
-                        visible: win.focusedPanel === "messages" && !Backend.threadOpen
-                    }
-
-                    Rectangle {
                         id: header
                         width: parent.width; height: 52; color: Theme.bg
                         Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.hairline }

@@ -40,7 +40,7 @@ Item {
     MouseArea { anchors.fill: parent; onClicked: wp.hide() }
     Rectangle { anchors.fill: parent; color: Theme.ink; opacity: 0.45 }
 
-    readonly property string sans: "sans-serif"
+    readonly property string sans: Theme.fontFamily
     readonly property color panelBorder:
         Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, Theme.mode === "light" ? 0.15 : 0.10)
 
@@ -49,7 +49,7 @@ Item {
         height: header.height + list.height
         x: Math.round((parent.width - width) / 2)
         y: Math.round(parent.height * 0.16)
-        radius: 14
+        radius: 24
         color: Theme.bg
         border.color: wp.panelBorder; border.width: 1
         clip: true
@@ -59,10 +59,17 @@ Item {
             anchors.fill: parent
             Item {
                 id: header
-                width: parent.width; height: 52
-                Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.hairline }
+                width: parent.width; height: 66
+                Rectangle {
+                    id: searchField
+                    anchors.fill: parent
+                    anchors.leftMargin: 14; anchors.rightMargin: 14
+                    anchors.topMargin: 14; anchors.bottomMargin: 6
+                    radius: 15
+                    color: Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.07)
+                }
                 Row {
-                    anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16; spacing: 10
+                    anchors.fill: searchField; anchors.leftMargin: 14; anchors.rightMargin: 14; spacing: 10
                     Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; anchors.verticalCenter: parent.verticalCenter; text: "⇄"
                            color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 17 }
                     TextInput { renderType: TextInput.QtRendering;
@@ -108,9 +115,11 @@ Item {
                     // inset, rounded highlight so it never touches the box's
                     // rounded corners or border
                     Rectangle {
-                        anchors.fill: parent; anchors.leftMargin: 10; anchors.rightMargin: 10
-                        anchors.topMargin: 1; anchors.bottomMargin: 1; radius: 8
+                        anchors.fill: parent; anchors.leftMargin: 14; anchors.rightMargin: 14
+                        anchors.topMargin: 1; anchors.bottomMargin: 1; radius: 13
                         color: index === wp.sel ? Theme.selection : hov.hovered ? Theme.hover : "transparent"
+                        border.width: 1
+                        border.color: index === wp.sel ? Theme.hairline : "transparent"
                     }
                     // Same accent-dot marker the worktree picker uses for the
                     // active entry — right-aligned here so the avatar chips
