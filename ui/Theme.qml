@@ -98,7 +98,8 @@ Singleton {
     readonly property int paddingSm: 6
     readonly property int fontSize:  14
     readonly property string fontFamily: "GeistMono Nerd Font"
-    readonly property int fontWeight: 500
+    // 400 under NativeRendering ≈ the old 500 under distance fields
+    readonly property int fontWeight: 400
 
     readonly property var avatarColors: [
         "#FF570D", "#97B5A6", "#7DD3FC", "#8A92A7",

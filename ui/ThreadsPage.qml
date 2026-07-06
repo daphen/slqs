@@ -38,7 +38,7 @@ Item {
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 17 }
             Text { renderType: Text.NativeRendering; text: "Threads"; color: Theme.fg
                    anchors.verticalCenter: parent.verticalCenter
-                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 17; font.weight: 600 }
+                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 17; font.weight: 500 }
             Text { renderType: Text.NativeRendering; text: Backend.currentSubThreads.length + " followed"
                    color: Theme.fg_muted; anchors.verticalCenter: parent.verticalCenter
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14 }
@@ -103,7 +103,7 @@ Item {
                             Text { renderType: Text.NativeRendering; anchors.centerIn: parent
                                    visible: img.status !== Image.Ready
                                    text: modelData.initials || "?"; color: Theme.ink
-                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 11; font.weight: 800 }
+                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 11; font.weight: 500 }
                             ClippingRectangle {
                                 anchors.fill: parent; radius: parent.radius; color: "transparent"
                                 Image { id: img; anchors.fill: parent; source: modelData.avatar || ""
@@ -113,7 +113,7 @@ Item {
                         }
                         Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
                                text: modelData.title || ""; color: Theme.mode === "light" ? Theme.ink : Theme.fg
-                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15; font.weight: 600 }
+                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15; font.weight: 500 }
                         Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
                                text: "#" + (modelData.channelName || ""); color: Theme.fg_muted
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
@@ -136,10 +136,10 @@ Item {
                     Text { renderType: Text.NativeRendering
                            text: (modelData.replyCount || 0) + (modelData.replyCount === 1 ? " reply" : " replies")
                            color: Theme.sky
-                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 600 }
+                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 500 }
                     Text { renderType: Text.NativeRendering; visible: (modelData.unread || 0) > 0
                            text: modelData.unread + " new"; color: Theme.cursor
-                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 600 }
+                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 500 }
                 }
             }
 

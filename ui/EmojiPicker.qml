@@ -159,7 +159,7 @@ Item {
                                height: 22; verticalAlignment: Text.AlignVCenter
                                width: 26; text: row.isReaction ? ("" + row.modelData.count) : ""
                                color: row.modelData.mine ? Theme.sky : Theme.fg
-                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14; font.weight: 600 }
+                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14; font.weight: 500 }
                         Text { id: usersText; renderType: Text.NativeRendering; visible: row.isReaction
                                width: row.width - 90
                                height: row.expanded ? implicitHeight : 22

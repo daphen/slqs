@@ -72,7 +72,7 @@ Rectangle {
                             text: modelData.name
                             color: active ? Theme.fg : Theme.fg_muted
                             font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
-                            font.pixelSize: 14; font.weight: active ? 600 : 500
+                            font.pixelSize: 14; font.weight: active ? 500 : 400
                         }
                         HoverHandler { id: tabHov }
                         TapHandler { onTapped: Backend.switchWorkspace(modelData.id) }
@@ -90,7 +90,7 @@ Rectangle {
                     Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
                         text: Backend.currentWorkspaceName || "Direct Messages"; color: Theme.fg
                         font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
-                        font.pixelSize: 15; font.weight: 600 }
+                        font.pixelSize: 15; font.weight: 500 }
                     Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
                         text: "⌄"; color: Theme.fg_muted
                         font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
@@ -139,7 +139,7 @@ Rectangle {
                 Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
                        text: "Threads"; color: parent.parent.thPrimary ? Theme.bg : Theme.fg
                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
-                       font.pixelSize: 14; font.weight: Backend.threadUnreadTotal > 0 ? 600 : Theme.fontWeight }
+                       font.pixelSize: 14; font.weight: Backend.threadUnreadTotal > 0 ? 500 : Theme.fontWeight }
             }
             Rectangle {
                 visible: Backend.threadUnreadTotal > 0
@@ -148,7 +148,7 @@ Rectangle {
                 Text { id: tb; renderType: Text.NativeRendering; anchors.centerIn: parent
                        text: Backend.threadUnreadTotal; color: Theme.ink
                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
-                       font.pixelSize: 12; font.weight: 600 }
+                       font.pixelSize: 12; font.weight: 500 }
             }
             HoverHandler { id: thHov }
             TapHandler { onTapped: { sidebar.threadsSelected = true; sidebar.threadsClicked() } }
@@ -194,7 +194,7 @@ Rectangle {
                     anchors.bottom: parent.bottom; anchors.bottomMargin: 8
                     text: section.toUpperCase()
                     color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
-                    font.pixelSize: 11; font.weight: 600; font.letterSpacing: 1.2
+                    font.pixelSize: 11; font.weight: 500; font.letterSpacing: 1.2
                 }
             }
 
@@ -300,7 +300,7 @@ Rectangle {
                         color: row.primary ? Theme.bg
                              : (row.unread > 0 || row.isOpen || row.cursor) ? Theme.fg : Theme.dimmedFg
                         font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14
-                        font.weight: row.unread > 0 ? 600 : Theme.fontWeight
+                        font.weight: row.unread > 0 ? 500 : Theme.fontWeight
                     }
                 }
 
@@ -314,7 +314,7 @@ Rectangle {
                     text: row.unread
                     color: row.primary ? Theme.bg : row.mention ? Theme.cursor : Theme.fg_muted
                     font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
-                    font.pixelSize: 13; font.weight: row.mention ? 600 : 500
+                    font.pixelSize: 13; font.weight: row.mention ? 500 : 400
                 }
 
                 HoverHandler { id: hov }

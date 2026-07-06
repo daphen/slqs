@@ -178,7 +178,7 @@ Item {
                         x: 16; y: 12
                         text: del.isDivider ? modelData.label.toUpperCase() : ""
                         color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
-                        font.pixelSize: 12; font.weight: 600
+                        font.pixelSize: 12; font.weight: 500
                     }
 
                     // selectable row — inset + rounded so the highlight never
@@ -204,7 +204,7 @@ Item {
                                 width: parent.width - 40 - (badge.visible ? 32 : 0); spacing: 3
                                 Text { renderType: Text.NativeRendering; text: modelData.name || ""; color: Theme.fg
                                        elide: Text.ElideRight; width: parent.width; maximumLineCount: 1; wrapMode: Text.NoWrap
-                                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15; font.weight: 600 }
+                                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15; font.weight: 500 }
                                 Text { renderType: Text.NativeRendering; visible: !!modelData.sub; text: modelData.sub || ""
                                        color: Theme.fg_muted; elide: Text.ElideRight; width: parent.width; maximumLineCount: 1; wrapMode: Text.NoWrap
                                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12 }
@@ -220,7 +220,7 @@ Item {
                             Text { id: bt; renderType: Text.NativeRendering; anchors.centerIn: parent
                                    text: modelData.unread || ""; color: Theme.ink
                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
-                                   font.pixelSize: 12; font.weight: 600 }
+                                   font.pixelSize: 12; font.weight: 500 }
                         }
                         HoverHandler { id: hov }
                         TapHandler { onTapped: { palette.sel = del.index; palette.accept() } }

@@ -55,7 +55,7 @@ Item {
             color: Theme.bg; border.color: Theme.hairline; border.width: 1
             Text { id: dayLbl; anchors.centerIn: parent; renderType: Text.NativeRendering
                    text: Backend.dayLabel(del.day); color: Theme.fg_muted
-                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12; font.weight: 600 }
+                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12; font.weight: 500 }
         }
     }
 
@@ -140,7 +140,7 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             text: Math.abs(del.index - del.ListView.view.currentIndex)
             color: Theme.fg_secondary
-            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 11; font.weight: 600
+            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 11; font.weight: 500
         }
     }
 
@@ -160,7 +160,7 @@ Item {
             Text { renderType: Text.NativeRendering;
                 anchors.centerIn: parent; text: del.initials; color: Theme.ink
                 visible: avatarImg.status !== Image.Ready
-                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14; font.weight: 800
+                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14; font.weight: 500
             }
             ClippingRectangle {
                 anchors.fill: parent; radius: parent.radius; color: "transparent"
@@ -199,7 +199,7 @@ Item {
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
             Text { renderType: Text.NativeRendering; text: del.replyAuthor; color: Theme.sky
                    visible: del.replyAuthor.length > 0
-                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 600 }
+                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 500 }
             Text { renderType: Text.NativeRendering; text: del.replyText; color: Theme.fg_muted
                    width: Math.max(0, body.width - 140); elide: Text.ElideRight
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
@@ -209,7 +209,7 @@ Item {
             visible: !del.grouped
             spacing: 8
             Text { renderType: Text.NativeRendering; text: del.author; color: Theme.mode === "light" ? Theme.ink : Theme.fg
-                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15; font.weight: 600 }
+                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15; font.weight: 500 }
             Text { renderType: Text.NativeRendering; text: del.time; color: Theme.fg_muted; font.features: ({ "tnum": 1 }); anchors.bottom: parent.bottom; anchors.bottomMargin: 1
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12 }
         }
@@ -344,7 +344,7 @@ Item {
                                anchors.verticalCenter: parent.verticalCenter }
                         Text { renderType: Text.NativeRendering; text: modelData.n; color: Theme.fg_muted
                                anchors.verticalCenter: parent.verticalCenter
-                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12; font.weight: 600 }
+                               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12; font.weight: 500 }
                     }
                 }
             }
@@ -365,7 +365,7 @@ Item {
             topPadding: 3
             text: "  " + del.reply_count + (del.reply_count === 1 ? " reply" : " replies")
             color: Theme.sky
-            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 600
+            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 500
         }
     }
 

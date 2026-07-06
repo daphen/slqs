@@ -282,7 +282,7 @@ FloatingWindow {
                             Text { renderType: Text.NativeRendering; text: "#"; color: Theme.fg_muted; anchors.verticalCenter: parent.verticalCenter
                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 19 }
                             Text { renderType: Text.NativeRendering; text: Backend.currentChannel; color: Theme.fg; anchors.verticalCenter: parent.verticalCenter
-                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 17; font.weight: 600 }
+                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 17; font.weight: 500 }
                             Rectangle { visible: Backend.currentTopic.length > 0; width: 1; height: 16; color: Theme.hairline
                                         anchors.verticalCenter: parent.verticalCenter }
                             Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
@@ -304,7 +304,7 @@ FloatingWindow {
                             border.width: 1; border.color: Theme.sky
                             Text { id: joinLbl; renderType: Text.NativeRendering; anchors.centerIn: parent
                                    text: "+ Join channel"; color: Theme.sky
-                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 600 }
+                                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 500 }
                             MouseArea { id: joinMA; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                         onClicked: Backend.joinCurrent() }
                         }
@@ -436,7 +436,7 @@ FloatingWindow {
                             // (light-mode green) — fixes dark-on-dark-green in light mode.
                             color: (parent.color.r * 0.299 + parent.color.g * 0.587 + parent.color.b * 0.114) > 0.5 ? Theme.ink : Theme.brightWhite
                             font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
-                            font.pixelSize: 11; font.weight: 600; font.letterSpacing: 0.5
+                            font.pixelSize: 11; font.weight: 500; font.letterSpacing: 0.5
                         }
                     }
                     Text { renderType: Text.NativeRendering;

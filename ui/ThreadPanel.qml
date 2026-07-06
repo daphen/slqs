@@ -81,7 +81,7 @@ Rectangle {
             anchors.left: parent.left; anchors.leftMargin: 16
             anchors.verticalCenter: parent.verticalCenter; spacing: 8
             Text { renderType: Text.NativeRendering; text: "Thread"; color: Theme.fg
-                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 16; font.weight: 600 }
+                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 16; font.weight: 500 }
             Text { renderType: Text.NativeRendering; text: "— " + Backend.threadTitle; color: Theme.fg_muted
                    anchors.verticalCenter: parent.verticalCenter
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14 }
@@ -174,7 +174,7 @@ Rectangle {
                 color: panel.alsoToChannel ? Theme.cursor : "transparent"
                 border.color: panel.alsoToChannel ? Theme.cursor : Theme.hairline; border.width: 1
                 Text { renderType: Text.NativeRendering; anchors.centerIn: parent; visible: panel.alsoToChannel
-                       text: "✓"; color: Theme.ink; font.pixelSize: 10; font.weight: 800 }
+                       text: "✓"; color: Theme.ink; font.pixelSize: 10; font.weight: 500 }
             }
             Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
                    text: "Also send to channel"; color: panel.alsoToChannel ? Theme.fg : Theme.fg_muted

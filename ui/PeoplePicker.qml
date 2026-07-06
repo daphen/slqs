@@ -127,7 +127,7 @@ Item {
                            anchors.right: parent.right; anchors.rightMargin: 14; anchors.verticalCenter: parent.verticalCenter
                            text: pp.mode === "invite" ? "invite" : "message"
                            color: Theme.green
-                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12; font.weight: 600 }
+                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12; font.weight: 500 }
                     HoverHandler { id: hov }
                     TapHandler { onTapped: { pp.sel = row.index; pp.accept() } }
                 }

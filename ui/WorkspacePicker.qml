@@ -144,7 +144,7 @@ Item {
                                    text: dm ? "" : (row.modelData.name || "?").slice(0, 2).toUpperCase()   // nf-fa-comments for DMs
                                    color: dm ? Theme.fg : Theme.fg_muted
                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
-                                   font.pixelSize: dm ? 15 : 12; font.weight: 600 }
+                                   font.pixelSize: dm ? 15 : 12; font.weight: 500 }
                             ClippingRectangle {
                                 anchors.fill: parent; radius: parent.radius; color: "transparent"
                                 Image { id: wsIcon; anchors.fill: parent; source: row.modelData.icon || ""
@@ -155,7 +155,7 @@ Item {
                         Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
                                text: (row.modelData.id === "@me") ? "Direct Messages" : row.modelData.name; color: Theme.fg
                                font.family: wp.sans
-                               font.pixelSize: 14; font.weight: row.active ? 600 : 500 }
+                               font.pixelSize: 14; font.weight: row.active ? 500 : 400 }
                     }
                     HoverHandler { id: hov }
                     TapHandler { onTapped: { wp.sel = row.index; wp.accept() } }
