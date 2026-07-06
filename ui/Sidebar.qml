@@ -138,7 +138,7 @@ Rectangle {
         // Hidden when the backend has no threads (Discord).
         Rectangle {
             visible: Backend.hasThreads
-            width: parent.width; height: Backend.hasThreads ? 30 : 0; clip: true; radius: Theme.radiusSm
+            width: parent.width; height: Backend.hasThreads ? 36 : 0; clip: true; radius: Theme.radiusSm
             color: (sidebar.threadsSelected && sidebar.active) ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.10)
                  : thHov.hovered ? Theme.hover : "transparent"
             border.width: 1
@@ -189,12 +189,24 @@ Rectangle {
             }
 
             section.property: "section"
-            section.delegate: Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
+            // Reference rhythm: a hairline above each group, a full row of
+            // air, then the tracked label sitting tight on its rows.
+            section.delegate: Item {
                 required property string section
-                topPadding: 12; bottomPadding: 4; leftPadding: 6
-                text: section.toUpperCase()
-                color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
-                font.pixelSize: 12; font.weight: 600
+                width: ListView.view.width
+                height: 36
+                Rectangle {
+                    anchors.top: parent.top
+                    width: parent.width; height: 1
+                    color: Theme.hairline
+                }
+                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                    anchors.left: parent.left; anchors.leftMargin: 6
+                    anchors.bottom: parent.bottom; anchors.bottomMargin: 4
+                    text: section.toUpperCase()
+                    color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
+                    font.pixelSize: 11; font.weight: 600; font.letterSpacing: 1.2
+                }
             }
 
             delegate: Rectangle {
@@ -208,7 +220,7 @@ Rectangle {
                 required property string topic
                 required property string avatar
                 width: ListView.view.width
-                height: 30; radius: Theme.radiusSm
+                height: 36; radius: Theme.radiusSm
                 readonly property bool cursor: list.currentIndex === index
                 // Not "open" while the Threads view covers the message pane — its
                 // indicator would read as a second highlight next to the threads cursor.
@@ -294,18 +306,17 @@ Rectangle {
                     }
                 }
 
-                Rectangle {
+                // Bare muted count, no chip — labels are the only full-ink
+                // element so the row keeps a strict two-level hierarchy.
+                // Mentions flip the count to the accent.
+                Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
                     visible: row.unread > 0
-                    anchors.right: parent.right; anchors.rightMargin: 8
+                    anchors.right: parent.right; anchors.rightMargin: 10
                     anchors.verticalCenter: parent.verticalCenter
-                    height: 17; width: Math.max(17, badge.implicitWidth + 10); radius: 9
-                    // one consistent monochrome chip; mentions get an accent dot, not a color flip
-                    color: Theme.hover
-                    Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
-                        id: badge; anchors.centerIn: parent; text: row.unread
-                        color: Theme.fg
-                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12; font.weight: 600
-                    }
+                    text: row.unread
+                    color: row.mention ? Theme.cursor : Theme.fg_muted
+                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
+                    font.pixelSize: 13; font.weight: row.mention ? 600 : 500
                 }
 
                 HoverHandler { id: hov }
