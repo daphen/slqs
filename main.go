@@ -784,6 +784,21 @@ func (d *daemon) msgBody(m slack.Message) string {
 	return body
 }
 
+
+// blockText prefers a message's Block Kit content over the flat fallback
+// text — for bots the top-level text is often just "This message contains
+// interactive elements." while the real prose lives in the blocks.
+func blockText(m slack.Message) string {
+	if len(m.Blocks.BlockSet) > 0 {
+		if raw, err := json.Marshal(m); err == nil {
+			if bt := textFromBlocks(string(raw)); bt != "" {
+				return bt
+			}
+		}
+	}
+	return m.Text
+}
+
 func (d *daemon) formatMsg(w *workspace, channelID, userID, ts, text, username string, files []slack.File, attachments []slack.Attachment, subType, threadTS string) map[string]any {
 	author := w.users[userID]
 	if author == "" {
@@ -1409,10 +1424,11 @@ func (d *daemon) sendHistory(c net.Conn, w *workspace, channelID, before string)
 	d.resolveMsgAuthors(w, msgs)
 	out := make([]map[string]any, 0, len(msgs))
 	for _, m := range msgs {
-		if m.Text == "" && len(m.Files) == 0 {
+		text := blockText(m)
+		if text == "" && len(m.Files) == 0 {
 			continue
 		}
-		out = append(out, d.formatMsg(w, channelID, m.User, m.Timestamp, m.Text, m.Username, m.Files, m.Attachments, m.SubType, m.ThreadTimestamp))
+		out = append(out, d.formatMsg(w, channelID, m.User, m.Timestamp, text, m.Username, m.Files, m.Attachments, m.SubType, m.ThreadTimestamp))
 	}
 	b, _ := json.Marshal(map[string]any{"type": "history", "workspace": w.teamID, "channel": channelID, "msgs": out})
 	b = append(b, '\n')
@@ -1439,10 +1455,11 @@ func (d *daemon) sendJump(c net.Conn, w *workspace, channelID, ts string) {
 	d.resolveMsgAuthors(w, msgs)
 	out := make([]map[string]any, 0, len(msgs))
 	for _, m := range msgs {
-		if m.Text == "" && len(m.Files) == 0 {
+		text := blockText(m)
+		if text == "" && len(m.Files) == 0 {
 			continue
 		}
-		out = append(out, d.formatMsg(w, channelID, m.User, m.Timestamp, m.Text, m.Username, m.Files, m.Attachments, m.SubType, m.ThreadTimestamp))
+		out = append(out, d.formatMsg(w, channelID, m.User, m.Timestamp, text, m.Username, m.Files, m.Attachments, m.SubType, m.ThreadTimestamp))
 	}
 	// Channel name for the header — from the joined list, else conversations.info
 	// (jump into a public channel we haven't joined).
@@ -1514,10 +1531,11 @@ func (d *daemon) sendReplies(c net.Conn, w *workspace, channelID, threadTS strin
 	d.resolveMsgAuthors(w, msgs)
 	out := make([]map[string]any, 0, len(msgs))
 	for _, m := range msgs {
-		if m.Text == "" && len(m.Files) == 0 {
+		text := blockText(m)
+		if text == "" && len(m.Files) == 0 {
 			continue
 		}
-		out = append(out, d.formatMsg(w, channelID, m.User, m.Timestamp, m.Text, m.Username, m.Files, m.Attachments, m.SubType, m.ThreadTimestamp))
+		out = append(out, d.formatMsg(w, channelID, m.User, m.Timestamp, text, m.Username, m.Files, m.Attachments, m.SubType, m.ThreadTimestamp))
 	}
 	b, _ := json.Marshal(map[string]any{"type": "replies", "workspace": w.teamID, "channel": channelID, "thread": threadTS, "msgs": out})
 	b = append(b, '\n')
