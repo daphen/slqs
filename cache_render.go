@@ -241,8 +241,9 @@ func shareQuotes(atts []slack.Attachment) string {
 		head := "> ↰ *" + a.AuthorName + "*"
 		if a.FromURL != "" {
 			// link to the original message — the share carries only its text,
-			// context (links, unfurls, thread) lives at the source
-			head += " · " + a.FromURL
+			// context (links, unfurls, thread) lives at the source. Angle form:
+			// firstLink (feeds the `o` keybind) only matches <https://…>.
+			head += " · <" + a.FromURL + ">"
 		}
 		if t != "" {
 			lines := strings.Split(t, "\n")
@@ -280,7 +281,7 @@ func attachmentText(atts []slack.Attachment) string {
 		// URL — the pretty card is client-side hydration we never receive.
 		// Render the link so the update is at least visible + clickable.
 		if len(seg) == 0 && a.FromURL != "" {
-			seg = append(seg, a.FromURL)
+			seg = append(seg, "<"+a.FromURL+">")
 		}
 		if len(seg) > 0 {
 			parts = append(parts, strings.Join(seg, " "))
