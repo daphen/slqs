@@ -123,6 +123,7 @@ Rectangle {
             onCursorRectangleChanged: flick.ensureVisible(cursorRectangle)
             wrapMode: TextArea.Wrap
             color: root.inkFg
+            cursorDelegate: Rectangle { width: 2; radius: 1; color: Theme.cursor }
             font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15
             placeholderText: root.editingTs !== "" ? "Editing message… (Esc to cancel)"
                            : root.replyTs !== "" ? "Replying to " + root.replyAuthor + "… (Esc to cancel)"

@@ -215,6 +215,7 @@ Rectangle {
                 width: replyFlick.width
                 onCursorRectangleChanged: replyFlick.ensureVisible(cursorRectangle)
                 wrapMode: TextArea.Wrap; color: replyBox.inkFg
+                cursorDelegate: Rectangle { width: 2; radius: 1; color: Theme.cursor }
                 font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15
                 placeholderText: panel.editingTs !== "" ? "Editing… (Esc to cancel)" : "Reply…"
                 placeholderTextColor: replyBox.inkMuted
