@@ -10,14 +10,14 @@ Rectangle {
     // is the minimum (no artificial floor). Matches the thread reply input.
     implicitHeight: Math.min(180, input.implicitHeight + 26 + ((attaching || replying) ? 26 : 0))
     radius: Theme.radius
-    // Insert mode inverts the box to the sidebar cursor's ink pill — the mode
-    // is readable from across the room, no accent ring needed.
-    readonly property bool inverted: input.focus
-    readonly property color inkFg: inverted ? Theme.bg : Theme.fg
-    readonly property color inkMuted: inverted ? Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0.55) : Theme.fg_muted
-    color: inverted ? Theme.fg : Theme.surface
-    border.color: inverted ? Theme.fg : Theme.hairline
-    border.width: 1
+    // Insert mode = the desktop focus language (the docs' nav-focus): solid
+    // ink-tint fill + a strong neutral ring. Full inversion read too heavy.
+    readonly property bool focused: input.focus
+    readonly property color inkFg: Theme.fg
+    readonly property color inkMuted: Theme.fg_muted
+    color: focused ? Qt.tint(Theme.bg, Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.07)) : Theme.surface
+    border.color: focused ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.35) : Theme.hairline
+    border.width: focused ? 1.5 : 1
     Behavior on color { ColorAnimation { duration: 120 } }
     Behavior on border.color { ColorAnimation { duration: 120 } }
 
@@ -185,9 +185,7 @@ Rectangle {
         anchors.bottom: parent.bottom; anchors.bottomMargin: 8
         width: 32; height: 32; radius: Theme.radiusSm
         readonly property bool on: input.text.trim().length > 0
-        color: on ? Theme.cursor
-             : root.inverted ? Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0.12)
-             : Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.06)
+        color: on ? Theme.cursor : Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.06)
         Behavior on color { ColorAnimation { duration: 120 } }
         Text { renderType: Text.NativeRendering; anchors.centerIn: parent; text: "➤"
                color: parent.on ? Theme.ink : root.inkMuted

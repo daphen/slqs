@@ -184,12 +184,13 @@ Rectangle {
         Rectangle {
             id: replyBox
             anchors.fill: parent; anchors.margins: 10; anchors.topMargin: 10 + thFooter.bcastH; radius: Theme.radius
-            // insert mode = the sidebar cursor's ink pill, same as the channel composer
-            readonly property bool inverted: replyInput.focus
-            readonly property color inkFg: inverted ? Theme.bg : Theme.fg
-            readonly property color inkMuted: inverted ? Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0.55) : Theme.fg_muted
-            color: inverted ? Theme.fg : Theme.surface; border.width: 1
-            border.color: inverted ? Theme.fg : Theme.hairline
+            // insert mode = ink-tint fill + strong ring, same as the channel composer
+            readonly property bool focused: replyInput.focus
+            readonly property color inkFg: Theme.fg
+            readonly property color inkMuted: Theme.fg_muted
+            color: focused ? Qt.tint(Theme.bg, Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.07)) : Theme.surface
+            border.width: focused ? 1.5 : 1
+            border.color: focused ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.35) : Theme.hairline
             Behavior on color { ColorAnimation { duration: 120 } }
             Behavior on border.color { ColorAnimation { duration: 120 } }
             // same `:` emoji + `@` mention autocomplete as the channel composer
