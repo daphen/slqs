@@ -1177,6 +1177,24 @@ func (d *daemon) readConn(c net.Conn) {
 			}()
 			continue
 		}
+		// Permalink jump — MUST run before the nil-workspace guard: the whole
+		// point is channels we're not a member of (w == nil), resolved by the
+		// permalink's team subdomain instead.
+		if cmd.Type == "jump" {
+			jw := w
+			if jw == nil && cmd.Team != "" {
+				for _, ws := range d.wsList {
+					if ws.client.TeamSubdomain() == cmd.Team {
+						jw = ws
+						break
+					}
+				}
+			}
+			log.Printf("JUMP-DBG recv channel=%s ts=%s team=%q idIndexHit=%v resolved=%v",
+				cmd.Channel, cmd.Ts, cmd.Team, w != nil, jw != nil)
+			go d.sendJump(c, jw, cmd.Channel, cmd.Ts)
+			continue
+		}
 		if w == nil {
 			continue
 		}
@@ -1353,23 +1371,6 @@ func (d *daemon) readConn(c net.Conn) {
 			go d.sendRecent(c, w, id)
 		case "history":
 			go d.sendHistory(c, w, id, cmd.Before)
-		case "jump":
-			// Permalink / jump-to-message: fetch a window around the target ts
-			// and push it as a reset so the client can scroll to + highlight it.
-			// For a channel we haven't joined (not in idIndex), resolve the
-			// owning workspace by the permalink's team subdomain.
-			jw := w
-			if jw == nil && cmd.Team != "" {
-				for _, ws := range d.wsList {
-					if ws.client.TeamSubdomain() == cmd.Team {
-						jw = ws
-						break
-					}
-				}
-			}
-			log.Printf("JUMP-DBG recv channel=%s ts=%s team=%q idIndexHit=%v resolved=%v",
-				id, cmd.Ts, cmd.Team, w != nil, jw != nil)
-			go d.sendJump(c, jw, id, cmd.Ts)
 		case "replies":
 			go d.sendReplies(c, w, id, cmd.Thread)
 		case "unsubThread":
