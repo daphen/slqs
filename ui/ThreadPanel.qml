@@ -182,9 +182,16 @@ Rectangle {
             TapHandler { onTapped: panel.alsoToChannel = !panel.alsoToChannel }
         }
         Rectangle {
+            id: replyBox
             anchors.fill: parent; anchors.margins: 10; anchors.topMargin: 10 + thFooter.bcastH; radius: Theme.radius
-            color: Theme.surface; border.width: 1
-            border.color: replyInput.focus ? Theme.cursor : Theme.hairline
+            // insert mode = the sidebar cursor's ink pill, same as the channel composer
+            readonly property bool inverted: replyInput.focus
+            readonly property color inkFg: inverted ? Theme.bg : Theme.fg
+            readonly property color inkMuted: inverted ? Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0.55) : Theme.fg_muted
+            color: inverted ? Theme.fg : Theme.surface; border.width: 1
+            border.color: inverted ? Theme.fg : Theme.hairline
+            Behavior on color { ColorAnimation { duration: 120 } }
+            Behavior on border.color { ColorAnimation { duration: 120 } }
             // same `:` emoji + `@` mention autocomplete as the channel composer
             Autocomplete { id: replyAc; anchors.fill: parent; input: replyInput }
             Connections {
@@ -207,10 +214,10 @@ Rectangle {
                 id: replyInput
                 width: replyFlick.width
                 onCursorRectangleChanged: replyFlick.ensureVisible(cursorRectangle)
-                wrapMode: TextArea.Wrap; color: Theme.fg
+                wrapMode: TextArea.Wrap; color: replyBox.inkFg
                 font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15
                 placeholderText: panel.editingTs !== "" ? "Editing… (Esc to cancel)" : "Reply…"
-                placeholderTextColor: Theme.fg_muted
+                placeholderTextColor: replyBox.inkMuted
                 background: null
                 onTextChanged: { replyAc.update(); if (text.length > 0) Backend.notifyTyping() }
                 onCursorPositionChanged: replyAc.update()

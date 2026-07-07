@@ -10,9 +10,15 @@ Rectangle {
     // is the minimum (no artificial floor). Matches the thread reply input.
     implicitHeight: Math.min(180, input.implicitHeight + 26 + ((attaching || replying) ? 26 : 0))
     radius: Theme.radius
-    color: Theme.surface
-    border.color: input.focus ? Theme.cursor : Theme.hairline
+    // Insert mode inverts the box to the sidebar cursor's ink pill — the mode
+    // is readable from across the room, no accent ring needed.
+    readonly property bool inverted: input.focus
+    readonly property color inkFg: inverted ? Theme.bg : Theme.fg
+    readonly property color inkMuted: inverted ? Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0.55) : Theme.fg_muted
+    color: inverted ? Theme.fg : Theme.surface
+    border.color: inverted ? Theme.fg : Theme.hairline
     border.width: 1
+    Behavior on color { ColorAnimation { duration: 120 } }
     Behavior on border.color { ColorAnimation { duration: 120 } }
 
     signal exitInsert()
@@ -68,10 +74,10 @@ Rectangle {
         spacing: 6
         Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
                text: root.editingTs !== "" ? "✎  Editing message" : ("↰  Replying to " + root.replyAuthor)
-               color: Theme.fg
+               color: root.inkFg
                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
         Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
-               text: "  ✕"; color: Theme.fg_muted
+               text: "  ✕"; color: root.inkMuted
                font.family: Theme.fontFamily; font.pixelSize: 13
                TapHandler { onTapped: { if (root.editingTs !== "") root.cancelEdit(); else { root.replyTs = ""; root.replyAuthor = "" } } } }
     }
@@ -90,13 +96,13 @@ Rectangle {
                font.family: Theme.fontFamily; font.pixelSize: 13 }
         Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
                text: Backend.attachState === "uploading" ? "uploading image…" : (Backend.attachName || "image")
-               color: Backend.attachState === "uploading" ? Theme.fg_muted : Theme.fg
+               color: Backend.attachState === "uploading" ? root.inkMuted : root.inkFg
                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
         Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
                text: Backend.attachState === "ready" ? "✓" : ""; color: Theme.green
                font.family: Theme.fontFamily; font.pixelSize: 13 }
         Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
-               text: "  ✕"; color: Theme.fg_muted
+               text: "  ✕"; color: root.inkMuted
                font.family: Theme.fontFamily; font.pixelSize: 13
                TapHandler { onTapped: Backend.dropAttach() } }
     }
@@ -116,12 +122,12 @@ Rectangle {
             width: flick.width
             onCursorRectangleChanged: flick.ensureVisible(cursorRectangle)
             wrapMode: TextArea.Wrap
-            color: Theme.fg
+            color: root.inkFg
             font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15
             placeholderText: root.editingTs !== "" ? "Editing message… (Esc to cancel)"
                            : root.replyTs !== "" ? "Replying to " + root.replyAuthor + "… (Esc to cancel)"
                            : "Message #" + Backend.currentChannel
-            placeholderTextColor: Theme.fg_muted
+            placeholderTextColor: root.inkMuted
             background: null
             onTextChanged: { ac.update(); if (text.length > 0) Backend.notifyTyping() }
             onCursorPositionChanged: ac.update()
@@ -178,10 +184,12 @@ Rectangle {
         anchors.bottom: parent.bottom; anchors.bottomMargin: 8
         width: 32; height: 32; radius: Theme.radiusSm
         readonly property bool on: input.text.trim().length > 0
-        color: on ? Theme.cursor : Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.06)
+        color: on ? Theme.cursor
+             : root.inverted ? Qt.rgba(Theme.bg.r, Theme.bg.g, Theme.bg.b, 0.12)
+             : Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.06)
         Behavior on color { ColorAnimation { duration: 120 } }
         Text { renderType: Text.NativeRendering; anchors.centerIn: parent; text: "➤"
-               color: parent.on ? Theme.ink : Theme.fg_muted
+               color: parent.on ? Theme.ink : root.inkMuted
                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15 }
         TapHandler { onTapped: root.send() }
     }
