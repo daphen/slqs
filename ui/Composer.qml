@@ -16,7 +16,7 @@ Rectangle {
     readonly property color inkFg: Theme.fg
     readonly property color inkMuted: Theme.fg_muted
     color: focused ? Qt.tint(Theme.bg, Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, Theme.mode === "light" ? 0.07 : 0.14)) : Theme.surface
-    border.color: focused ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, Theme.mode === "light" ? 0.35 : 0.5) : Theme.hairline
+    border.color: focused ? (Theme.mode === "light" ? Theme.fg : "#FFFFFF") : Theme.hairline
     border.width: focused ? 1.5 : 1
     Behavior on color { ColorAnimation { duration: 120 } }
     Behavior on border.color { ColorAnimation { duration: 120 } }
