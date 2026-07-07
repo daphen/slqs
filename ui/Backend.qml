@@ -438,6 +438,19 @@ Item {
                                    workspace: c.workspace, section: sectionOf(c.unread, c.kind, c.mention) })
         }
     }
+    // While the user is NAVIGATING the sidebar, the list must not reorder
+    // under their j/k — a section re-flow does clear()+rebuild, which also
+    // dumps the cursor at the top. Badges keep updating in place; the
+    // re-flow is deferred until the sidebar loses focus.
+    property bool sidebarNavigating: false
+    property bool _chanReflowPending: false
+    onSidebarNavigatingChanged: {
+        if (!sidebarNavigating && _chanReflowPending) {
+            _chanReflowPending = false
+            rebuildChannelModel()
+        }
+    }
+
     // Update a channel's unread + mention (by id); re-flow sections only if it
     // crossed a section boundary. count===0 clears the mention flag (read).
     function applyUnread(id, count, mention) {
@@ -447,7 +460,11 @@ Item {
         e.unread = Math.min(count, 99)
         e.mention = count === 0 ? false : !!mention
         if (e.workspace !== currentWorkspace) return
-        if (sectionOf(e.unread, e.kind, e.mention) !== before) { rebuildChannelModel(); return }
+        if (sectionOf(e.unread, e.kind, e.mention) !== before && !sidebarNavigating) {
+            rebuildChannelModel()
+            return
+        }
+        if (sectionOf(e.unread, e.kind, e.mention) !== before) _chanReflowPending = true
         for (let i = 0; i < channelsModel.count; i++)
             if (channelsModel.get(i).id === id) {
                 channelsModel.setProperty(i, "unread", e.unread)
