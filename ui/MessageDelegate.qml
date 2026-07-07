@@ -211,15 +211,16 @@ Item {
             spacing: 8
             Text { renderType: Text.NativeRendering; text: del.author; color: Theme.mode === "light" ? Theme.ink : Theme.fg
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15; font.weight: 500 }
-            Text { renderType: Text.NativeRendering; text: del.time; color: Theme.fg_muted; font.features: ({ "tnum": 1 }); anchors.bottom: parent.bottom; anchors.bottomMargin: 1
+            Text { renderType: Text.NativeRendering; text: del.time + (del.edited ? "  (edited)" : ""); color: Theme.fg_muted; font.features: ({ "tnum": 1 }); anchors.bottom: parent.bottom; anchors.bottomMargin: 1
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12 }
         }
 
         Text { renderType: Text.NativeRendering;
             visible: del.text.length > 0 && !del.emojiOnly
             width: parent.width
+            // grouped rows have no visible header, so the marker rides the body there
             text: Backend.richify(del.text, 22)
-                  + (del.edited ? " <span style='font-size:11px;color:" + Theme.fg_muted + "'>(edited)</span>" : "")
+                  + (del.edited && del.grouped ? " <span style='font-size:11px;color:" + Theme.fg_muted + "'>(edited)</span>" : "")
             // Light mode: plain black body text (the theme's secondary fg is a
             // purple that reads wrong for message content). Dark mode: fg (#EDEDED),
             // the same near-white neovim's Normal text uses.
