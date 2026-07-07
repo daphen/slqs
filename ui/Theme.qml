@@ -21,6 +21,9 @@ Singleton {
             "bg_alt":      "#F6F7F4",
             "selection":   "#F4F5F2",
             "surface":     "#F7F8F5",
+            "surface1":    "#F7F8F5",
+            "surface2":    "#EDEEEB",
+            "surface3":    "#E5E5E3",
             "overlay":     "#E9EAE7",
             "prompt":      "#EEEFEC",
             "fg":          "#10100E",
@@ -43,6 +46,9 @@ Singleton {
             "bg_alt":      "#1B1B1B",
             "selection":   "#2E2E2E",
             "surface":     "#1B1B1B",
+            "surface1":    "#1B1B1B",
+            "surface2":    "#2E2E2E",
+            "surface3":    "#3A3A3A",
             "overlay":     "#292826",
             "prompt":      "#323A40",
             "fg":          "#EDEDED",
@@ -66,6 +72,10 @@ Singleton {
     readonly property color bg_alt:       palettes[mode].bg_alt
     readonly property color selection:    palettes[mode].selection
     readonly property color surface:      palettes[mode].surface
+    // elevation ladder (derived by theme-processor): 1 texture, 2 structure, 3 engaged
+    readonly property color surface1:     palettes[mode].surface1
+    readonly property color surface2:     palettes[mode].surface2
+    readonly property color surface3:     palettes[mode].surface3
     readonly property color overlay:      palettes[mode].overlay
     readonly property color prompt:       palettes[mode].prompt
     readonly property color fg:           palettes[mode].fg
@@ -101,11 +111,9 @@ Singleton {
     // 400 under NativeRendering ≈ the old 500 under distance fields
     readonly property int fontWeight: 400
 
-    // Solid warm highlight fill: fg tint composited over surface (never bg —
-    // neutral-bg tints read cold next to the palette's warm grays). Shared by
-    // the insert-mode composer fill and the mention-of-you background.
-    readonly property color tintFill: Qt.tint(surface,
-        Qt.rgba(fg.r, fg.g, fg.b, mode === "light" ? 0.07 : 0.14))
+    // Insert-mode composer fill + mention-of-you background: the ladder's
+    // "engaged" step (predates the ladder as a hand-computed near-identical tint).
+    readonly property color tintFill: surface3
 
     readonly property var avatarColors: [
         "#FF570D", "#97B5A6", "#7DD3FC", "#8A92A7",
