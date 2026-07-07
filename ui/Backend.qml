@@ -304,7 +304,7 @@ Item {
         // mention markers from slkd (private-use runes survive the escape above):
         // … = a mention of you / @here|channel (highlighted background),
         // … = any other @user / #channel / @group (accent color).
-        s = s.replace(/\ue001([^\ue002]*)\ue002/g, '<span style="background-color:' + cssHex(Theme.warning) + '; color:' + cssHex(Theme.yellow) + '">$1</span>')
+        s = s.replace(/\ue001([^\ue002]*)\ue002/g, '<span style="background-color:' + cssHex(Theme.tintFill) + '; color:' + cssHex(Theme.yellow) + '">$1</span>')
         s = s.replace(/\ue000([^\ue002]*)\ue002/g, '<font color="' + cssHex(Theme.sky) + '">$1</font>')
         s = s.replace(/\*\*([^*\n]+)\*\*/g, "<b>$1</b>")
         s = s.replace(/~~([^~\n]+)~~/g, "<s>$1</s>")

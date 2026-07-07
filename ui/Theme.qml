@@ -101,6 +101,12 @@ Singleton {
     // 400 under NativeRendering ≈ the old 500 under distance fields
     readonly property int fontWeight: 400
 
+    // Solid warm highlight fill: fg tint composited over surface (never bg —
+    // neutral-bg tints read cold next to the palette's warm grays). Shared by
+    // the insert-mode composer fill and the mention-of-you background.
+    readonly property color tintFill: Qt.tint(surface,
+        Qt.rgba(fg.r, fg.g, fg.b, mode === "light" ? 0.07 : 0.14))
+
     readonly property var avatarColors: [
         "#FF570D", "#97B5A6", "#7DD3FC", "#8A92A7",
         "#ff8a31", "#CCD5E4", "#FF7B72", "#8A9AA6"
