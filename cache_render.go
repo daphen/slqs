@@ -417,6 +417,39 @@ func textFromBlocks(raw string) string {
 					parts = append(parts, strings.Join(seg, " "))
 				}
 			}
+		case "actions":
+			// Buttons: URL buttons render as label + link (fully usable —
+			// they just open a page); action buttons can't be triggered from
+			// here (they post to the app's interaction endpoint), so show
+			// their labels with an honest pointer instead of Slack's
+			// "contains interactive elements" placeholder.
+			if els, ok := b["elements"].([]any); ok {
+				var seg []string
+				hasAction := false
+				for _, e := range els {
+					m, ok := e.(map[string]any)
+					if !ok {
+						continue
+					}
+					label := txt(m["text"])
+					if label == "" {
+						continue
+					}
+					if u, _ := m["url"].(string); u != "" {
+						seg = append(seg, label+": "+u)
+					} else {
+						seg = append(seg, "["+label+"]")
+						hasAction = true
+					}
+				}
+				if len(seg) > 0 {
+					s := strings.Join(seg, "   ")
+					if hasAction {
+						s += "   (buttons — respond in the Slack app)"
+					}
+					parts = append(parts, s)
+				}
+			}
 		}
 	}
 	return strings.Join(parts, "\n")
