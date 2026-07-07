@@ -176,9 +176,15 @@ func (d *daemon) msgFromRaw(w *workspace, channelID, userID, ts, text string, re
 	if bt := textFromBlocks(raw); bt != "" {
 		body = bt
 	}
-	// Shared messages / text link-unfurls carry their content in attachments,
-	// not the top-level text — surface it so the message isn't blank.
-	if body == "" {
+	// Shared Slack messages ALWAYS render (quoted under the body — a smiley
+	// next to a share must not hide it); other attachments (link unfurls)
+	// only fill in when the message would otherwise be blank.
+	if shares := shareQuotes(rj.Attachments); shares != "" {
+		if body != "" {
+			body += "\n"
+		}
+		body += shares
+	} else if body == "" {
 		body = attachmentText(rj.Attachments)
 	}
 	author := w.users[userID]
@@ -215,6 +221,37 @@ func (d *daemon) msgFromRaw(w *workspace, channelID, userID, ts, text string, re
 	}
 }
 
+// shareQuotes renders SHARED Slack messages (forwarded/linked chats — the
+// footer says "Slack Conversation") as quote lines under the body. Without
+// this they only surfaced when the body was empty, so "​:smile: + share"
+// showed just the smiley.
+func shareQuotes(atts []slack.Attachment) string {
+	var parts []string
+	for _, a := range atts {
+		if !strings.Contains(a.Footer, "Slack Conversation") {
+			continue
+		}
+		t := a.Text
+		if t == "" {
+			t = a.Fallback
+		}
+		if a.AuthorName == "" && t == "" {
+			continue
+		}
+		head := "> ↰ *" + a.AuthorName + "*"
+		if t != "" {
+			lines := strings.Split(t, "\n")
+			for i, l := range lines {
+				lines[i] = "> " + l
+			}
+			parts = append(parts, head+"\n"+strings.Join(lines, "\n"))
+		} else {
+			parts = append(parts, head)
+		}
+	}
+	return strings.Join(parts, "\n")
+}
+
 // attachmentText summarizes message attachments (shared messages, link unfurls
 // with text) as "Author: title text", joined across attachments.
 func attachmentText(atts []slack.Attachment) string {
@@ -233,6 +270,12 @@ func attachmentText(atts []slack.Attachment) string {
 		}
 		if t != "" {
 			seg = append(seg, t)
+		}
+		// Unfurl-only attachments (e.g. Linear issue updates) carry ONLY a
+		// URL — the pretty card is client-side hydration we never receive.
+		// Render the link so the update is at least visible + clickable.
+		if len(seg) == 0 && a.FromURL != "" {
+			seg = append(seg, a.FromURL)
 		}
 		if len(seg) > 0 {
 			parts = append(parts, strings.Join(seg, " "))

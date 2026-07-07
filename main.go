@@ -785,18 +785,29 @@ func (d *daemon) msgBody(m slack.Message) string {
 }
 
 
-// blockText prefers a message's Block Kit content over the flat fallback
-// text — for bots the top-level text is often just "This message contains
-// interactive elements." while the real prose lives in the blocks.
-func blockText(m slack.Message) string {
+// displayText is the one answer for "what does this message say": Block Kit
+// content over the flat fallback text, shared Slack messages appended as
+// quotes (a smiley next to a share must not hide it), and attachment
+// content (incl. unfurl-only URLs like Linear updates) when the message
+// would otherwise be blank — threads dropped those entirely.
+func displayText(m slack.Message) string {
+	body := m.Text
 	if len(m.Blocks.BlockSet) > 0 {
 		if raw, err := json.Marshal(m); err == nil {
 			if bt := textFromBlocks(string(raw)); bt != "" {
-				return bt
+				body = bt
 			}
 		}
 	}
-	return m.Text
+	if shares := shareQuotes(m.Attachments); shares != "" {
+		if body != "" {
+			body += "\n"
+		}
+		body += shares
+	} else if body == "" {
+		body = attachmentText(m.Attachments)
+	}
+	return body
 }
 
 func (d *daemon) formatMsg(w *workspace, channelID, userID, ts, text, username string, files []slack.File, attachments []slack.Attachment, subType, threadTS string) map[string]any {
@@ -1424,7 +1435,7 @@ func (d *daemon) sendHistory(c net.Conn, w *workspace, channelID, before string)
 	d.resolveMsgAuthors(w, msgs)
 	out := make([]map[string]any, 0, len(msgs))
 	for _, m := range msgs {
-		text := blockText(m)
+		text := displayText(m)
 		if text == "" && len(m.Files) == 0 {
 			continue
 		}
@@ -1455,7 +1466,7 @@ func (d *daemon) sendJump(c net.Conn, w *workspace, channelID, ts string) {
 	d.resolveMsgAuthors(w, msgs)
 	out := make([]map[string]any, 0, len(msgs))
 	for _, m := range msgs {
-		text := blockText(m)
+		text := displayText(m)
 		if text == "" && len(m.Files) == 0 {
 			continue
 		}
@@ -1531,7 +1542,7 @@ func (d *daemon) sendReplies(c net.Conn, w *workspace, channelID, threadTS strin
 	d.resolveMsgAuthors(w, msgs)
 	out := make([]map[string]any, 0, len(msgs))
 	for _, m := range msgs {
-		text := blockText(m)
+		text := displayText(m)
 		if text == "" && len(m.Files) == 0 {
 			continue
 		}
