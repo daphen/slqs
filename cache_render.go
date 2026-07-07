@@ -167,6 +167,7 @@ func (d *daemon) msgFromRaw(w *workspace, channelID, userID, ts, text string, re
 		Username    string             `json:"username"`
 		SubType     string             `json:"subtype"`
 		ThreadTS    string             `json:"thread_ts"`
+		Edited      *slack.Edited      `json:"edited"`
 	}
 	if raw != "" {
 		json.Unmarshal([]byte(raw), &rj)
@@ -210,6 +211,7 @@ func (d *daemon) msgFromRaw(w *workspace, channelID, userID, ts, text string, re
 		"mine":          userID != "" && userID == w.selfID,
 		"subtype":       rj.SubType,   // "thread_broadcast" => also show in the channel timeline
 		"thread_ts":     rj.ThreadTS,  // parent ts: lets the channel open the right thread on Enter
+		"edited":        rj.Edited != nil,
 	}
 }
 

@@ -488,6 +488,7 @@ Item {
         if (m.mine === undefined) m.mine = false
         if (m.day === undefined) m.day = m.ts ? dayKeyOf(m.ts) : ""
         if (m.subtype === undefined) m.subtype = ""
+        if (m.edited === undefined) m.edited = false
         if (m.thread_ts === undefined) m.thread_ts = ""
         if (m.channelRef === undefined) m.channelRef = ""
         if (m.pending === undefined) m.pending = false

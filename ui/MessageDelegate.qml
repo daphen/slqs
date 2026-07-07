@@ -17,6 +17,7 @@ Item {
     required property string replyAuthor
     required property string replyText
     required property string subtype
+    required property bool   edited
     property bool inThread: false   // true when rendered in the thread panel
     required property int    index
     required property bool   pending
@@ -218,6 +219,7 @@ Item {
             visible: del.text.length > 0 && !del.emojiOnly
             width: parent.width
             text: Backend.richify(del.text, 22)
+                  + (del.edited ? " <span style='font-size:11px;color:" + Theme.fg_muted + "'>(edited)</span>" : "")
             // Light mode: plain black body text (the theme's secondary fg is a
             // purple that reads wrong for message content). Dark mode: fg (#EDEDED),
             // the same near-white neovim's Normal text uses.
