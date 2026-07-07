@@ -239,6 +239,11 @@ func shareQuotes(atts []slack.Attachment) string {
 			continue
 		}
 		head := "> ↰ *" + a.AuthorName + "*"
+		if a.FromURL != "" {
+			// link to the original message — the share carries only its text,
+			// context (links, unfurls, thread) lives at the source
+			head += " · " + a.FromURL
+		}
 		if t != "" {
 			lines := strings.Split(t, "\n")
 			for i, l := range lines {
