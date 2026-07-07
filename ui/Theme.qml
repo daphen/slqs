@@ -111,9 +111,8 @@ Singleton {
     // 400 under NativeRendering ≈ the old 500 under distance fields
     readonly property int fontWeight: 400
 
-    // Insert-mode composer fill + mention-of-you background: the ladder's
-    // "engaged" step (predates the ladder as a hand-computed near-identical tint).
-    readonly property color tintFill: surface3
+    // Insert-mode composer fill + mention-of-you background.
+    readonly property color tintFill: surface2
 
     readonly property var avatarColors: [
         "#FF570D", "#97B5A6", "#7DD3FC", "#8A92A7",
