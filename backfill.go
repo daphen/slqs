@@ -25,9 +25,16 @@ func (d *daemon) backfill(w *workspace) {
 	d.backfillMu.Unlock()
 
 	start := time.Now()
-	d.backfillChannels(w)
-	d.backfillSubscriptions(w)
-	log.Printf("[%s] reconnect backfill done in %.1fs", w.teamName, time.Since(start).Seconds())
+	// Channel read-state comes from the fast client.counts call, which also
+	// reports whether any threads are unread. The live socket keeps followed
+	// threads in sync while connected (OnThreadMarked/OnMessage/…), so the
+	// expensive full getView is only worth it as an offline catch-up — and only
+	// when the server actually says there's unread thread activity to find.
+	threadsUnread := d.backfillChannels(w)
+	if threadsUnread {
+		d.backfillSubscriptions(w)
+	}
+	log.Printf("[%s] reconnect backfill done in %.1fs (threadsUnread=%v)", w.teamName, time.Since(start).Seconds(), threadsUnread)
 	d.refreshChannels()
 }
 
@@ -35,11 +42,13 @@ func (d *daemon) backfill(w *workspace) {
 // re-fetches history (since each channel's watermark) for every channel that
 // has cached messages plus any the server reports unread — recovering messages
 // the socket missed. The poll loop broadcasts the newly-cached messages.
-func (d *daemon) backfillChannels(w *workspace) {
+func (d *daemon) backfillChannels(w *workspace) bool {
 	var unreadIDs []string
-	if unreads, _, err := w.client.GetUnreadCounts(); err != nil {
+	threadsUnread := false
+	if unreads, agg, err := w.client.GetUnreadCounts(); err != nil {
 		log.Printf("[%s] backfill GetUnreadCounts: %v", w.teamName, err)
 	} else {
+		threadsUnread = agg.HasUnreads
 		updates := make([]cache.ChannelReadStateUpdate, 0, len(unreads))
 		for _, u := range unreads {
 			updates = append(updates, cache.ChannelReadStateUpdate{
@@ -57,7 +66,7 @@ func (d *daemon) backfillChannels(w *workspace) {
 	rows, err := d.writeDB.BackfillCandidates(w.teamID, unreadIDs)
 	if err != nil {
 		log.Printf("[%s] backfill candidates: %v", w.teamName, err)
-		return
+		return threadsUnread
 	}
 	sem := make(chan struct{}, 4)
 	var wg sync.WaitGroup
@@ -81,6 +90,7 @@ func (d *daemon) backfillChannels(w *workspace) {
 		}(row.ChannelID)
 	}
 	wg.Wait()
+	return threadsUnread
 }
 
 // backfillSubscriptions re-fetches the followed-threads list live and rebuilds
@@ -98,9 +108,16 @@ func (d *daemon) backfillSubscriptions(w *workspace) {
 	ctx, cancel := context.WithTimeout(d.ctx, 90*time.Second)
 	views, err := w.client.ListThreadSubscriptions(ctx, 1000)
 	cancel()
-	if err != nil {
+	// A timeout can still return a most-recent-first prefix. Use it to surface
+	// the recent (unread) threads via upsert, but DON'T reconcile/tombstone off
+	// an incomplete list — that would wrongly drop the unseen tail.
+	partial := err != nil && len(views) > 0
+	if err != nil && !partial {
 		log.Printf("[%s] backfill subscriptions: %v", w.teamName, err)
 		return
+	}
+	if partial {
+		log.Printf("[%s] backfill subscriptions: partial (%d threads, %v) — upserting without tombstone", w.teamName, len(views), err)
 	}
 	fresh := make([]cache.ThreadSubscription, 0, len(views))
 	for _, v := range views {
@@ -113,9 +130,19 @@ func (d *daemon) backfillSubscriptions(w *workspace) {
 			rm.Timestamp = s.ThreadTS
 		}
 		d.persistMessage(w, s.ChannelID, rm)
+		if partial {
+			// upsert-only: mark active + carry last_read, never deactivate
+			if e := d.writeDB.UpsertThreadSubscription(w.teamID, s.ChannelID, s.ThreadTS, s.LastRead, true); e != nil {
+				log.Printf("[%s] upsert subscription: %v", w.teamName, e)
+			}
+			continue
+		}
 		fresh = append(fresh, cache.ThreadSubscription{
 			ChannelID: s.ChannelID, ThreadTS: s.ThreadTS, LastRead: s.LastRead, Active: true,
 		})
+	}
+	if partial {
+		return // skip the authoritative reconcile on an incomplete list
 	}
 	// Make the cached active set match Slack's authoritative list. This also
 	// tombstones phantom subscriptions — e.g. a thread we only opened to read.

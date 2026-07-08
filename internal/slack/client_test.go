@@ -1831,7 +1831,7 @@ func TestListThreadSubscriptions_PaginatesUntilExhausted(t *testing.T) {
 	defer srv.Close()
 
 	c := &Client{token: "xoxc-test", cookie: "d-cookie", apiBaseURL: srv.URL + "/api/"}
-	got, err := c.ListThreadSubscriptions(context.Background())
+	got, err := c.ListThreadSubscriptions(context.Background(), 0)
 	if err != nil {
 		t.Fatalf("ListThreadSubscriptions: %v", err)
 	}
@@ -1860,7 +1860,7 @@ func TestListThreadSubscriptions_EmptyResponse(t *testing.T) {
 	defer srv.Close()
 
 	c := &Client{token: "xoxc-test", cookie: "d-cookie", apiBaseURL: srv.URL + "/api/"}
-	got, err := c.ListThreadSubscriptions(context.Background())
+	got, err := c.ListThreadSubscriptions(context.Background(), 0)
 	if err != nil {
 		t.Fatalf("ListThreadSubscriptions: %v", err)
 	}
@@ -1891,7 +1891,7 @@ func TestListThreadSubscriptions_RespectsHardCap(t *testing.T) {
 	defer srv.Close()
 
 	c := &Client{token: "xoxc-test", cookie: "d-cookie", apiBaseURL: srv.URL + "/api/"}
-	got, err := c.ListThreadSubscriptions(context.Background())
+	got, err := c.ListThreadSubscriptions(context.Background(), 0)
 	if err != nil {
 		t.Fatalf("ListThreadSubscriptions: %v", err)
 	}
@@ -1920,7 +1920,7 @@ func TestListThreadSubscriptions_FiltersUnsubscribedItems(t *testing.T) {
 	defer srv.Close()
 
 	c := &Client{token: "xoxc-test", cookie: "d-cookie", apiBaseURL: srv.URL + "/api/"}
-	got, err := c.ListThreadSubscriptions(context.Background())
+	got, err := c.ListThreadSubscriptions(context.Background(), 0)
 	if err != nil {
 		t.Fatalf("ListThreadSubscriptions: %v", err)
 	}
@@ -1940,7 +1940,7 @@ func TestListThreadSubscriptions_ReturnsErrorOnNotOK(t *testing.T) {
 	defer srv.Close()
 
 	c := &Client{token: "xoxc-test", cookie: "d-cookie", apiBaseURL: srv.URL + "/api/"}
-	_, err := c.ListThreadSubscriptions(context.Background())
+	_, err := c.ListThreadSubscriptions(context.Background(), 0)
 	if err == nil {
 		t.Fatalf("expected error on ok=false, got nil")
 	}

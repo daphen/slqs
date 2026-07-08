@@ -1691,6 +1691,13 @@ func (c *Client) ListThreadSubscriptions(ctx context.Context, max int) ([]Thread
 	for {
 		body, err := c.callListThreadSubscriptions(ctx, currentTS)
 		if err != nil {
+			// On a context timeout mid-pagination, hand back what we have —
+			// getView returns most-recent-first, so the fetched prefix holds
+			// the recent (unread) threads. The caller upserts these without
+			// tombstoning the unseen tail.
+			if ctx.Err() != nil && len(all) > 0 {
+				return all, ctx.Err()
+			}
 			return nil, err
 		}
 		var resp listThreadSubscriptionsResponse
