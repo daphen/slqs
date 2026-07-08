@@ -87,6 +87,24 @@ FloatingWindow {
     // File attach ('u'): pop a floating yazi in chooser mode, then stage the
     // picked file for upload (goes out with the next message, like a paste).
     function openUpload() { filePicker.running = true }
+
+    // 'U': upload the file at the path currently on the clipboard (e.g. the
+    // recording path record-toggle copies on stop). No picker.
+    function uploadClipboardPath() { clipPathReader.running = true }
+    Process {
+        id: clipPathReader
+        command: ["sh", "-c", "wl-paste --no-newline 2>/dev/null"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                clipPathReader.running = false
+                let p = (this.text || "").split("\n")[0].trim()
+                if (p.startsWith("file://")) p = decodeURIComponent(p.slice(7))
+                if (p.startsWith("~/")) p = Quickshell.env("HOME") + p.slice(1)
+                if (p.startsWith("/")) Backend.uploadFile(p)
+                else Backend.toast("Clipboard has no file path")
+            }
+        }
+    }
     Process {
         id: filePicker
         command: ["sh", "-c",
@@ -187,7 +205,7 @@ FloatingWindow {
             "v":        { act: () => { if (focusedPanel === "messages") Backend.viewImage(msgs.currentMessage()) }, help: "View image", cat: "msg" },
             // views & general
             "?":        { act: () => help.show(), help: "This help", cat: "view" },
-            "U":        { act: () => { if (Backend.updateAvailable) Backend.applyUpdate() }, help: "Apply update (when available)", cat: "view" },
+            "U":        { act: () => { if (Backend.updateAvailable) Backend.applyUpdate(); else win.uploadClipboardPath() }, help: "Upload file path from clipboard", cat: "chats" },
             "esc":      { act: () => backToNormal(), help: "Back to normal", cat: "view" },
         },
         "thread": {
