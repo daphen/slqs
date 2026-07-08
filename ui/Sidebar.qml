@@ -324,10 +324,11 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                     height: 18; width: Math.max(18, ub.implicitWidth + 10); radius: 9
                     color: Theme.cursor
-                    Text { id: ub; renderType: Text.NativeRendering; anchors.centerIn: parent
+                    Text { id: ub; renderType: Text.NativeRendering; anchors.fill: parent
+                           horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
                            text: row.unread; color: Theme.ink
                            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
-                           font.pixelSize: 12; font.weight: 500 }
+                           font.pixelSize: 12; font.weight: 500; font.features: ({ "tnum": 1 }) }
                 }
                 // Quiet unread (plain channel): bare muted count, no chip — keeps
                 // the row's two-level hierarchy for low-priority activity.
