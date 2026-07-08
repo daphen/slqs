@@ -449,7 +449,9 @@ Item {
         return c.kind === "dm" ? "Direct messages" : "Channels"
     }
     function rebuildChannelModel() {
-        const rank = { "Starred": 0, "Mentions & DMs": 1, "Unread": 2, "Channels": 3, "Direct messages": 4 }
+        // Mentions outrank pins (transient urgency vanishes once read);
+        // starred channels still never leave Starred — stability wins there.
+        const rank = { "Mentions & DMs": 0, "Starred": 1, "Unread": 2, "Channels": 3, "Direct messages": 4 }
         // Only the current workspace's channels are visible at a time.
         const sorted = _chanList.filter(c => c.workspace === currentWorkspace).sort((a, b) => {
             const sa = sectionOf(a), sb = sectionOf(b)
