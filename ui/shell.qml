@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Window
 import Quickshell
+import Quickshell.Io
 import "."
 
 FloatingWindow {
@@ -83,6 +84,22 @@ FloatingWindow {
     }
     function backToNormal() { appRoot.forceActiveFocus() }
 
+    // File attach ('u'): pop a floating yazi in chooser mode, then stage the
+    // picked file for upload (goes out with the next message, like a paste).
+    function openUpload() { filePicker.running = true }
+    Process {
+        id: filePicker
+        command: ["sh", "-c",
+            "f=$(mktemp); kitty --class slqs-upload -e yazi --chooser-file=\"$f\" \"$HOME\" >/dev/null 2>&1; cat \"$f\"; rm -f \"$f\""]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                filePicker.running = false
+                const p = (this.text || "").split("\n")[0].trim()
+                if (p.length > 0) Backend.uploadFile(p)
+            }
+        }
+    }
+
     // ── key handling as a small state machine ────────────────────────────
     // Each mode is a {keyId → action} table. routeKey normalizes the event to
     // a keyId, picks the table for the current mode, and dispatches. Adding a
@@ -148,6 +165,7 @@ FloatingWindow {
             "/":        { act: () => palette.show(), help: "Jump palette", cat: "chats" },
             "b":        { act: () => browse.show(), help: "Browse channels", cat: "chats" },
             "s":        { act: () => sidebar.toggleStarCurrent(), help: "Star / unstar channel", cat: "chats" },
+            "u":        { act: () => win.openUpload(), help: "Attach a file", cat: "chats" },
             // slqs only (Discord has no equivalent): d = DM anyone, I = invite to channel.
             "d":        { act: () => { if (!Backend.railHidden) peoplePicker.showDM() }, help: () => Backend.railHidden ? "" : "Message someone", cat: "chats" },
             "I":        { act: () => { if (!Backend.railHidden) peoplePicker.showInvite() }, help: () => Backend.railHidden ? "" : "Invite to channel", cat: "chats" },

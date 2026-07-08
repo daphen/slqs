@@ -1012,7 +1012,7 @@ func (d *daemon) readConn(c net.Conn) {
 		// Channel carries a globally-unique Slack channel ID (the wire key),
 		// so it resolves the owning workspace without a separate field.
 		var cmd struct {
-			Type, Channel, Text, Before, Thread, Id, Url, Ext, Mediatype, Ts, Emoji, Workspace, Team, State, User string
+			Type, Channel, Text, Before, Thread, Id, Url, Ext, Mediatype, Ts, Emoji, Workspace, Team, State, User, Path string
 			Remove, Broadcast                                                                                     bool
 			Images                                                                                          []struct{ Id, Url, Ext string } // "view" can carry several photos
 		}
@@ -1349,6 +1349,47 @@ func (d *daemon) readConn(c net.Conn) {
 				fileID, err := w.client.StageUpload(d.ctx, name, data)
 				if err != nil {
 					log.Printf("upload: %v", err)
+					fail()
+					return
+				}
+				d.attachMu.Lock()
+				d.pendingAttach[id] = fileID
+				d.attachMu.Unlock()
+				d.broadcast(map[string]any{"type": "attachReady", "channel": id, "name": name, "ok": true})
+			}(w)
+		case "uploadFile":
+			// Upload any file from disk (screen recordings, PDFs, …). Same
+			// staging flow as uploadClipboard — Slack infers the type from the
+			// name; the next "send" posts it. Register the in-flight upload
+			// synchronously so a quick send waits for it.
+			path := cmd.Path
+			done := make(chan struct{})
+			d.attachMu.Lock()
+			d.uploading[id] = done
+			d.attachMu.Unlock()
+			go func(w *workspace) {
+				defer close(done)
+				fail := func() {
+					d.broadcast(map[string]any{"type": "attachReady", "channel": id, "name": "", "ok": false})
+				}
+				data, err := os.ReadFile(path)
+				if err != nil || len(data) == 0 {
+					log.Printf("uploadFile read %s: %v", path, err)
+					fail()
+					return
+				}
+				name := filepath.Base(path)
+				// Optimistic preview only makes sense for images; other files
+				// just show the name chip.
+				preview := ""
+				switch strings.ToLower(filepath.Ext(name)) {
+				case ".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp":
+					preview = "file://" + path
+				}
+				d.broadcast(map[string]any{"type": "attachUploading", "channel": id, "name": name, "path": preview})
+				fileID, err := w.client.StageUpload(d.ctx, name, data)
+				if err != nil {
+					log.Printf("uploadFile stage: %v", err)
 					fail()
 					return
 				}

@@ -710,6 +710,13 @@ Item {
         _awaitingPaste = true
         safeWrite(JSON.stringify({ type: "uploadClipboard", channel: currentChannelId, thread: thread || "" }) + "\n")
     }
+    // Stage a file from disk (any type). Like pasteImage, it doesn't send —
+    // the daemon's attachUploading/attachReady drive the chip; Enter posts it.
+    function uploadFile(path, thread) {
+        if (!currentChannelId || !path) return
+        attachState = "uploading"; attachName = path.split("/").pop()
+        safeWrite(JSON.stringify({ type: "uploadFile", channel: currentChannelId, path: path, thread: thread || "" }) + "\n")
+    }
     function dropAttach() {
         if (attachState === "none") return
         attachState = "none"; attachName = ""
