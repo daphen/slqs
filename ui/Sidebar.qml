@@ -13,7 +13,6 @@ Rectangle {
     // Active panel gets the border (below); inactive dims slightly.
     opacity: active ? 1.0 : 0.8
     Behavior on opacity { NumberAnimation { duration: 120 } }
-    signal searchClosed()
     signal threadsClicked()
     signal workspacePickerRequested()
 
@@ -36,7 +35,17 @@ Rectangle {
         const it = Backend.channels.get(list.currentIndex)
         if (it) Backend.selectChannel(it.id, it.name, it.topic)
     }
-    function focusSearch() { search.forceActiveFocus() }
+    // Star/unstar the cursor row; the rebuild reorders sections, so chase the
+    // channel to its new position instead of letting the cursor dump to the top.
+    function toggleStarCurrent() {
+        if (threadsSelected) return
+        const it = Backend.channels.get(list.currentIndex)
+        if (!it) return
+        const id = it.id
+        Backend.toggleStar(id)
+        for (let i = 0; i < Backend.channels.count; i++)
+            if (Backend.channels.get(i).id === id) { list.currentIndex = i; break }
+    }
 
     Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.hairline }
 
@@ -106,26 +115,6 @@ Rectangle {
             }
         }
 
-        Rectangle {
-            width: parent.width; height: 32; radius: Theme.radiusSm
-            color: Theme.bg; border.width: 1
-            border.color: search.activeFocus ? Theme.cursor : Theme.hairline
-            Row {
-                anchors.fill: parent; anchors.leftMargin: 9; spacing: 7
-                Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter; text: "⌕"
-                       color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 16 }
-                TextInput { renderType: TextInput.NativeRendering;
-                    id: search
-                    anchors.verticalCenter: parent.verticalCenter
-                    width: parent.width - 30; color: Theme.fg; clip: true
-                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14
-                    Keys.onEscapePressed: { text = ""; sidebar.searchClosed() }
-                    Text { renderType: Text.NativeRendering; visible: !search.text && !search.activeFocus; text: "Jump to…"
-                           color: Theme.fg_muted; font: search.font }
-                }
-            }
-        }
-
         // Pinned "Threads" entry — opens the threads list (Ctrl+K palette).
         // Hidden when the backend has no threads (Discord).
         Rectangle {
@@ -184,11 +173,16 @@ Rectangle {
             // air, then the tracked label sitting tight on its rows.
             section.delegate: Item {
                 required property string section
+                // The first group sits right under the Threads pill — the
+                // between-groups air there double-counts with the Column
+                // spacing, so it gets a tighter header.
+                readonly property bool first:
+                    Backend.channels.count > 0 && section === Backend.channels.get(0).section
                 width: ListView.view.width
-                height: 48
+                height: first ? 34 : 48
                 // Air on BOTH sides of the divider — flush pills read broken.
                 Rectangle {
-                    anchors.top: parent.top; anchors.topMargin: 10
+                    anchors.top: parent.top; anchors.topMargin: first ? 0 : 10
                     width: parent.width; height: 1
                     color: Theme.hairline
                 }

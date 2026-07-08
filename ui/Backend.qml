@@ -390,7 +390,10 @@ Item {
                    : (prevMention[c.id] !== undefined ? prevMention[c.id] : (c.mention || false)),
             ord: i
         }))
-        rebuildChannelModel()
+        // Snapshot pushes reorder `ord` on activity — rebuilding under the
+        // user's j/k dumps the cursor, so defer like the unread path does.
+        if (sidebarNavigating && !firstLoad) _chanReflowPending = true
+        else rebuildChannelModel()
         if (firstLoad) selectFirstInWorkspace()
     }
 
@@ -416,26 +419,51 @@ Item {
 
     // Sidebar source of truth, kept sorted so section grouping re-flows live.
     property var _chanList: []
+    // Client-side channel pins ("Starred" section) — neither backend exposes
+    // stars, so the set lives in a local JSON file per app (slqs/dsqrd).
+    property var starredIds: []
+    FileView {
+        id: pinStore
+        path: backend._dataDir + "/starred.json"
+        onLoaded: {
+            try { backend.starredIds = JSON.parse(text()) } catch (e) { return }
+            backend.rebuildChannelModel()
+        }
+    }
+    function toggleStar(id) {
+        const s = starredIds.slice()
+        const i = s.indexOf(id)
+        if (i >= 0) s.splice(i, 1); else s.push(id)
+        starredIds = s
+        pinStore.setText(JSON.stringify(s))
+        rebuildChannelModel()
+    }
     // Unread DMs and channel @-mentions get a priority section at the very top
-    // (under the Threads row); other unread sits below in "Unread".
-    function sectionOf(unread, kind, mention) {
-        if (unread > 0 && mention) return "Mentions & DMs"
-        if (unread > 0) return "Unread"
-        return kind === "dm" ? "Direct messages" : "Channels"
+    // (under the Threads row); other unread sits below in "Unread". Starred
+    // channels pin above everything regardless of unread — stability is the
+    // point of pinning; the badge still shows there.
+    function sectionOf(c) {
+        if (starredIds.indexOf(c.id) >= 0) return "Starred"
+        if (c.unread > 0 && c.mention) return "Mentions & DMs"
+        if (c.unread > 0) return "Unread"
+        return c.kind === "dm" ? "Direct messages" : "Channels"
     }
     function rebuildChannelModel() {
-        const rank = { "Mentions & DMs": 0, "Unread": 1, "Channels": 2, "Direct messages": 3 }
+        const rank = { "Starred": 0, "Mentions & DMs": 1, "Unread": 2, "Channels": 3, "Direct messages": 4 }
         // Only the current workspace's channels are visible at a time.
         const sorted = _chanList.filter(c => c.workspace === currentWorkspace).sort((a, b) => {
-            const ra = rank[sectionOf(a.unread, a.kind, a.mention)], rb = rank[sectionOf(b.unread, b.kind, b.mention)]
-            return ra !== rb ? ra - rb : a.ord - b.ord
+            const sa = sectionOf(a), sb = sectionOf(b)
+            if (sa !== sb) return rank[sa] - rank[sb]
+            if (sa === "Starred" && (a.kind === "dm") !== (b.kind === "dm"))
+                return a.kind === "dm" ? -1 : 1
+            return a.ord - b.ord
         })
         channelsModel.clear()
         for (let i = 0; i < sorted.length; i++) {
             const c = sorted[i]
             channelsModel.append({ id: c.id, name: c.name, kind: c.kind, topic: c.topic,
                                    unread: c.unread, mention: c.mention, avatar: c.avatar || "",
-                                   workspace: c.workspace, section: sectionOf(c.unread, c.kind, c.mention) })
+                                   workspace: c.workspace, section: sectionOf(c) })
         }
     }
     // While the user is NAVIGATING the sidebar, the list must not reorder
@@ -456,15 +484,15 @@ Item {
     function applyUnread(id, count, mention) {
         const e = _chanList.find(c => c.id === id)
         if (!e) return
-        const before = sectionOf(e.unread, e.kind, e.mention)
+        const before = sectionOf(e)
         e.unread = Math.min(count, 99)
         e.mention = count === 0 ? false : !!mention
         if (e.workspace !== currentWorkspace) return
-        if (sectionOf(e.unread, e.kind, e.mention) !== before && !sidebarNavigating) {
+        if (sectionOf(e) !== before && !sidebarNavigating) {
             rebuildChannelModel()
             return
         }
-        if (sectionOf(e.unread, e.kind, e.mention) !== before) _chanReflowPending = true
+        if (sectionOf(e) !== before) _chanReflowPending = true
         for (let i = 0; i < channelsModel.count; i++)
             if (channelsModel.get(i).id === id) {
                 channelsModel.setProperty(i, "unread", e.unread)

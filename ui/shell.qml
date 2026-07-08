@@ -144,8 +144,9 @@ FloatingWindow {
             "shift+tab":{ act: () => cyclePanel(-1), help: "Previous panel", cat: "nav" },
             // chats
             "enter":    { act: () => activate(), help: "Open selected", cat: "chats" },
-            "/":        { act: () => sidebar.focusSearch(), help: "Search chats", cat: "chats" },
+            "/":        { act: () => palette.show(), help: "Jump palette", cat: "chats" },
             "b":        { act: () => browse.show(), help: "Browse channels", cat: "chats" },
+            "s":        { act: () => sidebar.toggleStarCurrent(), help: "Star / unstar channel", cat: "chats" },
             // slqs only (Discord has no equivalent): d = DM anyone, I = invite to channel.
             "d":        { act: () => { if (!Backend.railHidden) peoplePicker.showDM() }, help: () => Backend.railHidden ? "" : "Message someone", cat: "chats" },
             "I":        { act: () => { if (!Backend.railHidden) peoplePicker.showInvite() }, help: () => Backend.railHidden ? "" : "Invite to channel", cat: "chats" },
@@ -262,7 +263,6 @@ FloatingWindow {
                 Sidebar {
                     id: sidebar
                     width: 264; height: parent.height
-                    onSearchClosed: win.backToNormal()
                     onThreadsClicked: { Backend.showThreadsView(); win.focusPanel("messages") }
                     onWorkspacePickerRequested: workspacePicker.show()
                 }
