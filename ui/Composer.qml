@@ -8,7 +8,7 @@ Rectangle {
     readonly property bool replying: replyTs !== "" || editingTs !== ""
     // Grow with the text, capped at 180px; a single line's natural implicitHeight
     // is the minimum (no artificial floor). Matches the thread reply input.
-    implicitHeight: Math.min(180, input.implicitHeight + 26 + ((attaching || replying) ? 26 : 0))
+    implicitHeight: Math.min(180, input.implicitHeight + 26 + (((attaching && !Backend.threadOpen) || replying) ? 26 : 0))
     radius: Theme.radius
     // Insert mode = the desktop focus language (the docs' nav-focus): solid
     // ink-tint fill + a strong neutral ring. Full inversion read too heavy.
