@@ -217,7 +217,10 @@ func (d *daemon) msgFromRaw(w *workspace, channelID, userID, ts, text string, re
 		"mine":          userID != "" && userID == w.selfID,
 		"subtype":       rj.SubType,   // "thread_broadcast" => also show in the channel timeline
 		"thread_ts":     rj.ThreadTS,  // parent ts: lets the channel open the right thread on Enter
-		"edited":        rj.Edited != nil,
+		// A genuine Slack edit always carries edited.user; the live socket used
+		// to synthesize an edited stamp for any message_changed (unfurls etc.),
+		// so gate on user to ignore those stale/non-edit markers.
+		"edited":        rj.Edited != nil && rj.Edited.User != "",
 	}
 }
 

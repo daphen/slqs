@@ -124,6 +124,7 @@ type wsSubMsg struct {
 	Files       []slack.File       `json:"files"`
 	Blocks      slack.Blocks       `json:"blocks"`
 	Attachments []slack.Attachment `json:"attachments"`
+	Edited      *slack.Edited      `json:"edited"`
 }
 
 // wsReactionEvent represents a reaction_added or reaction_removed event.
@@ -303,7 +304,7 @@ func dispatchWebSocketEvent(data []byte, handler EventHandler) {
 			if msg.Message != nil {
 				debuglog.WS("message_changed: channel=%s user=%s ts=%s thread_ts=%s edited=true",
 					msg.Channel, msg.Message.User, msg.Message.TS, msg.Message.ThreadTS)
-				handler.OnMessage(msg.Channel, msg.Message.User, msg.Message.TS, msg.Message.Text, msg.Message.ThreadTS, "", true, msg.Message.Files, msg.Message.Blocks, msg.Message.Attachments, msg.Message.BotID, msg.Message.Username)
+				handler.OnMessage(msg.Channel, msg.Message.User, msg.Message.TS, msg.Message.Text, msg.Message.ThreadTS, "", msg.Message.Edited != nil, msg.Message.Files, msg.Message.Blocks, msg.Message.Attachments, msg.Message.BotID, msg.Message.Username)
 			}
 		case "message_deleted":
 			debuglog.WS("message_deleted: channel=%s deleted_ts=%s", msg.Channel, msg.DeletedTS)

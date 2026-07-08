@@ -40,7 +40,7 @@ func (h *wsHandler) OnMessage(channelID, userID, ts, text, threadTS, subtype str
 		Files: files, Blocks: blocks, Attachments: attachments,
 	}}
 	if edited {
-		synthetic.Edited = &slack.Edited{Timestamp: ts}
+		synthetic.Edited = &slack.Edited{User: authorID, Timestamp: ts}
 	}
 	raw, _ := json.Marshal(synthetic)
 	if err := h.d.writeDB.UpsertMessage(cache.Message{
