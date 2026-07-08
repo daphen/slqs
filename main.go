@@ -1233,7 +1233,7 @@ func (d *daemon) readConn(c net.Conn) {
 					if attThread != "" {
 						t = attThread
 					}
-					err = w.client.CompleteUpload(d.ctx, id, t, fileID, cmd.Text)
+					err = w.client.CompleteUpload(d.ctx, id, t, fileID, cmd.Text, cmd.Broadcast)
 				} else if cmd.Thread != "" {
 					_, _, err = w.client.SendReply(d.ctx, id, cmd.Thread, cmd.Text, cmd.Broadcast)
 				} else {

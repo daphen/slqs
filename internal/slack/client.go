@@ -923,15 +923,40 @@ func (c *Client) StageUpload(ctx context.Context, filename string, data []byte) 
 
 // CompleteUpload posts a previously-staged file to the channel with an optional
 // comment (and thread).
-func (c *Client) CompleteUpload(ctx context.Context, channelID, threadTS, fileID, comment string) error {
-	_, err := c.api.CompleteUploadExternalContext(ctx, slack.CompleteUploadExternalParameters{
-		Files:           []slack.FileSummary{{ID: fileID}},
-		Channel:         channelID,
-		InitialComment:  comment,
-		ThreadTimestamp: threadTS,
-	})
+// CompleteUpload posts the staged file. Sent raw (not via slack-go) because the
+// library's CompleteUploadExternalParameters has no reply_broadcast field, so it
+// can't do a thread reply that also lands in the channel ("Also send to channel").
+func (c *Client) CompleteUpload(ctx context.Context, channelID, threadTS, fileID, comment string, broadcast bool) error {
+	filesJSON, err := json.Marshal([]slack.FileSummary{{ID: fileID}})
 	if err != nil {
 		return fmt.Errorf("completing upload: %w", err)
+	}
+	form := url.Values{
+		"files":      {string(filesJSON)},
+		"channel_id": {channelID},
+	}
+	if comment != "" {
+		form.Set("initial_comment", comment)
+	}
+	if threadTS != "" {
+		form.Set("thread_ts", threadTS)
+	}
+	if broadcast {
+		form.Set("reply_broadcast", "true")
+	}
+	body, err := c.postForm(ctx, "files.completeUploadExternal", form)
+	if err != nil {
+		return fmt.Errorf("completing upload: %w", err)
+	}
+	var resp struct {
+		OK    bool   `json:"ok"`
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return fmt.Errorf("completing upload: parse: %w", err)
+	}
+	if !resp.OK {
+		return fmt.Errorf("completing upload: %s", resp.Error)
 	}
 	return nil
 }
