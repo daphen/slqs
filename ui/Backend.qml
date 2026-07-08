@@ -1221,6 +1221,31 @@ Item {
         safeWrite(JSON.stringify({ type: "replies", channel: t.channel, thread: t.ts }) + "\n")
     }
 
+    // Ctrl+I: jump to the most urgent unread, across every workspace. Opening
+    // marks it read, so repeated presses walk the whole backlog. Priority
+    // mirrors the sidebar: mentions/DMs, then unread threads, then any unread
+    // channel. Current workspace wins ties so it doesn't yank you away needlessly.
+    function _openChannelAnyWs(c) {
+        if (threadOpen) closeThread()
+        if (c.workspace && c.workspace !== currentWorkspace) {
+            currentWorkspace = c.workspace
+            rebuildChannelModel()
+        }
+        selectChannel(c.id, c.name, c.topic)
+    }
+    function gotoFirstUnread() {
+        const cw = currentWorkspace
+        const here = (a, b) => (a.workspace === cw ? 0 : 1) - (b.workspace === cw ? 0 : 1)
+        const mentions = _chanList.filter(c => (c.unread || 0) > 0 && (c.mention || c.kind === "dm")).sort(here)
+        if (mentions.length) { _openChannelAnyWs(mentions[0]); return true }
+        const threads = (subThreads || []).filter(t => (t.unread || 0) > 0).sort(here)
+        if (threads.length) { openThreadFromSub(threads[0]); return true }
+        const others = _chanList.filter(c => (c.unread || 0) > 0 && !(c.mention || c.kind === "dm")).sort(here)
+        if (others.length) { _openChannelAnyWs(others[0]); return true }
+        toast("No unread messages")
+        return false
+    }
+
     // Recently opened threads (newest first), for the Ctrl+K palette.
     property var recentThreads: []
     function _pushRecentThread(channel, ts, title, preview) {
