@@ -187,10 +187,13 @@ Rectangle {
                 readonly property bool first:
                     Backend.channels.count > 0 && section === Backend.channels.get(0).section
                 width: ListView.view.width
-                height: first ? 34 : 48
+                height: first ? 30 : 48
                 // Air on BOTH sides of the divider — flush pills read broken.
+                // The first group draws no divider: the header band above
+                // already provides the line, so one here reads as a stray.
                 Rectangle {
-                    anchors.top: parent.top; anchors.topMargin: first ? 0 : 10
+                    visible: !first
+                    anchors.top: parent.top; anchors.topMargin: 10
                     width: parent.width; height: 1
                     color: Theme.hairline
                 }
