@@ -121,7 +121,9 @@ Item {
                     anchors.leftMargin: 14; anchors.rightMargin: 14
                     anchors.topMargin: 14; anchors.bottomMargin: 6
                     radius: 15
-                    color: Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.07)
+                    color: Theme.surface1
+                    border.width: 1
+                    border.color: Theme.hairline
                 }
                 Row {
                     anchors.fill: searchField; anchors.leftMargin: 14; anchors.rightMargin: 14; spacing: 10
