@@ -84,6 +84,16 @@ FloatingWindow {
     }
     function backToNormal() { appRoot.forceActiveFocus() }
 
+    // When a staged attachment finishes uploading, drop into the composer so a
+    // bare Enter sends it — the thread reply if a thread's open, else the channel.
+    Connections {
+        target: Backend
+        function onAttachSettled() {
+            if (Backend.threadOpen) thread.focusReply()
+            else { win.focusPanel("messages"); composer.focusInput() }
+        }
+    }
+
     // Thread the pending upload belongs to, captured at trigger time (the async
     // picker returns later, and focus may have moved). "" = the channel.
     property string _uploadThread: ""

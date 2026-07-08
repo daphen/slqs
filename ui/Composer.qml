@@ -95,7 +95,7 @@ Rectangle {
         Text { renderType: Text.NativeRendering; text: "📎"; anchors.verticalCenter: parent.verticalCenter
                font.family: Theme.fontFamily; font.pixelSize: 13 }
         Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
-               text: Backend.attachState === "uploading" ? "uploading image…" : (Backend.attachName || "image")
+               text: Backend.attachState === "uploading" ? ("uploading " + (Backend.attachName || "file") + "…") : (Backend.attachName || "file")
                color: Backend.attachState === "uploading" ? root.inkMuted : root.inkFg
                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
         Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter

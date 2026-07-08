@@ -725,6 +725,9 @@ Item {
     function clearAttach() { attachState = "none"; attachName = ""; _awaitingPaste = false; _pendingImagePath = "" }
     // Clipboard held no image → the focused input should paste text instead.
     signal pasteFallback()
+    // A staged attachment finished uploading — drop into the composer so a bare
+    // Enter sends it (handy for the u/U keybinds triggered from normal mode).
+    signal attachSettled()
 
     // --- optimistic send: show your message instantly, reconcile with the echo ---
     property var _selfProfile: null   // {author,initials,color,avatar} learned from your own messages
@@ -987,7 +990,7 @@ Item {
         else if (e.type === "attachReady") {
             // Upload finished (ok) — or no image / failed. A no-image verdict while
             // still awaiting the Ctrl+V result → paste the clipboard text instead.
-            if (e.ok) { attachState = "ready"; attachName = e.name || "image" }
+            if (e.ok) { attachState = "ready"; attachName = e.name || "file"; attachSettled() }
             else if (_awaitingPaste) pasteFallback()
             else attachState = "none"
             _awaitingPaste = false
