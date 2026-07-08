@@ -89,8 +89,13 @@ func (d *daemon) backfillChannels(w *workspace) {
 func (d *daemon) backfillSubscriptions(w *workspace) {
 	// High cap so getView returns the full authoritative set — reconcile below
 	// tombstones anything not in it, so a truncated list would wrongly drop
-	// real subscriptions.
-	ctx, cancel := context.WithTimeout(d.ctx, 20*time.Second)
+	// real subscriptions. That means we must let it FINISH: with many followed
+	// threads it paginates (100/page, each heavy from fetch_threads_state), and
+	// a 20s budget timed out mid-run — leaving thread unreads unsynced (they'd
+	// still badge on other clients). This is a background reconcile, so give it
+	// room. On timeout it errors out and skips the reconcile (no tombstoning),
+	// so a slow run degrades to "stale", never to "dropped subscriptions".
+	ctx, cancel := context.WithTimeout(d.ctx, 90*time.Second)
 	views, err := w.client.ListThreadSubscriptions(ctx, 1000)
 	cancel()
 	if err != nil {
