@@ -219,6 +219,10 @@ Rectangle {
                 width: ListView.view.width
                 height: 36
                 readonly property bool cursor: list.currentIndex === index
+                // Mentions and DMs are "loud" unreads — a filled accent badge,
+                // not a quiet count. Section-agnostic, so starred and unstarred
+                // rows render identically.
+                readonly property bool loudUnread: unread > 0 && (mention || kind === "dm")
                 // Not "open" while the Threads view covers the message pane — its
                 // indicator would read as a second highlight next to the threads cursor.
                 readonly property bool isOpen: id === Backend.currentChannelId && !Backend.threadsView
@@ -312,17 +316,29 @@ Rectangle {
                     }
                 }
 
-                // Bare muted count, no chip — labels are the only full-ink
-                // element so the row keeps a strict two-level hierarchy.
-                // Mentions flip the count to the accent.
+                // Loud unread (mention / DM): filled accent pill, ink text —
+                // stands out regardless of section, matching the Threads badge.
+                Rectangle {
+                    visible: row.loudUnread
+                    anchors.right: parent.right; anchors.rightMargin: 16
+                    anchors.verticalCenter: parent.verticalCenter
+                    height: 18; width: Math.max(18, ub.implicitWidth + 10); radius: 9
+                    color: Theme.cursor
+                    Text { id: ub; renderType: Text.NativeRendering; anchors.centerIn: parent
+                           text: row.unread; color: Theme.ink
+                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
+                           font.pixelSize: 12; font.weight: 500 }
+                }
+                // Quiet unread (plain channel): bare muted count, no chip — keeps
+                // the row's two-level hierarchy for low-priority activity.
                 Text { renderType: Text.NativeRendering
-                    visible: row.unread > 0
+                    visible: row.unread > 0 && !row.loudUnread
                     anchors.right: parent.right; anchors.rightMargin: 22
                     anchors.verticalCenter: parent.verticalCenter
                     text: row.unread
-                    color: row.primary ? Theme.bg : row.mention ? Theme.cursor : Theme.fg_muted
+                    color: row.primary ? Theme.bg : Theme.fg_muted
                     font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
-                    font.pixelSize: 13; font.weight: row.mention ? 500 : 400
+                    font.pixelSize: 13; font.weight: 400
                 }
 
                 HoverHandler { id: hov }

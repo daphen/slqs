@@ -444,7 +444,7 @@ Item {
     // point of pinning; the badge still shows there.
     function sectionOf(c) {
         if (starredIds.indexOf(c.id) >= 0) return "Starred"
-        if (c.unread > 0 && c.mention) return "Mentions & DMs"
+        if (c.unread > 0 && (c.mention || c.kind === "dm")) return "Mentions & DMs"
         if (c.unread > 0) return "Unread"
         return c.kind === "dm" ? "Direct messages" : "Channels"
     }
