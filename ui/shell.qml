@@ -15,12 +15,13 @@ FloatingWindow {
         height: 22
         radius: 7
         anchors.verticalCenter: parent.verticalCenter
-        color: Theme.mode === "light" ? Theme.bg : Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.07)
+        // raised caps on the surface0 band, matching the desktop picker chin
+        color: Theme.mode === "light" ? Theme.bg : Theme.surface2
         border.width: 1
         border.color: Theme.hairline
         Text { renderType: Text.NativeRendering
             id: capText; anchors.centerIn: parent
-            color: Theme.fg_muted
+            color: Qt.tint(Theme.fg_muted, Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.55))
             font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
             font.pixelSize: 11; font.weight: 500
         }
@@ -28,7 +29,8 @@ FloatingWindow {
     component CapLabel: Text {
         renderType: Text.NativeRendering
         anchors.verticalCenter: parent.verticalCenter
-        color: Theme.fg_muted
+        // action ink, not passive muted — picker chin rule
+        color: Qt.tint(Theme.fg_muted, Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.55))
         font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
         font.pixelSize: 11
     }
@@ -418,7 +420,7 @@ FloatingWindow {
             Rectangle {
                 id: statusbar
                 anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
-                height: 36; color: Theme.bg_alt
+                height: 36; color: Theme.surface0
                 Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.hairline }
                 Row {
                     anchors.left: parent.left; anchors.leftMargin: 14
