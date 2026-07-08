@@ -86,7 +86,9 @@ Rectangle {
     // Sits below the reply/edit chip when both are showing.
     Row {
         id: attachChip
-        visible: root.attaching
+        // When a thread is open the upload targets the thread, so its chip shows
+        // in the thread reply instead — don't also render it over the channel.
+        visible: root.attaching && !Backend.threadOpen
         // sit to the right of the reply chip when both are showing, else at the edge
         anchors.left: root.replying ? replyChip.right : parent.left
         anchors.leftMargin: root.replying ? 16 : 14
@@ -110,7 +112,7 @@ Rectangle {
     Flickable {
         id: flick
         anchors { left: parent.left; right: parent.right; top: parent.top; bottom: parent.bottom
-                  leftMargin: 14; rightMargin: 50; topMargin: 12 + ((root.attaching || root.replying) ? 24 : 0); bottomMargin: 12 }
+                  leftMargin: 14; rightMargin: 50; topMargin: 12 + (((root.attaching && !Backend.threadOpen) || root.replying) ? 24 : 0); bottomMargin: 12 }
         contentHeight: input.implicitHeight; clip: true
         // keep the cursor in view once the text grows past the visible cap
         function ensureVisible(r) {

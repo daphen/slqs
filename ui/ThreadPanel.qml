@@ -161,7 +161,31 @@ Rectangle {
         // Grow with the text, capped at 180px (then the Flickable scrolls). +36 is box
         // chrome; bcastH reserves the "Also send to channel" toggle row above the box.
         readonly property real bcastH: panel.editingTs === "" ? 24 : 0
-        height: bcastH + Math.min(180, replyInput.implicitHeight + 36)
+        // Reserve a row for the staged-attachment chip so an upload in a thread
+        // shows HERE (where it sends), not over the channel composer.
+        readonly property real attachH: Backend.attachState !== "none" ? 22 : 0
+        height: bcastH + attachH + Math.min(180, replyInput.implicitHeight + 36)
+
+        Row {
+            id: thAttachChip
+            visible: Backend.attachState !== "none"
+            anchors.top: parent.top; anchors.left: parent.left
+            anchors.leftMargin: 14; anchors.topMargin: 8 + thFooter.bcastH
+            spacing: 6
+            Text { renderType: Text.NativeRendering; text: "📎"; anchors.verticalCenter: parent.verticalCenter
+                   font.family: Theme.fontFamily; font.pixelSize: 13 }
+            Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
+                   text: Backend.attachState === "uploading" ? ("uploading " + (Backend.attachName || "file") + "…") : (Backend.attachName || "file")
+                   color: Backend.attachState === "uploading" ? Theme.fg_muted : Theme.fg
+                   font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
+            Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
+                   text: Backend.attachState === "ready" ? "✓" : ""; color: Theme.green
+                   font.family: Theme.fontFamily; font.pixelSize: 13 }
+            Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
+                   text: "  ✕"; color: Theme.fg_muted
+                   font.family: Theme.fontFamily; font.pixelSize: 13
+                   TapHandler { onTapped: Backend.dropAttach() } }
+        }
         // Slack thread-broadcast. Click to toggle; Ctrl+Enter on send does it one-off.
         // Hidden while editing an existing reply.
         Row {
@@ -183,7 +207,7 @@ Rectangle {
         }
         Rectangle {
             id: replyBox
-            anchors.fill: parent; anchors.margins: 10; anchors.topMargin: 10 + thFooter.bcastH; radius: Theme.radius
+            anchors.fill: parent; anchors.margins: 10; anchors.topMargin: 10 + thFooter.bcastH + thFooter.attachH; radius: Theme.radius
             // insert mode = ink-tint fill + strong ring, same as the channel composer
             readonly property bool focused: replyInput.focus
             readonly property color inkFg: Theme.fg
