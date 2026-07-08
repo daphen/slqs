@@ -84,13 +84,17 @@ FloatingWindow {
     }
     function backToNormal() { appRoot.forceActiveFocus() }
 
+    // Thread the pending upload belongs to, captured at trigger time (the async
+    // picker returns later, and focus may have moved). "" = the channel.
+    property string _uploadThread: ""
+
     // File attach ('u'): pop a floating yazi in chooser mode, then stage the
     // picked file for upload (goes out with the next message, like a paste).
-    function openUpload() { filePicker.running = true }
+    function openUpload() { _uploadThread = Backend.threadOpen ? Backend.threadParentTs : ""; filePicker.running = true }
 
     // 'U': upload the file at the path currently on the clipboard (e.g. the
     // recording path record-toggle copies on stop). No picker.
-    function uploadClipboardPath() { clipPathReader.running = true }
+    function uploadClipboardPath() { _uploadThread = Backend.threadOpen ? Backend.threadParentTs : ""; clipPathReader.running = true }
     Process {
         id: clipPathReader
         command: ["sh", "-c", "wl-paste --no-newline 2>/dev/null"]
@@ -100,7 +104,7 @@ FloatingWindow {
                 let p = (this.text || "").split("\n")[0].trim()
                 if (p.startsWith("file://")) p = decodeURIComponent(p.slice(7))
                 if (p.startsWith("~/")) p = Quickshell.env("HOME") + p.slice(1)
-                if (p.startsWith("/")) Backend.uploadFile(p)
+                if (p.startsWith("/")) Backend.uploadFile(p, win._uploadThread)
                 else Backend.toast("Clipboard has no file path")
             }
         }
@@ -113,7 +117,7 @@ FloatingWindow {
             onStreamFinished: {
                 filePicker.running = false
                 const p = (this.text || "").split("\n")[0].trim()
-                if (p.length > 0) Backend.uploadFile(p)
+                if (p.length > 0) Backend.uploadFile(p, win._uploadThread)
             }
         }
     }
@@ -228,6 +232,8 @@ FloatingWindow {
             "ctrl+k": { act: () => palette.show(), help: "Jump palette", cat: "chats" },
             "ctrl+i": { act: () => Backend.gotoFirstUnread(), help: "Go to first unread", cat: "chats" },
             "ctrl+s": { act: () => workspacePicker.show(), help: "Switch workspace", cat: "chats" },
+            "u":      { act: () => win.openUpload(), help: "Attach a file", cat: "chats" },
+            "U":      { act: () => win.uploadClipboardPath(), help: "Upload file path from clipboard", cat: "chats" },
             "ctrl+h": { act: () => closeThreadAction(), help: "Back to channel", cat: "nav" },
             // thread-specific (feeds the THREADS section of the cheat sheet)
             "i":      { act: () => thread.focusReply(), help: "Reply in thread", cat: "thread" },

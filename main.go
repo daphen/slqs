@@ -319,9 +319,10 @@ type daemon struct {
 	appActive   bool           // client window focused
 	pendingOpen map[string]any // notification target to open on next client connect
 
-	attachMu      sync.Mutex
-	pendingAttach map[string]string        // channel id -> staged file id, posted with next send
-	uploading     map[string]chan struct{} // channel id -> closed when an in-flight upload finishes
+	attachMu            sync.Mutex
+	pendingAttach       map[string]string        // channel id -> staged file id, posted with next send
+	pendingAttachThread map[string]string        // channel id -> thread ts the staged file belongs to ("" = channel)
+	uploading           map[string]chan struct{} // channel id -> closed when an in-flight upload finishes
 
 	avMu    sync.RWMutex
 	avatars map[string]string // userID -> file:// path
@@ -1220,11 +1221,19 @@ func (d *daemon) readConn(c net.Conn) {
 				// A staged image (from a prior paste) posts with this message.
 				d.attachMu.Lock()
 				fileID := d.pendingAttach[id]
+				attThread := d.pendingAttachThread[id]
 				delete(d.pendingAttach, id)
+				delete(d.pendingAttachThread, id)
 				d.attachMu.Unlock()
 				var err error
 				if fileID != "" {
-					err = w.client.CompleteUpload(d.ctx, id, cmd.Thread, fileID, cmd.Text)
+					// The attachment carries the thread it was staged in, so it
+					// lands there no matter which composer triggered the send.
+					t := cmd.Thread
+					if attThread != "" {
+						t = attThread
+					}
+					err = w.client.CompleteUpload(d.ctx, id, t, fileID, cmd.Text)
 				} else if cmd.Thread != "" {
 					_, _, err = w.client.SendReply(d.ctx, id, cmd.Thread, cmd.Text, cmd.Broadcast)
 				} else {
@@ -1311,6 +1320,7 @@ func (d *daemon) readConn(c net.Conn) {
 			// a "send" read next always observes it and waits for the staged image —
 			// otherwise a quick paste+send races and the image posts with the
 			// following message instead of this one.
+			thread := cmd.Thread
 			done := make(chan struct{})
 			d.attachMu.Lock()
 			d.uploading[id] = done
@@ -1354,6 +1364,7 @@ func (d *daemon) readConn(c net.Conn) {
 				}
 				d.attachMu.Lock()
 				d.pendingAttach[id] = fileID
+				d.pendingAttachThread[id] = thread
 				d.attachMu.Unlock()
 				d.broadcast(map[string]any{"type": "attachReady", "channel": id, "name": name, "ok": true})
 			}(w)
@@ -1363,6 +1374,7 @@ func (d *daemon) readConn(c net.Conn) {
 			// name; the next "send" posts it. Register the in-flight upload
 			// synchronously so a quick send waits for it.
 			path := cmd.Path
+			thread := cmd.Thread
 			done := make(chan struct{})
 			d.attachMu.Lock()
 			d.uploading[id] = done
@@ -1395,12 +1407,14 @@ func (d *daemon) readConn(c net.Conn) {
 				}
 				d.attachMu.Lock()
 				d.pendingAttach[id] = fileID
+				d.pendingAttachThread[id] = thread
 				d.attachMu.Unlock()
 				d.broadcast(map[string]any{"type": "attachReady", "channel": id, "name": name, "ok": true})
 			}(w)
 		case "dropAttach":
 			d.attachMu.Lock()
 			delete(d.pendingAttach, id)
+			delete(d.pendingAttachThread, id)
 			d.attachMu.Unlock()
 		case "recent":
 			d.focusMu.Lock()
@@ -1960,7 +1974,8 @@ func main() {
 		wss:           map[string]*workspace{},
 		idIndex:       map[string]*workspace{},
 		avatars:       map[string]string{},
-		pendingAttach: map[string]string{},
+		pendingAttach:       map[string]string{},
+		pendingAttachThread: map[string]string{},
 		uploading:     map[string]chan struct{}{},
 		lastBackfill:  map[string]time.Time{},
 		conns:         map[net.Conn]struct{}{},
