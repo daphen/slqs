@@ -50,22 +50,22 @@ Rectangle {
     Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.hairline }
 
 
-    Column {
-        anchors.fill: parent
-        anchors.margins: 10
-        spacing: 10
-
-        // Workspace switcher. Slack: tabs across the top. Discord (rail hidden):
-        // a single current-workspace header that opens the Ctrl+S picker. Hidden
-        // entirely when the vertical rail is shown.
-        Item {
-            readonly property bool railShown: Backend.useRail && !Backend.railHidden
-            visible: !railShown
-            width: parent.width; height: railShown ? 0 : 34
-            // Slack: workspace tabs
-            Row {
-                visible: !Backend.useRail
-                anchors.verticalCenter: parent.verticalCenter; spacing: 4
+    // Workspace switcher. Slack: tabs across the top. Discord (rail hidden):
+    // a single current-workspace header that opens the Ctrl+S picker. Hidden
+    // entirely when the vertical rail is shown. Same 52px band as the chat
+    // header so the divider runs continuously across both panels.
+    Item {
+        id: wsHeader
+        readonly property bool railShown: Backend.useRail && !Backend.railHidden
+        visible: !railShown
+        anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
+        height: railShown ? 0 : 52
+        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.hairline }
+        // Slack: workspace tabs
+        Row {
+            visible: !Backend.useRail
+            anchors.left: parent.left; anchors.leftMargin: 10
+            anchors.verticalCenter: parent.verticalCenter; spacing: 4
                 Repeater {
                     model: Backend.workspaces
                     delegate: Rectangle {
@@ -95,6 +95,8 @@ Rectangle {
             Rectangle {
                 visible: Backend.useRail && Backend.railHidden
                 anchors.fill: parent; radius: 6
+                anchors.leftMargin: 10; anchors.rightMargin: 10
+                anchors.topMargin: 9; anchors.bottomMargin: 9
                 color: wsHdrHov.hovered ? Theme.hover : "transparent"
                 Row {
                     anchors.left: parent.left; anchors.leftMargin: 4
@@ -113,7 +115,13 @@ Rectangle {
                 HoverHandler { id: wsHdrHov }
                 TapHandler { onTapped: sidebar.workspacePickerRequested() }
             }
-        }
+    }
+
+    Column {
+        anchors.fill: parent
+        anchors.topMargin: (wsHeader.visible ? wsHeader.height : 0) + 10
+        anchors.leftMargin: 10; anchors.rightMargin: 10; anchors.bottomMargin: 10
+        spacing: 10
 
         // Pinned "Threads" entry — opens the threads list (Ctrl+K palette).
         // Hidden when the backend has no threads (Discord).
