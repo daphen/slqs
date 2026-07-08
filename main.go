@@ -1233,7 +1233,14 @@ func (d *daemon) readConn(c net.Conn) {
 					if attThread != "" {
 						t = attThread
 					}
-					err = w.client.CompleteUpload(d.ctx, id, t, fileID, cmd.Text, cmd.Broadcast)
+					var permalink string
+					permalink, err = w.client.CompleteUpload(d.ctx, id, t, fileID, cmd.Text)
+					// Slack's file API can't broadcast a threaded upload to the
+					// channel, so post the permalink as a broadcast reply — the
+					// channel then shows the unfurled file.
+					if err == nil && cmd.Broadcast && t != "" && permalink != "" {
+						_, _, err = w.client.SendReply(d.ctx, id, t, permalink, true)
+					}
 				} else if cmd.Thread != "" {
 					_, _, err = w.client.SendReply(d.ctx, id, cmd.Thread, cmd.Text, cmd.Broadcast)
 				} else {
