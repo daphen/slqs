@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import "."
+import QsLib
 
 // Pick a person (slqs only): mode "dm" starts/opens a 1:1 with anyone in the
 // workspace (even someone you've never messaged); mode "invite" adds them to the

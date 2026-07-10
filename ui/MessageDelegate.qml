@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell.Widgets
 import "."
+import QsLib
 
 Item {
     id: del

@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import "."
+import QsLib
 
 // Right-hand thread panel: parent message + replies, with a reply composer.
 // Opened by Enter on a message; closed with q (handled in shell's key router).

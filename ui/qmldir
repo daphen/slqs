@@ -1,4 +1,3 @@
-singleton Theme Theme.qml
 singleton Backend Backend.qml
 Sidebar Sidebar.qml
 RailBar RailBar.qml

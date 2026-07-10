@@ -1,5 +1,6 @@
 import QtQuick
 import "."
+import QsLib
 
 // Browse & join public channels (`b`). Requests the full list from slqs, filter
 // by typing; Enter joins a channel (or just opens it if already a member).

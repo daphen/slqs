@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import Quickshell.Widgets
 import "."
+import QsLib
 
 // Ctrl+K command palette: centered overlay. Empty query shows recent threads
 // and DMs at the top; typing fuzzy-searches every channel/DM. Enter jumps.

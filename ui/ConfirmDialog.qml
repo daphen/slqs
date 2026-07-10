@@ -1,5 +1,6 @@
 import QtQuick
 import "."
+import QsLib
 
 // Small modal confirmation. ask(preview) shows it; Enter/y confirms, Esc/n
 // cancels. Grabs key focus so the main router doesn't see the keys.

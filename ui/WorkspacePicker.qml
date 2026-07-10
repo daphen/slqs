@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell.Widgets
 import "."
+import QsLib
 
 // Jump between workspaces/servers (Ctrl+S). Replaces the always-on Discord rail:
 // filter by typing, Enter/click switches. Lists Backend.workspaces (DMs + guilds

@@ -3,38 +3,23 @@ import QtQuick.Window
 import Quickshell
 import Quickshell.Io
 import "."
+import QsLib
+import QsLib as Lib
 
 FloatingWindow {
     id: win
     implicitWidth: 1180
     implicitHeight: 760
 
-    // Keycap chip + muted label — same styling as the desktop picker footer.
-    component StatusCap: Rectangle {
-        property alias text: capText.text
-        width: Math.max(capText.implicitWidth + 12, 22)
-        height: 22
-        radius: 7
+    // Keycap chip + muted label — canonical QsLib family components,
+    // re-derived locally only to bake in the row anchoring.
+    component StatusCap: Lib.KeyCap {
         anchors.verticalCenter: parent.verticalCenter
-        // raised caps on the surface0 band, matching the desktop picker chin
-        color: Theme.mode === "light" ? Theme.bg : Theme.surface2
-        border.width: 1
-        border.color: Theme.hairline
-        Text { renderType: Text.NativeRendering
-            id: capText; anchors.centerIn: parent
-            color: Qt.tint(Theme.fg_muted, Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.55))
-            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
-            font.pixelSize: 11; font.weight: 500
-        }
     }
-    component CapLabel: Text {
-        renderType: Text.NativeRendering
+    component CapLabel: Lib.CapLabel {
         anchors.verticalCenter: parent.verticalCenter
-        // action ink, not passive muted — picker chin rule
-        color: Qt.tint(Theme.fg_muted, Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.55))
-        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
-        font.pixelSize: 11
     }
+
     // Distinct per-backend title so niri-jump-or-exec can tell the Slack and
     // Discord instances apart (both share the org.quickshell app-id).
     title: (Quickshell.env("SLK_SOCK") === "dsqrd") ? "discord-client" : "slk-client"

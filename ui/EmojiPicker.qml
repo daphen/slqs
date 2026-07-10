@@ -1,5 +1,6 @@
 import QtQuick
 import "."
+import QsLib
 
 // Emoji picker overlay. Opened to react to a message (`r`). Type to filter;
 // j/k or ↑/↓ to move; Enter/Tab/click to pick. Custom (workspace) emoji render

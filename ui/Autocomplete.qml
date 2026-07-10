@@ -1,5 +1,6 @@
 import QtQuick
 import "."
+import QsLib
 
 // Inline ':' emoji + '@' mention autocomplete for a TextArea. Place it filling
 // the input's container (the popup floats just above that container) and set

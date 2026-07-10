@@ -1,5 +1,6 @@
 import QtQuick
 import "."
+import QsLib
 
 // Normal-mode `?` cheat sheet. Built live from shell.qml's `keymaps` so it can
 // never drift from the real bindings. App-aware via Backend: slqs shows the

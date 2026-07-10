@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import Quickshell.Widgets
 import "."
+import QsLib
 
 Rectangle {
     id: sidebar

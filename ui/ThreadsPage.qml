@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Controls
 import Quickshell.Widgets
 import "."
+import QsLib
 
 // Full-pane "Threads" view: a scannable list of every followed thread with
 // its channel, author, preview, reply count, unread and last activity.

@@ -2,6 +2,7 @@ pragma Singleton
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import QsLib
 
 // ─────────────────────────────────────────────────────────────────────────
 // Fully dynamic: all data comes live from slkd over the Unix socket. slkd reads

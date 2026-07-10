@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import "."
+import QsLib
 
 Rectangle {
     id: root
@@ -94,8 +95,8 @@ Rectangle {
         anchors.leftMargin: root.replying ? 16 : 14
         anchors.top: parent.top; anchors.topMargin: 8
         spacing: 6
-        Text { renderType: Text.NativeRendering; text: "📎"; anchors.verticalCenter: parent.verticalCenter
-               font.family: Theme.fontFamily; font.pixelSize: 13 }
+        Icon { name: "paperclip"; width: 13; height: 13; color: Theme.fg_secondary
+               anchors.verticalCenter: parent.verticalCenter }
         Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
                text: Backend.attachState === "uploading" ? ("uploading " + (Backend.attachName || "file") + "…") : (Backend.attachName || "file")
                color: Backend.attachState === "uploading" ? root.inkMuted : root.inkFg
@@ -189,9 +190,8 @@ Rectangle {
         readonly property bool on: input.text.trim().length > 0
         color: on ? Theme.cursor : Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.06)
         Behavior on color { ColorAnimation { duration: 120 } }
-        Text { renderType: Text.NativeRendering; anchors.centerIn: parent; text: "➤"
-               color: parent.on ? Theme.ink : root.inkMuted
-               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15 }
+        Icon { name: "paper-plane-2"; width: 15; height: 15; anchors.centerIn: parent
+               color: parent.on ? Theme.ink : root.inkMuted }
         TapHandler { onTapped: root.send() }
     }
 }

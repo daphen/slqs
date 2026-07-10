@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell.Widgets
 import "."
+import QsLib
 
 // Vertical workspace rail (Discord-style). One rounded tile per workspace,
 // initials as the glyph; the active one is filled with an accent pill on the
