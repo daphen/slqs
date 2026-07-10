@@ -12,7 +12,7 @@
         pname = "slqs";
         version = "0.1.0";
         src = ./.;
-        vendorHash = "sha256-gJpFPtWUWzDbmG6OgkRSfhKmhCgCNBklf7ZwgOCUAQs=";
+        vendorHash = "sha256-cZCfXEtwhyz0XDC74AJ0CnPZ1Y/QURomgPqbipxHuVk=";
         subPackages = [ "." ];
         # Bake the build's commit so the running daemon can detect newer builds.
         # Empty on a dirty/dev tree (self.rev absent) → update check stays off.
