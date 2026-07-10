@@ -39,6 +39,7 @@ import (
 	"slqs/internal/emoji"
 	"slqs/internal/notify"
 	slackclient "slqs/internal/slack"
+	"slqs/internal/slackhttp"
 )
 
 var palette = []string{"#FF570D", "#97B5A6", "#7DD3FC", "#8A92A7", "#ff8a31", "#CCD5E4", "#FF7B72", "#8A9AA6"}
