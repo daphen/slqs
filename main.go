@@ -45,7 +45,7 @@ var palette = []string{"#FF570D", "#97B5A6", "#7DD3FC", "#8A92A7", "#ff8a31", "#
 
 // fileHTTP downloads thumbnails/avatars; a timeout keeps one stalled file from
 // holding a concurrency slot (sendRecent fetches images in parallel).
-var fileHTTP = &http.Client{Timeout: 20 * time.Second}
+var fileHTTP = &http.Client{Timeout: 20 * time.Second, Transport: slackhttp.HardenedTransport()}
 
 // gitRev is the build's git commit, injected via -ldflags "-X main.gitRev=...".
 // Empty on a plain `go build` (dev), which disables the update check.

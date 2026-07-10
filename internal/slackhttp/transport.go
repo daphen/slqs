@@ -10,6 +10,9 @@
 package slackhttp
 
 import (
+	"net"
+	"time"
+	"golang.org/x/net/http2"
 	"net/http"
 	"runtime"
 	"strings"
@@ -58,7 +61,7 @@ func (t *BrowserTransport) RoundTrip(req *http.Request) (*http.Response, error) 
 // Slack traffic.
 func NewBrowserHTTPClient(jar http.CookieJar) *http.Client {
 	return &http.Client{
-		Transport: &BrowserTransport{Inner: http.DefaultTransport},
+		Transport: &BrowserTransport{Inner: HardenedTransport()},
 		Jar:       jar,
 	}
 }
@@ -115,4 +118,28 @@ func setIfMissing(h http.Header, key, value string) {
 	if h.Get(key) == "" {
 		h.Set(key, value)
 	}
+}
+
+// HardenedTransport survives network changes: dialer keepalives + HTTP/2
+// read-idle pings detect dead pooled connections in seconds and re-dial,
+// instead of every request wedging until its context deadline (the classic
+// post-suspend black-hole pool).
+func HardenedTransport() *http.Transport {
+	t := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   10 * time.Second,
+			KeepAlive: 15 * time.Second,
+		}).DialContext,
+		ForceAttemptHTTP2:     true,
+		MaxIdleConns:          20,
+		IdleConnTimeout:       60 * time.Second,
+		TLSHandshakeTimeout:   10 * time.Second,
+		ResponseHeaderTimeout: 30 * time.Second,
+	}
+	if h2, err := http2.ConfigureTransports(t); err == nil {
+		h2.ReadIdleTimeout = 15 * time.Second
+		h2.PingTimeout = 10 * time.Second
+	}
+	return t
 }

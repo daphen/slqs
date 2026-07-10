@@ -1,6 +1,7 @@
 package image
 
 import (
+	"slqs/internal/slackhttp"
 	"context"
 	"fmt"
 	"image"
@@ -136,7 +137,7 @@ const (
 // 10-second timeout is used. Auth is empty until SetAuths is called.
 func NewFetcher(cache *Cache, client *http.Client) *Fetcher {
 	if client == nil {
-		client = &http.Client{Timeout: 10 * time.Second}
+		client = &http.Client{Timeout: 10 * time.Second, Transport: slackhttp.HardenedTransport()}
 	}
 	return &Fetcher{
 		cache:       cache,
