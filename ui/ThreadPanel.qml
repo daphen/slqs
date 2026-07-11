@@ -141,9 +141,9 @@ Rectangle {
         WheelHandler {
             acceptedDevices: PointerDevice.TouchPad
             onWheel: e => {
-                // touchpads report fine-grained deltas: pass pixelDeltas near-raw,
-                // scale angleDeltas well past the mouse math (they arrive tiny)
-                const px = e.pixelDelta.y !== 0 ? e.pixelDelta.y * 2 : e.angleDelta.y * 1.25
+                // junk-scaled pixelDeltas on this hardware; angleDelta is the
+                // real magnitude — measured gain, feels 1:1+
+                const px = e.angleDelta.y * 1.2
                 tlist.contentY = tlist.contentY - px
                 tlist.returnToBounds()
                 tlist.pinEnd = tlist.atYEnd
