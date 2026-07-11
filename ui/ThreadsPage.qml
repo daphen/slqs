@@ -49,7 +49,7 @@ Item {
         id: threadsCard
         anchors { top: head.bottom; left: parent.left; right: parent.right; bottom: parent.bottom
                   topMargin: 6; leftMargin: 4; rightMargin: 12; bottomMargin: 12 }
-        radius: Theme.radius + 8
+        radius: 24
         color: Theme.bg
     }
 

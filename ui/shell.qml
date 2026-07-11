@@ -357,8 +357,8 @@ FloatingWindow {
                         id: chatCard
                         anchors { top: header.bottom; left: parent.left; right: parent.right; bottom: parent.bottom
                                   topMargin: 6; leftMargin: 4; rightMargin: 12; bottomMargin: 12 }
-                        // concentric with the composer: its radius + its 8px inset
-                        radius: Theme.radius + 8
+                        // picker grammar: container 24, nested inset 14, inner = outer − inset
+                        radius: 24
                         color: Theme.bg
                     }
 
@@ -379,7 +379,7 @@ FloatingWindow {
                         id: footer
                         anchors.left: chatCard.left; anchors.right: chatCard.right
                         anchors.bottom: chatCard.bottom
-                        height: composer.height + typingRow.height + 8
+                        height: composer.height + typingRow.height + 16
 
                         Item {
                             id: typingRow
@@ -400,7 +400,7 @@ FloatingWindow {
                             id: composer
                             anchors.top: typingRow.bottom; anchors.topMargin: 2
                             anchors.left: parent.left; anchors.right: parent.right
-                            anchors.leftMargin: 8; anchors.rightMargin: 8
+                            anchors.leftMargin: 14; anchors.rightMargin: 14
                             onExitInsert: win.backToNormal()
                             onOpenPalette: palette.show()
                             onPageScroll: (d) => win.halfPage(d)

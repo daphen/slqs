@@ -8,14 +8,14 @@ import QsLib
 Rectangle {
     id: panel
     color: Theme.bg
-    radius: Theme.radius + 8   // concentric with its inset reply box
+    radius: 24   // picker-grammar card
 
     // Hairpin outline drawn ABOVE the content — rows and the reply footer
     // fill flush to the edge and would paint over a root border.
     Rectangle {
         anchors.fill: parent; z: 999
         color: "transparent"
-        radius: Theme.radius + 8
+        radius: 24
         border.width: 1
         border.color: Theme.hairlineSoft
     }
