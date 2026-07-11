@@ -46,7 +46,7 @@ ListView {
 
     property real scrollGain: 5.0
     WheelHandler {
-        acceptedDevices: PointerDevice.TouchPad | PointerDevice.Mouse
+        acceptedDevices: PointerDevice.Mouse
         onWheel: e => {
             list.pinBottom = false   // user took over; stop auto-pinning to bottom
             const px = (e.pixelDelta.y !== 0) ? e.pixelDelta.y : e.angleDelta.y / 8
@@ -59,6 +59,20 @@ ListView {
             list.stick = list.atYEnd
             if (list.contentY < prevY - 0.5) list.maybeLoadOlder()   // load older only while scrolling up
             e.accepted = true
+        }
+    }
+    // Touchpad scrolls through the Flickable natively (kinetic inertia) —
+    // this handler only mirrors the side effects and lets the event pass.
+    WheelHandler {
+        acceptedDevices: PointerDevice.TouchPad
+        onWheel: e => {
+            list.pinBottom = false
+            const up = (e.pixelDelta.y !== 0 ? e.pixelDelta.y : e.angleDelta.y) > 0
+            Qt.callLater(() => {
+                list.stick = list.atYEnd
+                if (up) list.maybeLoadOlder()
+            })
+            e.accepted = false
         }
     }
 

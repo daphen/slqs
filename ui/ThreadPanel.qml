@@ -129,7 +129,7 @@ Rectangle {
         onHeightChanged: if (pinEnd && !justOpened) Qt.callLater(toEnd)
 
         WheelHandler {
-            acceptedDevices: PointerDevice.TouchPad | PointerDevice.Mouse
+            acceptedDevices: PointerDevice.Mouse
             onWheel: e => {
                 const px = (e.pixelDelta.y !== 0) ? e.pixelDelta.y : e.angleDelta.y / 8
                 tlist.contentY = tlist.contentY - px * 5
@@ -137,6 +137,11 @@ Rectangle {
                 tlist.pinEnd = tlist.atYEnd
                 e.accepted = true
             }
+        }
+        // touchpad scrolls natively — observe only, to keep pinEnd honest
+        WheelHandler {
+            acceptedDevices: PointerDevice.TouchPad
+            onWheel: e => { Qt.callLater(() => tlist.pinEnd = tlist.atYEnd); e.accepted = false }
         }
         ScrollBar.vertical: ScrollBar { width: 8; policy: ScrollBar.AsNeeded }
     }

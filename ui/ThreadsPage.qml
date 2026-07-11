@@ -65,7 +65,7 @@ Item {
         cacheBuffer: 2000; reuseItems: true
 
         WheelHandler {
-            acceptedDevices: PointerDevice.TouchPad | PointerDevice.Mouse
+            acceptedDevices: PointerDevice.Mouse
             onWheel: e => {
                 const px = (e.pixelDelta.y !== 0) ? e.pixelDelta.y : e.angleDelta.y / 8
                 const maxY = Math.max(0, list.contentHeight - list.height)

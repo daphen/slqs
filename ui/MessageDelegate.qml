@@ -63,7 +63,7 @@ Item {
 
     Rectangle {
         anchors { top: parent.top; topMargin: del._dayPad; left: parent.left; right: parent.right; bottom: parent.bottom }
-        anchors.leftMargin: 6; anchors.rightMargin: 6
+        anchors.leftMargin: 14; anchors.rightMargin: 14
         radius: Theme.radiusSm
         // No color/opacity animation here: the cursor must snap instantly so fast
         // j/k navigation doesn't catch rows mid-fade (reads as blinking).
@@ -155,7 +155,7 @@ Item {
     // gutter: avatar (first in group) or hover-timestamp (continuation)
     Item {
         id: gutter
-        x: 26; width: 40
+        x: 34; width: 40
         anchors.top: parent.top; anchors.topMargin: (del.grouped ? 3 : 9) + del._dayPad
         height: 40
         // Text OUTSIDE the clip: ClippingRectangle rasterizes children at
