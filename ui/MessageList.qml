@@ -61,18 +61,19 @@ ListView {
             e.accepted = true
         }
     }
-    // Touchpad scrolls through the Flickable natively (kinetic inertia) —
-    // this handler only mirrors the side effects and lets the event pass.
     WheelHandler {
         acceptedDevices: PointerDevice.TouchPad
         onWheel: e => {
             list.pinBottom = false
-            const up = (e.pixelDelta.y !== 0 ? e.pixelDelta.y : e.angleDelta.y) > 0
-            Qt.callLater(() => {
-                list.stick = list.atYEnd
-                if (up) list.maybeLoadOlder()
-            })
-            e.accepted = false
+            // touchpads report fine-grained deltas: pass pixelDeltas near-raw,
+            // scale angleDeltas well past the mouse math (they arrive tiny)
+            const px = e.pixelDelta.y !== 0 ? e.pixelDelta.y * 2 : e.angleDelta.y * 1.25
+            const prevY = list.contentY
+            list.contentY = list.contentY - px
+            list.returnToBounds()
+            list.stick = list.atYEnd
+            if (list.contentY < prevY - 0.5) list.maybeLoadOlder()
+            e.accepted = true
         }
     }
 

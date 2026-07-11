@@ -73,6 +73,17 @@ Item {
                 e.accepted = true
             }
         }
+        WheelHandler {
+            acceptedDevices: PointerDevice.TouchPad
+            onWheel: e => {
+                // touchpads report fine-grained deltas: pass pixelDeltas near-raw,
+                // scale angleDeltas well past the mouse math (they arrive tiny)
+                const px = e.pixelDelta.y !== 0 ? e.pixelDelta.y * 2 : e.angleDelta.y * 1.25
+                const maxY = Math.max(0, list.contentHeight - list.height)
+                list.contentY = Math.max(0, Math.min(maxY, list.contentY - px))
+                e.accepted = true
+            }
+        }
 
         delegate: Item {
             id: row

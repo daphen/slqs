@@ -138,10 +138,17 @@ Rectangle {
                 e.accepted = true
             }
         }
-        // touchpad scrolls natively — observe only, to keep pinEnd honest
         WheelHandler {
             acceptedDevices: PointerDevice.TouchPad
-            onWheel: e => { Qt.callLater(() => tlist.pinEnd = tlist.atYEnd); e.accepted = false }
+            onWheel: e => {
+                // touchpads report fine-grained deltas: pass pixelDeltas near-raw,
+                // scale angleDeltas well past the mouse math (they arrive tiny)
+                const px = e.pixelDelta.y !== 0 ? e.pixelDelta.y * 2 : e.angleDelta.y * 1.25
+                tlist.contentY = tlist.contentY - px
+                tlist.returnToBounds()
+                tlist.pinEnd = tlist.atYEnd
+                e.accepted = true
+            }
         }
         ScrollBar.vertical: ScrollBar { width: 8; policy: ScrollBar.AsNeeded }
     }
