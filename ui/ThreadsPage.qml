@@ -13,7 +13,7 @@ Item {
     property bool active: false
     property alias currentIndex: list.currentIndex
 
-    Rectangle { anchors.fill: parent; color: Theme.bg }   // opaque (covers channel view)
+    Rectangle { anchors.fill: parent; color: Theme.bg_alt }   // opaque (covers channel view)
 
     function move(d) {
         list.currentIndex = Math.max(0, Math.min(list.count - 1, list.currentIndex + d))
@@ -29,8 +29,7 @@ Item {
 
     Rectangle {
         id: head
-        width: parent.width; height: 52; color: Theme.bg
-        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.hairline }
+        width: parent.width; height: 52; color: "transparent"
         Row {
             anchors.left: parent.left; anchors.leftMargin: 18
             anchors.verticalCenter: parent.verticalCenter; spacing: 9
@@ -46,10 +45,18 @@ Item {
         }
     }
 
+    Rectangle {
+        id: threadsCard
+        anchors { top: head.bottom; left: parent.left; right: parent.right; bottom: parent.bottom
+                  topMargin: 6; leftMargin: 4; rightMargin: 12; bottomMargin: 12 }
+        radius: Theme.radius + 8
+        color: Theme.bg
+    }
+
     ListView {
         id: list
-        anchors.top: head.bottom; anchors.bottom: parent.bottom
-        width: parent.width; clip: true
+        anchors.fill: threadsCard
+        clip: true
         topMargin: 8; bottomMargin: 10; spacing: 8
         model: Backend.currentSubThreads
         currentIndex: 0

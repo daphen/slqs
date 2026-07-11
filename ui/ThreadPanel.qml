@@ -8,17 +8,16 @@ import QsLib
 Rectangle {
     id: panel
     color: Theme.bg
-    topLeftRadius: 10     // card edges over the channel (right side meets the window)
-    bottomLeftRadius: 10
+    radius: Theme.radius + 8   // concentric with its inset reply box
 
     // Hairpin outline drawn ABOVE the content — rows and the reply footer
     // fill flush to the edge and would paint over a root border.
     Rectangle {
         anchors.fill: parent; z: 999
         color: "transparent"
-        topLeftRadius: 10; bottomLeftRadius: 10
+        radius: Theme.radius + 8
         border.width: 1
-        border.color: Theme.hairline
+        border.color: Theme.hairlineSoft
     }
     signal exitReply()
     signal openPalette()   // Ctrl+K from the reply input → jump palette (drops to normal)
@@ -75,9 +74,9 @@ Rectangle {
 
     Rectangle {
         id: thHeader
-        anchors.top: parent.top; width: parent.width; height: 52; color: Theme.bg
+        anchors.top: parent.top; width: parent.width; height: 52; color: "transparent"
         topLeftRadius: 10   // follow the panel's rounded top-left corner
-        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.hairline }
+        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.hairlineSoft }
         Row {
             anchors.left: parent.left; anchors.leftMargin: 16
             anchors.verticalCenter: parent.verticalCenter; spacing: 8
@@ -157,7 +156,7 @@ Rectangle {
 
     Rectangle {
         id: thFooter
-        anchors.bottom: parent.bottom; width: parent.width; color: Theme.bg
+        anchors.bottom: parent.bottom; width: parent.width; color: "transparent"
         bottomLeftRadius: 10   // follow the panel's rounded bottom-left corner
         // Grow with the text, capped at 180px (then the Flickable scrolls). +36 is box
         // chrome; bcastH reserves the "Also send to channel" toggle row above the box.

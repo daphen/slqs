@@ -63,10 +63,16 @@ Item {
 
     Rectangle {
         anchors { top: parent.top; topMargin: del._dayPad; left: parent.left; right: parent.right; bottom: parent.bottom }
+        anchors.leftMargin: 6; anchors.rightMargin: 6
+        radius: Theme.radiusSm
         // No color/opacity animation here: the cursor must snap instantly so fast
         // j/k navigation doesn't catch rows mid-fade (reads as blinking).
         color: del.cursor ? Qt.rgba(Theme.selection.r, Theme.selection.g, Theme.selection.b, 0.6)
              : hov.hovered ? Qt.rgba(Theme.selection.r, Theme.selection.g, Theme.selection.b, 0.5) : "transparent"
+        // mail-index cursor grammar: strong fg-alpha hairpin so the cursor
+        // reads even where the selection tint sinks into the card
+        border.width: del.cursor ? 1 : 0
+        border.color: Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.35)
     }
 
     // Brief accent pulse when this row is jumped to via a permalink.

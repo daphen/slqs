@@ -287,7 +287,8 @@ FloatingWindow {
 
         Rectangle {
             anchors.fill: parent
-            color: Theme.bg
+            // reference layout: flat canvas, panes float as cards on it
+            color: Theme.bg_alt
 
             Row {
                 id: mainRow
@@ -317,8 +318,7 @@ FloatingWindow {
                     // focused-panel accent: full border (message pane, no thread open)
                     Rectangle {
                         id: header
-                        width: parent.width; height: 52; color: Theme.bg
-                        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.hairline }
+                        width: parent.width; height: 52; color: "transparent"
                         Row {
                             anchors.left: parent.left; anchors.leftMargin: 18
                             anchors.verticalCenter: parent.verticalCenter; spacing: 9
@@ -353,11 +353,21 @@ FloatingWindow {
                         }
                     }
 
+                    Rectangle {
+                        id: chatCard
+                        anchors { top: header.bottom; left: parent.left; right: parent.right; bottom: parent.bottom
+                                  topMargin: 6; leftMargin: 4; rightMargin: 12; bottomMargin: 12 }
+                        // concentric with the composer: its radius + its 8px inset
+                        radius: Theme.radius + 8
+                        color: Theme.bg
+                    }
+
                     MessageList {
                         id: msgs
-                        anchors.top: header.bottom; anchors.bottom: footer.top
+                        anchors.top: chatCard.top; anchors.topMargin: 6
+                        anchors.left: chatCard.left; anchors.right: chatCard.right
+                        anchors.bottom: footer.top
                         anchors.bottomMargin: 10
-                        width: parent.width
                         // Highlight stays in insert mode only when targeting a specific
                         // message (reply/edit); numbers show in normal mode only.
                         active: win.focusedPanel === "messages" && !Backend.threadOpen
@@ -367,9 +377,9 @@ FloatingWindow {
 
                     Item {
                         id: footer
-                        width: parent.width
-                        anchors.bottom: parent.bottom
-                        height: composer.height + typingRow.height + 16
+                        anchors.left: chatCard.left; anchors.right: chatCard.right
+                        anchors.bottom: chatCard.bottom
+                        height: composer.height + typingRow.height + 8
 
                         Item {
                             id: typingRow
@@ -390,7 +400,7 @@ FloatingWindow {
                             id: composer
                             anchors.top: typingRow.bottom; anchors.topMargin: 2
                             anchors.left: parent.left; anchors.right: parent.right
-                            anchors.leftMargin: 16; anchors.rightMargin: 16
+                            anchors.leftMargin: 8; anchors.rightMargin: 8
                             onExitInsert: win.backToNormal()
                             onOpenPalette: palette.show()
                             onPageScroll: (d) => win.halfPage(d)
@@ -447,6 +457,7 @@ FloatingWindow {
                         id: thread
                         visible: Backend.threadOpen
                         anchors.right: parent.right; anchors.top: parent.top; anchors.bottom: parent.bottom
+                        anchors.topMargin: 8; anchors.rightMargin: 12; anchors.bottomMargin: 12
                         width: Math.min(560, parent.width * 0.58)
                         z: 5
                         onExitReply: win.backToNormal()

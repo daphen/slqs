@@ -8,8 +8,7 @@ import QsLib
 // left edge. Click or Ctrl+H/L (handled in shell) to switch.
 Rectangle {
     id: rail
-    color: Theme.bg
-    Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.hairline }
+    color: "transparent"
 
     function glyphFor(ws) {
         if (ws.id === "@me") return String.fromCharCode(0xf086)   // nf-fa-comments (chat bubbles) for DMs

@@ -6,7 +6,8 @@ import QsLib
 
 Rectangle {
     id: sidebar
-    color: Theme.bg_alt
+    // sits directly on the window canvas — no own surface, no divider
+    color: "transparent"
     property bool active: true   // is this the focused panel?
     // freeze channel-list reordering while the user navigates here
     onActiveChanged: Backend.sidebarNavigating = active
@@ -48,9 +49,6 @@ Rectangle {
             if (Backend.channels.get(i).id === id) { list.currentIndex = i; break }
     }
 
-    Rectangle { anchors.right: parent.right; width: 1; height: parent.height; color: Theme.hairline }
-
-
     // Workspace switcher. Slack: tabs across the top. Discord (rail hidden):
     // a single current-workspace header that opens the Ctrl+S picker. Hidden
     // entirely when the vertical rail is shown. Same 52px band as the chat
@@ -61,7 +59,6 @@ Rectangle {
         visible: !railShown
         anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
         height: railShown ? 0 : 52
-        Rectangle { anchors.bottom: parent.bottom; width: parent.width; height: 1; color: Theme.hairline }
         // Slack: workspace tabs
         Row {
             visible: !Backend.useRail
@@ -196,7 +193,7 @@ Rectangle {
                     visible: !first
                     anchors.top: parent.top; anchors.topMargin: 10
                     width: parent.width; height: 1
-                    color: Theme.hairline
+                    color: Theme.hairlineSoft
                 }
                 Text { renderType: Text.NativeRendering
                     anchors.left: parent.left; anchors.leftMargin: 12
