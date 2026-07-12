@@ -45,12 +45,10 @@ Item {
         }
     }
 
-    Rectangle {
+    Card {
         id: threadsCard
         anchors { top: head.bottom; left: parent.left; right: parent.right; bottom: parent.bottom
                   topMargin: 6; leftMargin: 4; rightMargin: 12; bottomMargin: 12 }
-        radius: 24
-        color: Theme.bg
     }
 
     ListView {
@@ -64,24 +62,7 @@ Item {
         boundsBehavior: Flickable.StopAtBounds
         cacheBuffer: 2000; reuseItems: true
 
-        WheelHandler {
-            acceptedDevices: PointerDevice.Mouse
-            onWheel: e => {
-                const px = (e.pixelDelta.y !== 0) ? e.pixelDelta.y : e.angleDelta.y / 8
-                const maxY = Math.max(0, list.contentHeight - list.height)
-                list.contentY = Math.max(0, Math.min(maxY, list.contentY - px * 5))
-                e.accepted = true
-            }
-        }
-        WheelHandler {
-            acceptedDevices: PointerDevice.TouchPad
-            onWheel: e => {
-                const px = e.angleDelta.y * 1.2   // pixelDelta is junk-scaled on this hardware
-                const maxY = Math.max(0, list.contentHeight - list.height)
-                list.contentY = Math.max(0, Math.min(maxY, list.contentY - px))
-                e.accepted = true
-            }
-        }
+        ScrollFeel { flick: list }
 
         delegate: Item {
             id: row

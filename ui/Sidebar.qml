@@ -164,24 +164,7 @@ Rectangle {
             highlightFollowsCurrentItem: false   // wheel scroll must not snap to the cursor
             onCurrentIndexChanged: positionViewAtIndex(currentIndex, ListView.Contain)
 
-            WheelHandler {
-                acceptedDevices: PointerDevice.Mouse
-                onWheel: e => {
-                    const px = (e.pixelDelta.y !== 0) ? e.pixelDelta.y : e.angleDelta.y / 8
-                    const maxY = Math.max(0, list.contentHeight - list.height)
-                    list.contentY = Math.max(0, Math.min(maxY, list.contentY - px * 4.5))
-                    e.accepted = true
-                }
-            }
-            WheelHandler {
-                acceptedDevices: PointerDevice.TouchPad
-                onWheel: e => {
-                    const px = e.angleDelta.y * 1.2   // pixelDelta is junk-scaled on this hardware
-                    const maxY = Math.max(0, list.contentHeight - list.height)
-                    list.contentY = Math.max(0, Math.min(maxY, list.contentY - px))
-                    e.accepted = true
-                }
-            }
+            ScrollFeel { flick: list }
 
             section.property: "section"
             // Reference rhythm: a hairline above each group, a full row of

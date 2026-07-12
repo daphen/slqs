@@ -1,4 +1,5 @@
 import QtQuick
+import QsLib
 import QtQuick.Controls
 import QtQuick.Window
 import "."
@@ -44,36 +45,12 @@ ListView {
     // keep the newest message visible instead of letting it slide under.
     onHeightChanged: if (stick) Qt.callLater(pinBottomView)
 
-    property real scrollGain: 5.0
-    WheelHandler {
-        acceptedDevices: PointerDevice.Mouse
-        onWheel: e => {
-            list.pinBottom = false   // user took over; stop auto-pinning to bottom
-            const px = (e.pixelDelta.y !== 0) ? e.pixelDelta.y : e.angleDelta.y / 8
-            // Don't clamp to contentHeight (now an estimate under virtualization);
-            // move, then let returnToBounds() snap into the valid range as rows
-            // realize. Reliable without realizing the whole channel.
-            const prevY = list.contentY
-            list.contentY = list.contentY - px * list.scrollGain
-            list.returnToBounds()
+    ScrollFeel {
+        flick: list
+        onScrolled: up => {
+            list.pinBottom = false   // user took over; stop auto-pinning
             list.stick = list.atYEnd
-            if (list.contentY < prevY - 0.5) list.maybeLoadOlder()   // load older only while scrolling up
-            e.accepted = true
-        }
-    }
-    WheelHandler {
-        acceptedDevices: PointerDevice.TouchPad
-        onWheel: e => {
-            list.pinBottom = false
-            // junk-scaled pixelDeltas on this hardware; angleDelta is the
-            // real magnitude — measured gain, feels 1:1+
-            const px = e.angleDelta.y * 1.2
-            const prevY = list.contentY
-            list.contentY = list.contentY - px
-            list.returnToBounds()
-            list.stick = list.atYEnd
-            if (list.contentY < prevY - 0.5) list.maybeLoadOlder()
-            e.accepted = true
+            if (up) list.maybeLoadOlder()   // load older only while scrolling up
         }
     }
 

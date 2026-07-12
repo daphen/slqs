@@ -353,13 +353,10 @@ FloatingWindow {
                         }
                     }
 
-                    Rectangle {
+                    Lib.Card {
                         id: chatCard
                         anchors { top: header.bottom; left: parent.left; right: parent.right; bottom: parent.bottom
                                   topMargin: 6; leftMargin: 4; rightMargin: 12; bottomMargin: 12 }
-                        // picker grammar: container 24, nested inset 14, inner = outer − inset
-                        radius: 24
-                        color: Theme.bg
                     }
 
                     MessageList {
@@ -400,7 +397,7 @@ FloatingWindow {
                             id: composer
                             anchors.top: typingRow.bottom; anchors.topMargin: 2
                             anchors.left: parent.left; anchors.right: parent.right
-                            anchors.leftMargin: 14; anchors.rightMargin: 14
+                            anchors.leftMargin: Theme.insetCard; anchors.rightMargin: Theme.insetCard
                             onExitInsert: win.backToNormal()
                             onOpenPalette: palette.show()
                             onPageScroll: (d) => win.halfPage(d)

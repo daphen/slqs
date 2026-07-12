@@ -8,14 +8,14 @@ import QsLib
 Rectangle {
     id: panel
     color: Theme.bg
-    radius: 24   // picker-grammar card
+    radius: Theme.radiusCard   // floats as a card like the chat pane
 
     // Hairpin outline drawn ABOVE the content — rows and the reply footer
     // fill flush to the edge and would paint over a root border.
     Rectangle {
         anchors.fill: parent; z: 999
         color: "transparent"
-        radius: 24
+        radius: Theme.radiusCard
         border.width: 1
         border.color: Theme.hairlineSoft
     }
@@ -128,27 +128,9 @@ Rectangle {
         // re-pin so the latest message stays visible instead of sliding under it.
         onHeightChanged: if (pinEnd && !justOpened) Qt.callLater(toEnd)
 
-        WheelHandler {
-            acceptedDevices: PointerDevice.Mouse
-            onWheel: e => {
-                const px = (e.pixelDelta.y !== 0) ? e.pixelDelta.y : e.angleDelta.y / 8
-                tlist.contentY = tlist.contentY - px * 5
-                tlist.returnToBounds()
-                tlist.pinEnd = tlist.atYEnd
-                e.accepted = true
-            }
-        }
-        WheelHandler {
-            acceptedDevices: PointerDevice.TouchPad
-            onWheel: e => {
-                // junk-scaled pixelDeltas on this hardware; angleDelta is the
-                // real magnitude — measured gain, feels 1:1+
-                const px = e.angleDelta.y * 1.2
-                tlist.contentY = tlist.contentY - px
-                tlist.returnToBounds()
-                tlist.pinEnd = tlist.atYEnd
-                e.accepted = true
-            }
+        ScrollFeel {
+            flick: tlist
+            onScrolled: tlist.pinEnd = tlist.atYEnd
         }
         ScrollBar.vertical: ScrollBar { width: 8; policy: ScrollBar.AsNeeded }
     }
