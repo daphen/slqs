@@ -465,6 +465,14 @@ func (d *daemon) imagesJSON(w *workspace, channelID, ts string, files []slack.Fi
 			continue
 		}
 		if !strings.HasPrefix(f.Mimetype, "image/") {
+			// documents/archives/etc: no inline render — emit a file chip
+			// (name + permalink; the UI opens it in Slack via the browser)
+			out = append(out, map[string]any{
+				"path": "", "w": 0, "h": 0,
+				"id": f.ID, "full": f.URLPrivate, "ext": f.Filetype,
+				"type": "file", "name": f.Name, "size": f.Size,
+				"link": f.Permalink, "pending": false,
+			})
 			continue
 		}
 		isGif := f.Mimetype == "image/gif"

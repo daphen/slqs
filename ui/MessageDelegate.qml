@@ -289,9 +289,47 @@ Item {
                     // videos render as a compact 16:9 card — the poster fills it if
                     // one loads, otherwise it's a plain ▶ card (never a big empty box).
                     readonly property bool isVideo: img.type === "video"
+                    // documents render as a compact chip, not an image frame
+                    readonly property bool isFile: img.type === "file"
                     readonly property real ar: isVideo ? 0.5625 : ((img.w > 0 && img.h > 0) ? img.h / img.w : 0.66)
-                    width: isVideo ? Math.min(320, maxW) : Math.min(maxW, img.w || maxW)
-                    height: width * ar
+                    width: isFile ? fileRow.implicitWidth + 24 : (isVideo ? Math.min(320, maxW) : Math.min(maxW, img.w || maxW))
+                    height: isFile ? 32 : width * ar
+                    border.width: isFile ? 1 : 0
+                    border.color: Theme.hairlineSoft
+
+                    Row {
+                        id: fileRow
+                        visible: parent.isFile
+                        anchors.centerIn: parent
+                        spacing: 7
+                        Icon {
+                            name: "paperclip"; width: 13; height: 13
+                            color: Theme.fg_secondary
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
+                        Text {
+                            renderType: Text.NativeRendering
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: img.name || "file"
+                            color: Theme.fg
+                            font.family: Theme.fontFamily; font.pixelSize: 12; font.weight: 500
+                        }
+                        Text {
+                            renderType: Text.NativeRendering
+                            anchors.verticalCenter: parent.verticalCenter
+                            text: (img.ext || "").toUpperCase()
+                                  + (img.size ? "  ·  " + (img.size > 1048576
+                                      ? (img.size/1048576).toFixed(1) + " MB"
+                                      : Math.max(1, Math.round(img.size/1024)) + " KB") : "")
+                            color: Theme.fg_muted
+                            font.family: Theme.fontFamily; font.pixelSize: 11
+                        }
+                    }
+                    HoverHandler { enabled: parent ? parent.isFile : false; cursorShape: Qt.PointingHandCursor }
+                    TapHandler {
+                        enabled: parent.isFile
+                        onTapped: if (img.link) Qt.openUrlExternally(img.link)
+                    }
                     // gifs animate inline (AnimatedImage); stills use Image.
                     // Only the matching element loads its source.
                     Image {
