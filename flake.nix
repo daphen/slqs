@@ -32,7 +32,12 @@
           export QML2_IMPORT_PATH="$HOME/.local/share/qml:${daemon}/share/slqs/ui/vendor''${QML2_IMPORT_PATH:+:$QML2_IMPORT_PATH}"
           export SLK_MEDIA_VIEWER="${daemon}/share/slqs/media-viewer.sh"
           sock="$XDG_RUNTIME_DIR/slqs.sock"
-          if ! pgrep -x slqs >/dev/null 2>&1; then
+          alive=""
+          for pid in $(pgrep -x slqs 2>/dev/null); do
+            # a zombie (unreaped child) matches pgrep but serves nothing
+            case "$(ps -o stat= -p "$pid" 2>/dev/null)" in Z*|"") ;; *) alive=1 ;; esac
+          done
+          if [ -z "$alive" ]; then
             # The daemon binds its socket only after loading all workspaces, so
             # wait for it before starting the UI — avoids the cold-start empty
             # render (UI racing a not-yet-ready daemon). Clear any stale socket
