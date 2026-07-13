@@ -23,11 +23,18 @@ Rectangle {
     property bool threadsSelected: false
     function move(d) {
         if (threadsSelected) {
-            if (d > 0) { threadsSelected = false; list.currentIndex = 0 }   // down → first channel
+            // leaving Threads costs one step; the rest of the count walks the list
+            if (d > 0) { threadsSelected = false; list.currentIndex = Math.min(list.count - 1, d - 1) }
             return
         }
-        // Threads is a virtual top item only when the backend supports threads.
-        if (Backend.hasThreads && d < 0 && list.currentIndex === 0) { threadsSelected = true; return }
+        // Threads is a virtual top item only when the backend supports threads —
+        // any upward overshoot past row 0 lands on it (13k from row 5 included).
+        if (Backend.hasThreads && d < 0 && list.currentIndex + d < 0) {
+            threadsSelected = true
+            list.currentIndex = 0
+            list.positionViewAtBeginning()
+            return
+        }
         list.currentIndex = Math.max(0, Math.min(list.count - 1, list.currentIndex + d))
     }
     function toTop()    { threadsSelected = Backend.hasThreads; list.currentIndex = 0; list.positionViewAtBeginning() }
