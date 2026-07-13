@@ -295,11 +295,25 @@ Item {
                     // gifs animate inline (AnimatedImage); stills use Image.
                     // Only the matching element loads its source.
                     Image {
+                        id: still
                         anchors.fill: parent
                         visible: img.type !== "gif"
                         source: img.type !== "gif" ? (img.path || "") : ""
                         fillMode: Image.PreserveAspectCrop; asynchronous: true; cache: true
                         sourceSize.width: 760   // HiDPI-crisp at the inline cap
+                        // a load raced against the daemon's download fails once and
+                        // Qt never retries on its own — nudge it until the file lands
+                        property int retries: 0
+                        onStatusChanged: if (status === Image.Error && retries < 6) stillRetry.restart()
+                        Timer {
+                            id: stillRetry; interval: 700
+                            onTriggered: {
+                                still.retries++
+                                const s = still.source
+                                still.source = ""
+                                still.source = s
+                            }
+                        }
                     }
                     AnimatedImage {
                         anchors.fill: parent

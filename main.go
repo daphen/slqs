@@ -212,7 +212,9 @@ func (d *daemon) cacheAvatar(u slack.User) {
 	}
 	dir := filepath.Join(os.Getenv("HOME"), ".cache", "slqs", "images")
 	path := filepath.Join(dir, "avatar-"+id+"-hi."+ext)
-	if os.WriteFile(path, b, 0644) != nil {
+	// tmp+rename: a reader mid-write sees the old file or none, never a torso
+	tmpA := path + ".tmp"
+	if os.WriteFile(tmpA, b, 0644) != nil || os.Rename(tmpA, path) != nil {
 		return
 	}
 	d.avMu.Lock()
@@ -372,7 +374,11 @@ func (d *daemon) cacheFile(id, url, ext, token, cookie string) string {
 	}
 	defer resp.Body.Close()
 	b, err := io.ReadAll(resp.Body)
-	if err != nil || os.WriteFile(dst, b, 0644) != nil {
+	if err != nil {
+		return ""
+	}
+	tmpF := dst + ".tmp"
+	if os.WriteFile(tmpF, b, 0644) != nil || os.Rename(tmpF, dst) != nil {
 		return ""
 	}
 	return path
