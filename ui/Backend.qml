@@ -403,7 +403,7 @@ Item {
         }
         _chanList = (channels || []).map((c, i) => ({
             id: c.id, name: c.name, kind: c.kind, topic: c.topic, avatar: c.avatar || "",
-            workspace: c.workspace,
+            workspace: c.workspace, user: c.user || "",
             unread: firstLoad ? (c.unread || 0)
                   : (prevUnread[c.id] !== undefined ? prevUnread[c.id] : (c.unread || 0)),
             mention: firstLoad ? (c.mention || false)
