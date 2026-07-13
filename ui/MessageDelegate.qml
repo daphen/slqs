@@ -292,7 +292,7 @@ Item {
                     // documents render as a compact chip, not an image frame
                     readonly property bool isFile: img.type === "file"
                     readonly property real ar: isVideo ? 0.5625 : ((img.w > 0 && img.h > 0) ? img.h / img.w : 0.66)
-                    width: isFile ? fileRow.implicitWidth + 24 : (isVideo ? Math.min(320, maxW) : Math.min(maxW, img.w || maxW))
+                    width: isFile ? Math.ceil(fileRow.implicitWidth) + 24 : (isVideo ? Math.min(320, maxW) : Math.min(maxW, img.w || maxW))
                     height: isFile ? 32 : width * ar
                     border.width: isFile ? 1 : 0
                     border.color: Theme.hairlineSoft
@@ -300,7 +300,10 @@ Item {
                     Row {
                         id: fileRow
                         visible: parent.isFile
-                        anchors.centerIn: parent
+                        // integer anchoring: centerIn lands text on half-pixels
+                        // and NativeRendering goes soft
+                        anchors.left: parent.left; anchors.leftMargin: 12
+                        anchors.verticalCenter: parent.verticalCenter
                         spacing: 7
                         Icon {
                             name: "paperclip"; width: 13; height: 13
