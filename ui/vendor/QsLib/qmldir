@@ -1,0 +1,9 @@
+module QsLib
+singleton Theme Theme.qml
+singleton Html Html.qml
+Icon Icon.qml
+KeyCap KeyCap.qml
+CapLabel CapLabel.qml
+FeedbackPill FeedbackPill.qml
+Card Card.qml
+ScrollFeel ScrollFeel.qml

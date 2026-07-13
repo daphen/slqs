@@ -29,7 +29,7 @@
         name = "slqs-client";
         runtimeInputs = [ daemon pkgs.quickshell pkgs.procps pkgs.coreutils pkgs.mpv pkgs.imv pkgs.ffmpeg-headless pkgs.jq pkgs.curl pkgs.xdg-utils ];
         text = ''
-          export QML2_IMPORT_PATH="$HOME/.local/share/qml''${QML2_IMPORT_PATH:+:$QML2_IMPORT_PATH}"
+          export QML2_IMPORT_PATH="$HOME/.local/share/qml:${daemon}/share/slqs/ui/vendor''${QML2_IMPORT_PATH:+:$QML2_IMPORT_PATH}"
           export SLK_MEDIA_VIEWER="${daemon}/share/slqs/media-viewer.sh"
           sock="$XDG_RUNTIME_DIR/slqs.sock"
           if ! pgrep -x slqs >/dev/null 2>&1; then
