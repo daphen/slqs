@@ -255,11 +255,12 @@ Rectangle {
                 // relative line number (vim hybrid: absolute on cursor row),
                 // shown only while the sidebar is focused — drives N j/k jumps.
                 Text { renderType: Text.NativeRendering
-                    visible: sidebar.active && !row.cursor
+                    visible: sidebar.active && (!row.cursor || sidebar.threadsSelected)
                     anchors.left: parent.left; anchors.leftMargin: 12
                     width: 18; horizontalAlignment: Text.AlignRight
                     anchors.verticalCenter: parent.verticalCenter
-                    text: Math.abs(row.index - list.currentIndex)
+                    // cursor on the virtual Threads row: distances count from it
+                    text: sidebar.threadsSelected ? row.index + 1 : Math.abs(row.index - list.currentIndex)
                     color: row.primary ? Theme.bg : Theme.fg
                     opacity: 0.65
                     font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
@@ -269,7 +270,7 @@ Rectangle {
                 // Cursor row: the same small accent bar the chat gutter uses,
                 // centered in the number column.
                 Rectangle {
-                    visible: sidebar.active && row.cursor
+                    visible: sidebar.active && row.cursor && !sidebar.threadsSelected
                     anchors.left: parent.left; anchors.leftMargin: 20
                     anchors.verticalCenter: parent.verticalCenter
                     width: 3; height: 16; radius: 2; color: Theme.cursor
