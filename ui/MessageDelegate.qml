@@ -6,6 +6,7 @@ import QsLib
 Item {
     id: del
     required property string author
+    required property string uid
     required property string initials
     required property string color
     required property string time
@@ -218,6 +219,10 @@ Item {
             spacing: 8
             Text { renderType: Text.NativeRendering; text: del.author; color: Theme.mode === "light" ? Theme.ink : Theme.fg
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15; font.weight: 500 }
+            StatusEmoji {
+                anchors.verticalCenter: parent.verticalCenter
+                emoji: Backend.statusOf("", del.uid)
+            }
             Text { renderType: Text.NativeRendering; text: del.time + (del.edited ? "  (edited)" : ""); color: Theme.fg_muted; font.features: ({ "tnum": 1 }); anchors.bottom: parent.bottom; anchors.bottomMargin: 1
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12 }
         }

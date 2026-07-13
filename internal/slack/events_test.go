@@ -102,6 +102,8 @@ func (m *mockEventHandler) OnUserTyping(channelID, userID string) {
 }
 func (m *mockEventHandler) OnConnect()    {}
 func (m *mockEventHandler) OnDisconnect() {}
+func (m *mockEventHandler) OnUserStatusChanged(userID, statusEmoji string) {}
+
 func (m *mockEventHandler) OnSelfPresenceChange(presence string) {
 	m.selfPresenceChanges = append(m.selfPresenceChanges, presence)
 }

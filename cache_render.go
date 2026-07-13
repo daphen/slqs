@@ -202,6 +202,7 @@ func (d *daemon) msgFromRaw(w *workspace, channelID, userID, ts, text string, re
 	s, _ := strconv.ParseInt(sec, 10, 64)
 	return map[string]any{
 		"author":        author,
+		"uid":           userID,
 		"initials":      initials(author),
 		"color":         colorFor(userID),
 		"avatar":        d.avatarPath(userID),
@@ -215,12 +216,12 @@ func (d *daemon) msgFromRaw(w *workspace, channelID, userID, ts, text string, re
 		"ts":            ts,
 		"reply_count":   replyCount,
 		"mine":          userID != "" && userID == w.selfID,
-		"subtype":       rj.SubType,   // "thread_broadcast" => also show in the channel timeline
-		"thread_ts":     rj.ThreadTS,  // parent ts: lets the channel open the right thread on Enter
+		"subtype":       rj.SubType,  // "thread_broadcast" => also show in the channel timeline
+		"thread_ts":     rj.ThreadTS, // parent ts: lets the channel open the right thread on Enter
 		// A genuine Slack edit always carries edited.user; the live socket used
 		// to synthesize an edited stamp for any message_changed (unfurls etc.),
 		// so gate on user to ignore those stale/non-edit markers.
-		"edited":        rj.Edited != nil && rj.Edited.User != "",
+		"edited": rj.Edited != nil && rj.Edited.User != "",
 	}
 }
 
@@ -744,6 +745,7 @@ func (d *daemon) sendChannels(c net.Conn) {
 		Mention   bool   `json:"mention"`
 		Avatar    string `json:"avatar"`
 		Workspace string `json:"workspace"`
+		User      string `json:"user"` // DM counterpart, for presence dots
 		last      string
 	}
 	var entries []entry
@@ -787,7 +789,7 @@ func (d *daemon) sendChannels(c net.Conn) {
 				avatar = d.avatarPath(u)
 			}
 			mention := d.channelMention(w, id, kind, base, unread)
-			entries = append(entries, entry{id, name, kind, topic, unread, mention, avatar, w.teamID, lastV})
+			entries = append(entries, entry{id, name, kind, topic, unread, mention, avatar, w.teamID, w.dmUser[id], lastV})
 		}
 		subs = append(subs, d.buildSubThreads(w)...)
 	}
@@ -796,6 +798,27 @@ func (d *daemon) sendChannels(c net.Conn) {
 	// Threads come from the cache, which the reconnect backfill keeps current
 	// against the live API (see backfill.go) and re-pushes via refreshChannels.
 	d.writeConn(c, map[string]any{"type": "channels", "channels": entries, "subThreads": subs})
+
+	// presence + status snapshots ride along so a fresh client paints dots
+	// and status emoji without waiting for the next change event
+	for _, w := range d.wsList {
+		w.presMu.Lock()
+		psnap := make(map[string]string, len(w.presence))
+		for k, v := range w.presence {
+			psnap[k] = v
+		}
+		ssnap := make(map[string]string, len(w.status))
+		for k, v := range w.status {
+			ssnap[k] = v
+		}
+		w.presMu.Unlock()
+		if len(psnap) > 0 {
+			d.writeConn(c, map[string]any{"type": "presence", "workspace": w.teamID, "all": psnap})
+		}
+		if len(ssnap) > 0 {
+			d.writeConn(c, map[string]any{"type": "status", "workspace": w.teamID, "all": ssnap})
+		}
+	}
 
 	// A notification was clicked while no window was open — open that target now
 	// (after the channel list, so the client can resolve it).

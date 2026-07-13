@@ -3,11 +3,12 @@ package main
 import (
 	"encoding/json"
 	"log"
+	"strings"
 	"time"
 
+	"github.com/slack-go/slack"
 	"slqs/internal/cache"
 	slackclient "slqs/internal/slack"
-	"github.com/slack-go/slack"
 )
 
 // wsHandler persists live Slack WebSocket events to cache.db for one workspace.
@@ -155,15 +156,46 @@ func (h *wsHandler) OnUserTyping(channelID, threadTS, userID string) {
 		"channel": channelID, "thread": threadTS, "user": h.w.users[userID]})
 }
 
+func (h *wsHandler) OnUserStatusChanged(userID, statusEmoji string) {
+	glyph := ""
+	if e := strings.Trim(statusEmoji, ":"); e != "" {
+		glyph = emojiGlyph(e)
+	}
+	h.w.presMu.Lock()
+	old := h.w.status[userID]
+	if glyph == "" {
+		delete(h.w.status, userID)
+	} else {
+		h.w.status[userID] = glyph
+	}
+	h.w.presMu.Unlock()
+	if old == glyph {
+		return
+	}
+	h.d.broadcast(map[string]any{"type": "status", "workspace": h.w.teamID,
+		"user": userID, "emoji": glyph})
+}
+
+func (h *wsHandler) OnPresenceChange(userID, presence string) {
+	h.w.presMu.Lock()
+	old := h.w.presence[userID]
+	h.w.presence[userID] = presence
+	h.w.presMu.Unlock()
+	if old == presence {
+		return
+	}
+	h.d.broadcast(map[string]any{"type": "presence", "workspace": h.w.teamID,
+		"user": userID, "presence": presence})
+}
+
 // --- events slqs doesn't act on ---
-func (h *wsHandler) OnPresenceChange(userID, presence string)                       {}
-func (h *wsHandler) OnSelfPresenceChange(presence string)                           {}
-func (h *wsHandler) OnDNDChange(enabled bool, endUnix int64)                        {}
-func (h *wsHandler) OnConversationOpened(channel slack.Channel)                     { h.d.registerChannel(h.w, channel) }
-func (h *wsHandler) OnChannelSectionUpserted(ev slackclient.ChannelSectionUpserted) {}
-func (h *wsHandler) OnChannelSectionDeleted(sectionID string)                       {}
+func (h *wsHandler) OnSelfPresenceChange(presence string)                            {}
+func (h *wsHandler) OnDNDChange(enabled bool, endUnix int64)                         {}
+func (h *wsHandler) OnConversationOpened(channel slack.Channel)                      { h.d.registerChannel(h.w, channel) }
+func (h *wsHandler) OnChannelSectionUpserted(ev slackclient.ChannelSectionUpserted)  {}
+func (h *wsHandler) OnChannelSectionDeleted(sectionID string)                        {}
 func (h *wsHandler) OnChannelSectionChannelsUpserted(sectionID string, ids []string) {}
 func (h *wsHandler) OnChannelSectionChannelsRemoved(sectionID string, ids []string)  {}
-func (h *wsHandler) OnPrefChange(name, value string)                                {}
-func (h *wsHandler) OnMemberJoined(channelID, userID string)                        {}
-func (h *wsHandler) OnMemberLeft(channelID, userID string)                          {}
+func (h *wsHandler) OnPrefChange(name, value string)                                 {}
+func (h *wsHandler) OnMemberJoined(channelID, userID string)                         {}
+func (h *wsHandler) OnMemberLeft(channelID, userID string)                           {}

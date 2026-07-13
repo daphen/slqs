@@ -306,6 +306,11 @@ type workspace struct {
 	subteams map[string]string // user-group id -> @handle (resolve <!subteam^ID>)
 	myGroups []string          // user-group ids self belongs to (for @-group mentions)
 	namePref string            // "real" (default) | "display" — how to resolve user names
+
+	presMu   sync.Mutex
+	presence map[string]string   // user id -> "active"|"away"
+	presSubs map[string]struct{} // desired presence_sub set (Slack replaces the list wholesale)
+	status   map[string]string   // user id -> status emoji (glyph, or ":name:" for custom)
 }
 
 type daemon struct {
@@ -800,7 +805,6 @@ func (d *daemon) msgBody(m slack.Message) string {
 	return body
 }
 
-
 // displayText is the one answer for "what does this message say": Block Kit
 // content over the flat fallback text, shared Slack messages appended as
 // quotes (a smiley next to a share must not hide it), and attachment
@@ -1029,8 +1033,8 @@ func (d *daemon) readConn(c net.Conn) {
 		// so it resolves the owning workspace without a separate field.
 		var cmd struct {
 			Type, Channel, Text, Before, Thread, Id, Url, Ext, Mediatype, Ts, Emoji, Workspace, Team, State, User, Path string
-			Remove, Broadcast                                                                                     bool
-			Images                                                                                          []struct{ Id, Url, Ext string } // "view" can carry several photos
+			Remove, Broadcast                                                                                           bool
+			Images                                                                                                      []struct{ Id, Url, Ext string } // "view" can carry several photos
 		}
 		if json.Unmarshal(sc.Bytes(), &cmd) != nil {
 			continue
@@ -1446,6 +1450,7 @@ func (d *daemon) readConn(c net.Conn) {
 			}
 			d.focusMu.Unlock()
 			go d.sendRecent(c, w, id)
+			go d.watchChannelPresence(w, id)
 		case "history":
 			go d.sendHistory(c, w, id, cmd.Before)
 		case "replies":
@@ -1828,6 +1833,9 @@ func (d *daemon) addWorkspace(ctx context.Context, tok slackclient.Token) (*work
 		topics:   map[string]string{},
 		dmUser:   map[string]string{},
 		subteams: map[string]string{},
+		presence: map[string]string{},
+		presSubs: map[string]struct{}{},
+		status:   map[string]string{},
 	}
 	// Per-workspace name style: WAG shows Slack display names, others (Lovable)
 	// the full real name.
@@ -1840,6 +1848,9 @@ func (d *daemon) addWorkspace(ctx context.Context, tok slackclient.Token) (*work
 		users = us
 		for _, u := range us {
 			w.users[u.ID] = nameFor(u, w.namePref)
+			if e := strings.Trim(u.Profile.StatusEmoji, ":"); e != "" {
+				w.status[u.ID] = emojiGlyph(e)
+			}
 		}
 	}
 	if handles, member, err := client.GetUsergroups(ctx, w.selfID); err == nil {
@@ -1992,16 +2003,16 @@ func main() {
 	}
 
 	d := &daemon{
-		ctx:           ctx,
-		wss:           map[string]*workspace{},
-		idIndex:       map[string]*workspace{},
-		avatars:       map[string]string{},
+		ctx:                 ctx,
+		wss:                 map[string]*workspace{},
+		idIndex:             map[string]*workspace{},
+		avatars:             map[string]string{},
 		pendingAttach:       map[string]string{},
 		pendingAttachThread: map[string]string{},
-		uploading:     map[string]chan struct{}{},
-		lastBackfill:  map[string]time.Time{},
-		conns:         map[net.Conn]struct{}{},
-		userMiss:      map[string]bool{},
+		uploading:           map[string]chan struct{}{},
+		lastBackfill:        map[string]time.Time{},
+		conns:               map[net.Conn]struct{}{},
+		userMiss:            map[string]bool{},
 	}
 	cachePath := filepath.Join(xdgData(), "cache.db")
 	dsn := "file:" + cachePath + "?mode=ro&_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)"

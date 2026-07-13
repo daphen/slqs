@@ -14,6 +14,25 @@ Item {
     id: backend
 
     property alias channels: channelsModel
+
+    // live status dots: "workspace:userId" -> "active"|"away" ("" unknown)
+    property var presence: ({})
+    property int presenceGen: 0
+    function presenceOf(ws, uid) {
+        const _ = presenceGen
+        if (!uid) return ""
+        return presence[(ws || currentWorkspace) + ":" + uid] || ""
+    }
+
+    // custom status emoji: "workspace:userId" -> glyph, or ":name:" (custom,
+    // rendered via emojiPath). "" = no status set.
+    property var userStatus: ({})
+    property int statusGen: 0
+    function statusOf(ws, uid) {
+        const _ = statusGen
+        if (!uid) return ""
+        return userStatus[(ws || currentWorkspace) + ":" + uid] || ""
+    }
     property alias messages: messagesModel
     property string currentChannel: ""     // display name of the open channel
     property string currentChannelId: ""   // wire key (globally-unique Slack id)
@@ -466,6 +485,7 @@ Item {
             const c = sorted[i]
             channelsModel.append({ id: c.id, name: c.name, kind: c.kind, topic: c.topic,
                                    unread: c.unread, mention: c.mention, avatar: c.avatar || "",
+                                   user: c.user || "",
                                    workspace: c.workspace, section: sectionOf(c) })
         }
     }
@@ -530,6 +550,7 @@ Item {
                && (parseFloat(cur.ts) - parseFloat(prev.ts)) < 600
     }
     function normMsg(m) {
+        if (m.uid === undefined) m.uid = ""
         if (m.replyAuthor === undefined) m.replyAuthor = ""
         if (m.replyText === undefined) m.replyText = ""
         if (m.replyToTs === undefined) m.replyToTs = ""
@@ -980,6 +1001,22 @@ Item {
         }
         else if (e.type === "open") openFromNotification(e.workspace, e.channel, e.thread)
         else if (e.type === "typing") showTyping(e.channel, e.thread, e.user)
+        else if (e.type === "presence") {
+            if (e.all) {
+                for (const u in e.all) presence[e.workspace + ":" + u] = e.all[u]
+            } else if (e.user) {
+                presence[e.workspace + ":" + e.user] = e.presence || ""
+            }
+            presenceGen++
+        }
+        else if (e.type === "status") {
+            if (e.all) {
+                for (const u in e.all) userStatus[e.workspace + ":" + u] = e.all[u]
+            } else if (e.user) {
+                userStatus[e.workspace + ":" + e.user] = e.emoji || ""
+            }
+            statusGen++
+        }
         else if (e.type === "reactors") applyReactors(e.ts, e.reactions)
         else if (e.type === "attachUploading") {
             // Daemon found a clipboard image and began uploading → show the

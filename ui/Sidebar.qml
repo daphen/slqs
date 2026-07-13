@@ -206,6 +206,11 @@ Rectangle {
                 required property bool mention
                 required property string topic
                 required property string avatar
+                required property string user
+                required property string workspace
+                // "active" | "away" | "" (unknown / not a DM)
+                readonly property string status: kind === "dm" ? Backend.presenceOf(workspace, user) : ""
+                readonly property string statusEmoji: kind === "dm" ? Backend.statusOf(workspace, user) : ""
                 width: ListView.view.width
                 height: 36
                 readonly property bool cursor: list.currentIndex === index
@@ -279,8 +284,12 @@ Rectangle {
                         Text { renderType: Text.NativeRendering;
                             anchors.centerIn: parent
                             visible: !(row.kind === "dm" && dmAv.status === Image.Ready)
+                            // the DM marker doubles as the status dot: green
+                            // only while the counterpart is actually active
                             text: row.kind === "dm" ? "●" : "#"
-                            color: row.kind === "dm" ? Theme.green : (row.primary ? Theme.bg : Theme.fg_muted)
+                            color: row.kind === "dm"
+                                ? (row.status === "active" ? Theme.green : Theme.fg_muted)
+                                : (row.primary ? Theme.bg : Theme.fg_muted)
                             font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: row.kind === "dm" ? 10 : 14
                         }
                         ClippingRectangle {
@@ -294,15 +303,34 @@ Rectangle {
                                 sourceSize.width: 36; sourceSize.height: 36
                             }
                         }
+                        // presence pinned to the avatar corner (Slack-style):
+                        // filled green = active, hollow = away, absent = unknown
+                        Rectangle {
+                            visible: row.kind === "dm" && dmAv.status === Image.Ready && row.status !== ""
+                            anchors.right: parent.right; anchors.bottom: parent.bottom
+                            anchors.rightMargin: -2; anchors.bottomMargin: -1
+                            width: 9; height: 9; radius: 4.5
+                            color: row.status === "active" ? Theme.green : Theme.bg
+                            border.width: 1.5
+                            border.color: row.status === "active" ? Theme.bg : Theme.fg_muted
+                        }
                     }
                     Text { renderType: Text.NativeRendering;
+                        id: chName
                         anchors.verticalCenter: parent.verticalCenter
-                        width: parent.width - chIcon.width - parent.spacing
+                        readonly property real avail: parent.width - chIcon.width - parent.spacing
+                            - (chStatus.visible ? chStatus.width + parent.spacing : 0)
+                        width: Math.min(implicitWidth, avail)
                         text: row.name; elide: Text.ElideRight
                         color: row.primary ? Theme.bg
                              : (row.unread > 0 || row.isOpen || row.cursor) ? Theme.fg : Theme.dimmedFg
                         font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14
                         font.weight: row.unread > 0 ? 500 : Theme.fontWeight
+                    }
+                    StatusEmoji {
+                        id: chStatus
+                        anchors.verticalCenter: parent.verticalCenter
+                        emoji: row.statusEmoji
                     }
                 }
 

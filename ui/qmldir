@@ -3,6 +3,7 @@ Sidebar Sidebar.qml
 RailBar RailBar.qml
 MessageList MessageList.qml
 MessageDelegate MessageDelegate.qml
+StatusEmoji StatusEmoji.qml
 Composer Composer.qml
 ThreadPanel ThreadPanel.qml
 ChannelPalette ChannelPalette.qml

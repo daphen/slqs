@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"slqs/internal/debuglog"
 	"github.com/slack-go/slack"
+	"slqs/internal/debuglog"
 )
 
 // EventHandler processes real-time events from Slack.
@@ -26,6 +26,9 @@ type EventHandler interface {
 	OnDisconnect()
 	OnSelfPresenceChange(presence string)
 	OnDNDChange(enabled bool, endUnix int64)
+	// OnUserStatusChanged is delivered for user_status_changed / user_change
+	// WS events; statusEmoji is the raw shortcode (":palm_tree:", "" cleared).
+	OnUserStatusChanged(userID, statusEmoji string)
 
 	// OnChannelMarked is delivered when Slack pushes a channel_marked /
 	// im_marked / group_marked / mpim_marked event (read state changed
@@ -142,6 +145,15 @@ type wsReactionEvent struct {
 // batch_presence_aware set on the socket (see the WS URL), Slack
 // coalesces presence updates into a `users` array rather than a single
 // `user`, so both forms must be handled.
+type wsUserChangeEvent struct {
+	User struct {
+		ID      string `json:"id"`
+		Profile struct {
+			StatusEmoji string `json:"status_emoji"`
+		} `json:"profile"`
+	} `json:"user"`
+}
+
 type wsPresenceEvent struct {
 	Type     string   `json:"type"`
 	User     string   `json:"user"`
@@ -341,6 +353,15 @@ func dispatchWebSocketEvent(data []byte, handler EventHandler) {
 			}
 		} else if evt.User != "" {
 			handler.OnPresenceChange(evt.User, evt.Presence)
+		}
+
+	case "user_change", "user_status_changed":
+		var evt wsUserChangeEvent
+		if err := json.Unmarshal(data, &evt); err != nil {
+			return
+		}
+		if evt.User.ID != "" {
+			handler.OnUserStatusChanged(evt.User.ID, evt.User.Profile.StatusEmoji)
 		}
 
 	case "manual_presence_change":

@@ -34,8 +34,91 @@ func (d *daemon) backfill(w *workspace) {
 	if threadsUnread {
 		d.backfillSubscriptions(w)
 	}
+	d.resubPresence(w)
 	log.Printf("[%s] reconnect backfill done in %.1fs (threadsUnread=%v)", w.teamName, time.Since(start).Seconds(), threadsUnread)
 	d.refreshChannels()
+}
+
+// resubPresence rebuilds the presence subscription after a websocket
+// (re)connect: the server-side sub list died with the old socket. DM
+// counterparts are always watched (the sidebar shows them); channel authors
+// accumulate via watchPresence as channels are opened. Everything is
+// re-queried — state moved while we were offline.
+func (d *daemon) resubPresence(w *workspace) {
+	w.presMu.Lock()
+	for _, u := range w.dmUser {
+		if u != "" && u != w.selfID {
+			w.presSubs[u] = struct{}{}
+		}
+	}
+	all := make([]string, 0, len(w.presSubs))
+	for id := range w.presSubs {
+		all = append(all, id)
+	}
+	w.presMu.Unlock()
+	if len(all) == 0 {
+		return
+	}
+	if err := w.client.SubscribePresence(all); err != nil {
+		log.Printf("[%s] presence_sub (%d ids): %v", w.teamName, len(all), err)
+		return
+	}
+	_ = w.client.QueryPresence(all)
+}
+
+// watchPresence adds ids to the subscription set and pushes the full list
+// (presence_sub replaces the previous subscription); initial state for the
+// newly-added ids arrives as presence_change replies to presence_query.
+func (d *daemon) watchPresence(w *workspace, ids []string) {
+	w.presMu.Lock()
+	var fresh []string
+	for _, id := range ids {
+		if id == "" || id == w.selfID {
+			continue
+		}
+		if _, ok := w.presSubs[id]; ok {
+			continue
+		}
+		w.presSubs[id] = struct{}{}
+		fresh = append(fresh, id)
+	}
+	all := make([]string, 0, len(w.presSubs))
+	for id := range w.presSubs {
+		all = append(all, id)
+	}
+	w.presMu.Unlock()
+	if len(fresh) == 0 {
+		return
+	}
+	if err := w.client.SubscribePresence(all); err != nil {
+		log.Printf("[%s] presence_sub (%d ids): %v", w.teamName, len(all), err)
+		return
+	}
+	_ = w.client.QueryPresence(fresh)
+}
+
+// watchChannelPresence subscribes an opened channel's recent authors (plus
+// the DM counterpart) so its status dots go live.
+func (d *daemon) watchChannelPresence(w *workspace, channelID string) {
+	if w == nil || channelID == "" {
+		return
+	}
+	var ids []string
+	if u := w.dmUser[channelID]; u != "" {
+		ids = append(ids, u)
+	}
+	rows, err := d.cacheDB.QueryContext(d.ctx, `SELECT DISTINCT user_id FROM messages
+		WHERE channel_id=? AND user_id<>'' ORDER BY ts DESC LIMIT 100`, channelID)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var uid string
+			if rows.Scan(&uid) == nil {
+				ids = append(ids, uid)
+			}
+		}
+	}
+	d.watchPresence(w, ids)
 }
 
 // backfillChannels catches up persistent read-state from the server, then
