@@ -12,7 +12,7 @@ Rectangle {
     property color textColor: small
         ? Theme.fg_muted
         : Qt.tint(Theme.fg_muted, Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.55))
-    width: small ? 18 : Math.max(capText.implicitWidth + 12, 22)
+    width: small ? Math.max(capText.implicitWidth + 8, 18) : Math.max(capText.implicitWidth + 12, 22)
     height: small ? 18 : 22
     radius: small ? 5 : 7
     color: ghost ? "transparent" : (Theme.mode === "light" ? Theme.bg : Theme.surface2)

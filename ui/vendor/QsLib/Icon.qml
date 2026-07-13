@@ -21,8 +21,10 @@ Item {
         id: img
         anchors.fill: parent
         source: root.name !== "" ? Qt.resolvedUrl("icons/" + root._file + ".svg") : ""
-        sourceSize.width: 64
-        sourceSize.height: 64
+        // rasterize at display size (Qt multiplies by the screen's DPR for
+        // SVGs) — a fixed oversize texture minifies to mush on 1x monitors
+        sourceSize.width: Math.max(1, Math.round(root.width))
+        sourceSize.height: Math.max(1, Math.round(root.height))
         visible: false
         asynchronous: true
     }
