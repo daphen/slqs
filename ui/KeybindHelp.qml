@@ -18,11 +18,11 @@ Item {
     property string query: ""
     property bool searching: false
 
-    function show() { open = true; resetSearch(); Qt.callLater(() => scope.forceActiveFocus()) }
+    // Presentational only — shell.qml's routeKey owns open/close/filter and sets
+    // open/searching/query; the field below just displays `query`.
+    function show() { open = true; resetSearch() }
     function close() { open = false }
-    // explicit searchField ref so clearing works from arrow-function key handlers
-    // too (QML doesn't inject object scope into arrow functions)
-    function resetSearch() { searching = false; query = ""; searchField.text = "" }
+    function resetSearch() { searching = false; query = "" }
 
     function _help(h) { return (typeof h === "function") ? h() : h }
     function _pretty(id) {
@@ -99,20 +99,8 @@ Item {
     MouseArea { anchors.fill: parent; onClicked: sheet.close() }
     Rectangle { anchors.fill: parent; color: Theme.ink; opacity: 0.5 }
 
-    FocusScope {
-        id: scope
+    Item {
         anchors.fill: parent
-        Keys.onPressed: e => {
-            if (e.key === Qt.Key_Escape) {
-                if (sheet.searching || sheet.query) sheet.resetSearch()
-                else sheet.close()
-                e.accepted = true
-            } else if (e.key === Qt.Key_Slash && !sheet.searching) {
-                sheet.searching = true; searchField.forceActiveFocus(); e.accepted = true
-            } else if (!sheet.searching && (e.key === Qt.Key_Q || e.text === "?")) {
-                sheet.close(); e.accepted = true
-            }
-        }
         Rectangle {
             id: panel
             anchors.centerIn: parent
@@ -136,31 +124,22 @@ Item {
                            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                            font.pixelSize: 20; font.bold: true }
                     Rectangle {
+                        readonly property bool showField: sheet.searching || sheet.query.length > 0
                         anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
-                        width: sheet.searching ? 220 : 0
+                        width: showField ? 220 : 0
                         height: 30; radius: 8; clip: true
                         color: Theme.surface
-                        border.width: sheet.searching ? 1 : 0; border.color: Theme.hairline
+                        border.width: showField ? 1 : 0; border.color: Theme.hairline
                         visible: width > 1
                         Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
-                        TextInput {
-                            id: searchField
+                        Text {   // display-only: shell.qml edits sheet.query
                             anchors.fill: parent; anchors.margins: 8
-                            verticalAlignment: TextInput.AlignVCenter
-                            color: Theme.fg
+                            verticalAlignment: Text.AlignVCenter
+                            text: sheet.query.length ? sheet.query : "filter…"
+                            color: sheet.query.length ? Theme.fg : Theme.fg_muted
                             font.family: Theme.fontFamily; font.pixelSize: 13
-                            clip: true
-                            onTextChanged: sheet.query = text
-                            Text { visible: !searchField.text
-                                   anchors.fill: parent; verticalAlignment: Text.AlignVCenter
-                                   text: "filter…"; color: Theme.fg_muted; font: searchField.font
-                                   renderType: Text.NativeRendering }
-                            Keys.onPressed: e => {
-                                if (e.key === Qt.Key_Escape) {
-                                    sheet.resetSearch()
-                                    scope.forceActiveFocus(); e.accepted = true
-                                }
-                            }
+                            elide: Text.ElideLeft
+                            renderType: Text.NativeRendering
                         }
                     }
                 }

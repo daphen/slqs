@@ -292,6 +292,21 @@ FloatingWindow {
 
     function routeKey(e) {
         const ctrl = e.modifiers & Qt.ControlModifier
+        // Cheat sheet: driven from here (the shell keeps focus; handing it to the
+        // overlay proved unreliable). esc closes / clears; / filters; typing edits.
+        if (help.open) {
+            if (e.key === Qt.Key_Escape) {
+                if (help.searching || help.query) help.resetSearch(); else help.close()
+            } else if (e.key === Qt.Key_Slash && !help.searching) {
+                help.searching = true
+            } else if (!help.searching && (e.key === Qt.Key_Q || e.text === "?")) {
+                help.close()
+            } else if (help.searching) {
+                if (e.key === Qt.Key_Backspace) help.query = help.query.slice(0, -1)
+                else if (e.text && e.text.length === 1 && e.text.charCodeAt(0) >= 0x20) help.query += e.text
+            }
+            e.accepted = true; return
+        }
         const id = keyId(e, ctrl)
         if (!id) return
         // Ctrl+D/U must not multi-fire on a held/repeated press (one tap = one half-page)
