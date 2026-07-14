@@ -485,22 +485,29 @@ FloatingWindow {
                         z: 4
                     }
 
-                    ThreadPanel {
-                        id: thread
-                        // stay visible while it animates closed (width→0), not
-                        // just while threadOpen — else the slide-out never shows
-                        visible: width > 1
+                    // Clipping dock: the width springs open/closed (shared
+                    // PanelMotion), but the ThreadPanel inside keeps a FIXED
+                    // width — so its wrapping message text lays out once and is
+                    // revealed by the clip, never reflowed/squished mid-anim.
+                    Item {
+                        id: threadDock
+                        readonly property real openW: Math.min(560, parent.width * 0.58)
                         clip: true
+                        visible: width > 1   // stay visible while it animates closed
                         anchors.right: parent.right; anchors.top: parent.top; anchors.bottom: parent.bottom
                         anchors.topMargin: 8; anchors.rightMargin: 12; anchors.bottomMargin: 12
-                        // reveal from the right edge with the shared panel spring
-                        width: Backend.threadOpen ? Math.min(560, parent.width * 0.58) : 0
+                        width: Backend.threadOpen ? openW : 0
                         Behavior on width { PanelMotion {} }
                         z: 5
-                        onExitReply: win.backToNormal()
-                        onOpenPalette: palette.show()
-                        // H = back to the channel (closes the thread panel); L = rightmost, just normal mode.
-                        onPanelMove: (d) => { if (d < 0) win.closeThreadAction(); else win.backToNormal() }
+                        ThreadPanel {
+                            id: thread
+                            width: threadDock.openW
+                            anchors.right: parent.right; anchors.top: parent.top; anchors.bottom: parent.bottom
+                            onExitReply: win.backToNormal()
+                            onOpenPalette: palette.show()
+                            // H = back to the channel (closes the thread panel); L = rightmost, just normal mode.
+                            onPanelMove: (d) => { if (d < 0) win.closeThreadAction(); else win.backToNormal() }
+                        }
                     }
                 }
             }
