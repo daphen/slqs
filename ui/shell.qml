@@ -472,6 +472,7 @@ FloatingWindow {
                 height: 36; color: Theme.surface0
                 Rectangle { anchors.top: parent.top; width: parent.width; height: 1; color: Theme.hairline }
                 Row {
+                    id: leftStatus
                     anchors.left: parent.left; anchors.leftMargin: 14
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 10
@@ -498,7 +499,12 @@ FloatingWindow {
                     }
                 }
                 Row {
+                    id: hintRow
                     visible: !Backend.updateAvailable
+                    // hide when the left status text would collide — opacity
+                    // (not visible) keeps implicitWidth measurable, so the
+                    // check can't feed back on itself
+                    opacity: (statusbar.width - leftStatus.width - implicitWidth - 56) >= 0 ? 1 : 0
                     anchors.right: parent.right; anchors.rightMargin: 14
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 6
