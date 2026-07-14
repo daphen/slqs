@@ -319,12 +319,13 @@ FloatingWindow {
                     clip: true
                     height: parent.height
                     width: win.sidebarHidden ? 0 : 264
-                    // same spring as the notification island's notch
+                    // spring like the notification island's notch, but a gentler
+                    // overshoot (1.15 vs 1.4) — the full bounce was too much here
                     Behavior on width {
                         NumberAnimation {
-                            duration: 380
+                            duration: 340
                             easing.type: Easing.BezierSpline
-                            easing.bezierCurve: [0.34, 1.4, 0.64, 1.0, 1.0, 1.0]
+                            easing.bezierCurve: [0.34, 1.15, 0.64, 1.0, 1.0, 1.0]
                         }
                     }
                     onThreadsClicked: { Backend.showThreadsView(); win.focusPanel("messages") }
