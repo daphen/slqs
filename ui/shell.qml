@@ -20,13 +20,14 @@ FloatingWindow {
         anchors.verticalCenter: parent.verticalCenter
     }
 
-    // Shared panel spring — one source of truth for every panel reveal/collapse
-    // (sidebar, thread). Retune here and all of them change at once. Use as the
-    // animation inside a Behavior: `Behavior on width { PanelMotion {} }`.
+    // Shared panel motion — one source of truth for every panel reveal/collapse
+    // (sidebar, thread). Retune here and all of them change at once. Vaul drawer
+    // curve: transform 0.2s cubic-bezier(0.165, 0.84, 0.44, 1) — a clean ease-out,
+    // no overshoot. Use as the animation inside a Behavior: `Behavior on width { PanelMotion {} }`.
     component PanelMotion: NumberAnimation {
-        duration: 340
+        duration: 200
         easing.type: Easing.BezierSpline
-        easing.bezierCurve: [0.34, 1.15, 0.64, 1.0, 1.0, 1.0]
+        easing.bezierCurve: [0.165, 0.84, 0.44, 1.0, 1.0, 1.0]
     }
 
     // Distinct per-backend title so niri-jump-or-exec can tell the Slack and

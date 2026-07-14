@@ -5,6 +5,7 @@ import QsLib
 // Normal-mode `?` cheat sheet. Built live from shell.qml's `keymaps` so it can
 // never drift from the real bindings. App-aware via Backend: slqs shows the
 // THREADS section + "workspace" wording; dsqrd drops THREADS + says "server".
+// Responsive column count; `/` fuzzy-filters; esc/q/? closes.
 Item {
     id: sheet
     anchors.fill: parent
@@ -14,8 +15,10 @@ Item {
 
     property bool open: false
     property var keymaps: ({})          // win.keymaps
+    property string query: ""
+    property bool searching: false
 
-    function show() { open = true; Qt.callLater(() => scope.forceActiveFocus()) }
+    function show() { open = true; query = ""; searching = false; Qt.callLater(() => scope.forceActiveFocus()) }
     function close() { open = false }
 
     function _help(h) { return (typeof h === "function") ? h() : h }
@@ -28,6 +31,7 @@ Item {
             case "ctrl+e": return "^e"; case "ctrl+y": return "^y"
             case "ctrl+g": return "^g"; case "ctrl+k": return "^k"
             case "ctrl+s": return "^s"; case "ctrl+h": return "^h"; case "ctrl+l": return "^l"
+            case "ctrl+shift+r": return "^⇧r"
         }
         return id
     }
@@ -48,19 +52,46 @@ Item {
         return rows
     }
 
-    readonly property var leftCols: {
-        const L = [
+    readonly property var allSections: {
+        const S = [
             { title: "NAVIGATE", rows: _rows([["channel", "nav"]], [{ keys: "{n}j", help: "Repeat n times (count prefix)" }]) },
             { title: "CHATS",    rows: _rows([["channel", "chats"]], null) },
         ]
         if (Backend.hasThreads)
-            L.push({ title: "THREADS", rows: _rows([["thread", "thread"], ["threadsPage", "thread"]], null) })
-        return L
+            S.push({ title: "THREADS", rows: _rows([["thread", "thread"], ["threadsPage", "thread"]], null) })
+        S.push({ title: "MESSAGES",        rows: _rows([["channel", "msg"]], null) })
+        S.push({ title: "VIEWS & GENERAL", rows: _rows([["channel", "view"]], [{ keys: "q", help: "Close panel / overlay" }]) })
+        return S
     }
-    readonly property var rightCols: [
-        { title: "MESSAGES",        rows: _rows([["channel", "msg"]], null) },
-        { title: "VIEWS & GENERAL", rows: _rows([["channel", "view"]], [{ keys: "q", help: "Close panel / overlay" }]) },
-    ]
+
+    // Sections with rows filtered by the query (match help or keys); empties drop.
+    readonly property var filtered: {
+        const q = query.trim().toLowerCase()
+        if (!q) return allSections
+        const out = []
+        for (const s of allSections) {
+            const rows = s.rows.filter(r =>
+                r.help.toLowerCase().indexOf(q) >= 0
+                || r.keys.toLowerCase().indexOf(q) >= 0
+                || s.title.toLowerCase().indexOf(q) >= 0)
+            if (rows.length) out.push({ title: s.title, rows: rows })
+        }
+        return out
+    }
+
+    // 1 / 2 / 3 columns by available width; sections packed into the shortest.
+    readonly property int colCount: sheet.width < 620 ? 1 : sheet.width < 940 ? 2 : 3
+    readonly property var laidOut: {
+        const cols = [], load = []
+        for (let i = 0; i < colCount; i++) { cols.push([]); load.push(0) }
+        for (const s of filtered) {
+            let t = 0
+            for (let i = 1; i < colCount; i++) if (load[i] < load[t]) t = i
+            cols[t].push(s)
+            load[t] += s.rows.length + 2
+        }
+        return cols
+    }
 
     MouseArea { anchors.fill: parent; onClicked: sheet.close() }
     Rectangle { anchors.fill: parent; color: Theme.ink; opacity: 0.5 }
@@ -69,32 +100,80 @@ Item {
         id: scope
         anchors.fill: parent
         Keys.onPressed: e => {
-            if (e.key === Qt.Key_Escape || e.key === Qt.Key_Q || e.text === "?") { sheet.close(); e.accepted = true }
+            if (e.key === Qt.Key_Escape) {
+                if (sheet.searching || sheet.query) { sheet.searching = false; sheet.query = "" }
+                else sheet.close()
+                e.accepted = true
+            } else if (e.key === Qt.Key_Slash && !sheet.searching) {
+                sheet.searching = true; searchField.forceActiveFocus(); e.accepted = true
+            } else if (!sheet.searching && (e.key === Qt.Key_Q || e.text === "?")) {
+                sheet.close(); e.accepted = true
+            }
         }
         Rectangle {
+            id: panel
             anchors.centerIn: parent
-            width: Math.min(824, parent.width - 80)
-            height: body.implicitHeight + 56
+            width: Math.min(sheet.colCount === 1 ? 420 : sheet.colCount === 2 ? 760 : 1040, parent.width - 60)
+            height: Math.min(body.implicitHeight + 56, parent.height - 60)
             radius: Theme.radius; color: Theme.bg_alt
             border.color: Theme.hairline; border.width: 1
+            clip: true
             MouseArea { anchors.fill: parent }   // swallow clicks inside the panel
 
             Column {
                 id: body
                 anchors.fill: parent; anchors.margins: 28
-                spacing: 22
-                Text { renderType: Text.NativeRendering
-                       text: "Keybindings"; color: Theme.fg
-                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
-                       font.pixelSize: 20; font.bold: true }
+                spacing: 20
+                // header: title + search pill
+                Item {
+                    width: parent.width; height: 30
+                    Text { renderType: Text.NativeRendering
+                           anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
+                           text: "Keybindings"; color: Theme.fg
+                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
+                           font.pixelSize: 20; font.bold: true }
+                    Rectangle {
+                        anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
+                        width: sheet.searching ? 220 : 0
+                        height: 30; radius: 8; clip: true
+                        color: Theme.surface
+                        border.width: sheet.searching ? 1 : 0; border.color: Theme.hairline
+                        visible: width > 1
+                        Behavior on width { NumberAnimation { duration: 160; easing.type: Easing.OutCubic } }
+                        TextInput {
+                            id: searchField
+                            anchors.fill: parent; anchors.margins: 8
+                            verticalAlignment: TextInput.AlignVCenter
+                            color: Theme.fg
+                            font.family: Theme.fontFamily; font.pixelSize: 13
+                            clip: true
+                            onTextChanged: sheet.query = text
+                            Text { visible: !searchField.text
+                                   anchors.fill: parent; verticalAlignment: Text.AlignVCenter
+                                   text: "filter…"; color: Theme.fg_muted; font: searchField.font
+                                   renderType: Text.NativeRendering }
+                            Keys.onPressed: e => {
+                                if (e.key === Qt.Key_Escape) {
+                                    sheet.searching = false; sheet.query = ""; text = ""
+                                    scope.forceActiveFocus(); e.accepted = true
+                                }
+                            }
+                        }
+                    }
+                }
+                Connections {
+                    target: sheet
+                    function onSearchingChanged() { if (!sheet.searching) searchField.text = "" }
+                }
+
                 Row {
-                    spacing: 48
+                    spacing: 40
                     Repeater {
-                        model: [sheet.leftCols, sheet.rightCols]
+                        model: sheet.laidOut
                         Column {
                             id: colRoot
                             required property var modelData
-                            width: 360
+                            width: (body.width - 40 * (sheet.colCount - 1)) / sheet.colCount
                             spacing: 18
                             Repeater {
                                 model: colRoot.modelData
@@ -111,6 +190,7 @@ Item {
                                         Row {
                                             id: rowRoot
                                             required property var modelData
+                                            width: parent.width
                                             spacing: 12
                                             Rectangle {
                                                 width: 76; height: 24; radius: Theme.radiusSm
@@ -121,7 +201,8 @@ Item {
                                             }
                                             Text { renderType: Text.NativeRendering
                                                    anchors.verticalCenter: parent.verticalCenter
-                                                   text: rowRoot.modelData.help; color: Theme.fg
+                                                   width: parent.width - 76 - parent.spacing
+                                                   text: rowRoot.modelData.help; color: Theme.fg; elide: Text.ElideRight
                                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14 }
                                         }
                                     }
@@ -131,8 +212,13 @@ Item {
                     }
                 }
                 Text { renderType: Text.NativeRendering
+                       visible: sheet.filtered.length === 0
+                       text: "no keys match “" + sheet.query + "”"; color: Theme.fg_muted
+                       font.family: Theme.fontFamily; font.pixelSize: 13 }
+                Text { renderType: Text.NativeRendering
                        anchors.horizontalCenter: parent.horizontalCenter
-                       text: "press ?, esc or q to close"; color: Theme.fg_muted
+                       text: sheet.searching ? "type to filter · esc to clear" : "/ to search · esc, q or ? to close"
+                       color: Theme.fg_muted
                        font.family: Theme.fontFamily; font.pixelSize: 12 }
             }
         }
