@@ -47,22 +47,26 @@ FloatingWindow {
     property bool search1: false   // /-search active (sidebar)
 
     readonly property bool isDiscord: Quickshell.env("SLK_SOCK") === "dsqrd"
-    // Collapsible sidebar (Discord: `b` toggles it for more message room).
-    property bool sidebarCollapsed: false   // `b` preference: keep the sidebar hidden
-    property bool sidebarHidden: false        // actual visual state (peeks open on h)
+    // Collapsible sidebar (Discord: `b` toggles it for more message room, and it
+    // auto-hides when the window gets too narrow to fit sidebar + a usable pane).
+    property bool sidebarCollapsed: false     // `b` preference: keep the sidebar hidden
+    property bool sidebarPeeking: false        // transient: h/Tab peeked it open
+    // 264 sidebar + ~296 for messages; below that the pane is unusable, so hide.
+    readonly property bool tooNarrow: isDiscord && width < 560
+    // Hidden when you asked for it (b) or there's no room (narrow) — unless you're
+    // currently peeking it open. A single source of truth the sidebar width binds to.
+    readonly property bool sidebarHidden: (sidebarCollapsed || tooNarrow) && !sidebarPeeking
     function toggleSidebar() {
         sidebarCollapsed = !sidebarCollapsed
-        sidebarHidden = sidebarCollapsed
+        sidebarPeeking = false
         // don't leave the keyboard on a now-zero-width pane
         if (sidebarHidden && focusedPanel === "sidebar") focusPanel("messages")
     }
 
     function focusPanel(name) {
-        // Peek a collapsed sidebar open when you move INTO it (h / Tab)…
-        if (name === "sidebar" && sidebarHidden) sidebarHidden = false
-        // …then collapse it again once you commit back to messages (picking a
-        // channel, l, etc.) — but only if you'd toggled it off with `b`.
-        if (name === "messages" && sidebarCollapsed) sidebarHidden = true
+        // Peek the sidebar open when you move INTO it (h / Tab); drop the peek once
+        // you commit back to messages so it re-collapses if b/narrow want it hidden.
+        sidebarPeeking = (name === "sidebar")
         focusedPanel = name
         sidebar.active = (name === "sidebar")
         // msgs.active / msgs.showNumbers are bound declaratively (below) so they
