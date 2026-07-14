@@ -350,6 +350,9 @@ type daemon struct {
 	userMiss map[string]bool // author IDs users.info couldn't resolve — don't refetch (guarded by mu)
 
 	updateEvent map[string]any // latest updateAvailable event, replayed to new clients
+	updMu       sync.Mutex
+	updEtag     string    // GitHub ETag — conditional requests are free
+	updLast     time.Time // last update check, for connect throttle
 
 	presenceActive atomic.Bool // false while idle (swayidle) — gates the tickle heartbeat
 }
@@ -872,6 +875,49 @@ func (d *daemon) formatMsg(w *workspace, channelID, userID, ts, text, username s
 		"mine":          userID != "" && userID == w.selfID,
 		"subtype":       subType,
 		"thread_ts":     threadTS,
+	}
+}
+
+// checkUpdate does one update check against the repo's main SHA. ETag-conditional
+// (a 304 is free against GitHub's rate limit). Detect-only; the host applies via
+// flake bump + rebuild. Safe to call concurrently (accept loop + poll goroutine).
+func (d *daemon) checkUpdate(ctx context.Context) {
+	if gitRev == "" {
+		return
+	}
+	d.updMu.Lock()
+	etag := d.updEtag
+	d.updLast = time.Now()
+	d.updMu.Unlock()
+	req, err := http.NewRequestWithContext(ctx, "GET", "https://api.github.com/repos/daphen/slqs/commits/main", nil)
+	if err != nil {
+		return
+	}
+	req.Header.Set("User-Agent", "slqs")
+	req.Header.Set("Accept", "application/vnd.github.sha")
+	if etag != "" {
+		req.Header.Set("If-None-Match", etag)
+	}
+	resp, err := fileHTTP.Do(req)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return // 304 unchanged (ETag hit), or transient error
+	}
+	d.updMu.Lock()
+	d.updEtag = resp.Header.Get("ETag")
+	d.updMu.Unlock()
+	b, _ := io.ReadAll(io.LimitReader(resp.Body, 64))
+	latest := strings.TrimSpace(string(b))
+	if latest != "" && latest != gitRev {
+		ev := map[string]any{"type": "updateAvailable",
+			"current": shortRev(gitRev), "latest": shortRev(latest)}
+		d.mu.Lock()
+		d.updateEvent = ev
+		d.mu.Unlock()
+		d.broadcast(ev)
 	}
 }
 
@@ -2133,6 +2179,16 @@ func main() {
 					c.Write(b)
 				}
 			}
+			// A fresh client (app (re)start) → re-check for updates unless we
+			// just did; the warm daemon otherwise only polls every 3h.
+			if gitRev != "" {
+				d.updMu.Lock()
+				stale := time.Since(d.updLast) > time.Minute
+				d.updMu.Unlock()
+				if stale {
+					go d.checkUpdate(ctx)
+				}
+			}
 			go d.sendChannels(c)
 			go d.readConn(c)
 		}
@@ -2157,45 +2213,12 @@ func main() {
 		}
 	}()
 
-	// Update check: poll the repo's main SHA and notify the client when a newer
-	// build exists. Detect-only (the host applies via flake bump + rebuild). Quiet
-	// on source builds (gitRev unset). Conditional ETag requests keep us well under
-	// GitHub's unauthenticated 60/h limit.
+	// Update check: at start, every 3h, and on each client connect (see the
+	// accept loop) — so restarting the app surfaces a new build immediately
+	// instead of waiting on the warm daemon's next poll.
 	if gitRev != "" {
 		go func() {
-			const api = "https://api.github.com/repos/daphen/slqs/commits/main"
-			var etag string
-			check := func() {
-				req, err := http.NewRequestWithContext(ctx, "GET", api, nil)
-				if err != nil {
-					return
-				}
-				req.Header.Set("User-Agent", "slqs")
-				req.Header.Set("Accept", "application/vnd.github.sha")
-				if etag != "" {
-					req.Header.Set("If-None-Match", etag)
-				}
-				resp, err := fileHTTP.Do(req)
-				if err != nil {
-					return
-				}
-				defer resp.Body.Close()
-				if resp.StatusCode != http.StatusOK {
-					return // 304 unchanged (ETag hit), or transient error
-				}
-				etag = resp.Header.Get("ETag")
-				b, _ := io.ReadAll(io.LimitReader(resp.Body, 64))
-				latest := strings.TrimSpace(string(b))
-				if latest != "" && latest != gitRev {
-					ev := map[string]any{"type": "updateAvailable",
-						"current": shortRev(gitRev), "latest": shortRev(latest)}
-					d.mu.Lock()
-					d.updateEvent = ev
-					d.mu.Unlock()
-					d.broadcast(ev)
-				}
-			}
-			check()
+			d.checkUpdate(ctx)
 			t := time.NewTicker(3 * time.Hour)
 			defer t.Stop()
 			for {
@@ -2203,7 +2226,7 @@ func main() {
 				case <-ctx.Done():
 					return
 				case <-t.C:
-					check()
+					d.checkUpdate(ctx)
 				}
 			}
 		}()
