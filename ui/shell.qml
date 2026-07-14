@@ -52,7 +52,9 @@ FloatingWindow {
     property bool sidebarCollapsed: false     // `b` preference: keep the sidebar hidden
     property bool sidebarPeeking: false        // transient: h/Tab peeked it open
     // 264 sidebar + ~296 for messages; below that the pane is unusable, so hide.
-    readonly property bool tooNarrow: isDiscord && width < 560
+    // Bind to appRoot.width (the fill item that tracks the real surface size) —
+    // FloatingWindow.width holds the requested/implicit size, not the live one.
+    readonly property bool tooNarrow: isDiscord && appRoot.width < 560
     // Hidden when you asked for it (b) or there's no room (narrow) — unless you're
     // currently peeking it open. A single source of truth the sidebar width binds to.
     readonly property bool sidebarHidden: (sidebarCollapsed || tooNarrow) && !sidebarPeeking
