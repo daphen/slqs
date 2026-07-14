@@ -379,7 +379,7 @@ Item {
     property bool   threadOpenToLatest: false  // true when opened to catch up replies (land at bottom)
     property string threadTitle: ""
     property bool   threadsView: false   // the dedicated Threads page is showing
-    function showThreadsView() { threadsView = true; safeWrite(JSON.stringify({ type: "refreshThreads" }) + "\n") }
+    function showThreadsView() { if (!hasThreads) return; threadsView = true; safeWrite(JSON.stringify({ type: "refreshThreads" }) + "\n") }
     function hideThreadsView() { threadsView = false }
 
     // slkd pushes the workspace list first, then the channels.
@@ -690,7 +690,7 @@ Item {
             messagesModel.clear()
             applyUnread(channelId, 0)
             sendFocus()
-            if (threadTs) {
+            if (threadTs && hasThreads) {
                 threadOpenToLatest = true
                 threadParentTs = threadTs
                 threadTitle = ""
@@ -1054,7 +1054,7 @@ Item {
             sendFocus()
         }
         // A thread-reply notification opens that thread on top of the channel.
-        if (thread) {
+        if (thread && hasThreads) {
             threadOpenToLatest = true   // you were pinged about a reply → land at the latest
             threadParentTs = thread
             threadTitle = ""        // filled from the parent once replies arrive
@@ -1321,7 +1321,7 @@ Item {
 
     // --- threads ---
     function openThread(msg) {
-        if (!msg) return
+        if (!msg || !hasThreads) return
         // A broadcast/reply shown in the channel belongs to a parent thread — open
         // that, not a thread rooted at the reply itself. Prefer the parent message
         // we already have in the channel; fall back to a stub the replies fill in.
@@ -1429,6 +1429,12 @@ Item {
     function safeWrite(s) {
         if (sock.connected) sock.write(s)
         else reconnect.restart()   // kick a reconnect; the user can retry
+    }
+
+    // ⌃⇧r: force an update check now; the daemon toasts the result.
+    function checkForUpdates() {
+        toast("Checking for updates…")
+        safeWrite(JSON.stringify({ type: "checkUpdate" }) + "\n")
     }
 
     Socket {

@@ -164,6 +164,7 @@ FloatingWindow {
             case Qt.Key_Backtab: return "shift+tab"
         }
         if (ctrl) {
+            if ((e.modifiers & Qt.ShiftModifier) && e.key === Qt.Key_R) return "ctrl+shift+r"
             switch (e.key) {
                 case Qt.Key_D: return "ctrl+d"
                 case Qt.Key_U: return "ctrl+u"
@@ -230,6 +231,7 @@ FloatingWindow {
             "v":        { act: () => { if (focusedPanel === "messages") Backend.viewImage(msgs.currentMessage()) }, help: "View image", cat: "msg" },
             // views & general
             "?":        { act: () => help.show(), help: "This help", cat: "view" },
+            "ctrl+shift+r": { act: () => Backend.checkForUpdates(), help: "Check for updates", cat: "view" },
             "U":        { act: () => { if (Backend.updateAvailable) Backend.applyUpdate(); else win.uploadClipboardPath() }, help: "Upload file path from clipboard", cat: "chats" },
             "esc":      { act: () => backToNormal(), help: "Back to normal", cat: "view" },
         },
@@ -261,6 +263,7 @@ FloatingWindow {
             "q":      { act: () => closeThreadAction(), help: "Close thread", cat: "thread" },
             "h":      { act: () => closeThreadAction(), help: "Back to channel", cat: "thread" },
             "?":      { act: () => help.show(), help: "This help", cat: "view" },
+            "ctrl+shift+r": { act: () => Backend.checkForUpdates(), help: "Check for updates", cat: "view" },
             "esc":    { act: () => closeThreadAction(), help: "Close thread", cat: "view" },
         },
         "threadsPage": {
@@ -281,6 +284,7 @@ FloatingWindow {
                               if (t) { confirmUnsub.target = t; confirmUnsub.ask("#" + (t.channelName || "") + " · " + (t.title || "")) } }, help: "Unsubscribe from thread", cat: "thread" },
             "q":      { act: () => Backend.hideThreadsView(), help: "Close threads view", cat: "thread" },
             "?":      { act: () => help.show(), help: "This help", cat: "view" },
+            "ctrl+shift+r": { act: () => Backend.checkForUpdates(), help: "Check for updates", cat: "view" },
             "esc":    { act: () => Backend.hideThreadsView(), help: "Close threads view", cat: "view" },
         },
     })
@@ -480,8 +484,10 @@ FloatingWindow {
                     ThreadsPage {
                         id: threadsPage
                         anchors.fill: parent
-                        visible: Backend.threadsView
-                        active: Backend.threadsView && !Backend.threadOpen
+                        // threads are a Slack-only concept — never render on a
+                        // backend without them (Discord)
+                        visible: Backend.hasThreads && Backend.threadsView
+                        active: Backend.hasThreads && Backend.threadsView && !Backend.threadOpen
                         z: 4
                     }
 
@@ -495,7 +501,8 @@ FloatingWindow {
                         anchors.topMargin: 8; anchors.bottomMargin: 12
                         x: Backend.threadOpen ? (parent.width - width - 12) : parent.width
                         Behavior on x { PanelMotion {} }
-                        visible: x < parent.width - 1   // hidden only when fully off-screen
+                        // never render a thread container on a threadless backend (Discord)
+                        visible: Backend.hasThreads && x < parent.width - 1
                         z: 5
                         onExitReply: win.backToNormal()
                         onOpenPalette: palette.show()

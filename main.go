@@ -1254,6 +1254,26 @@ func (d *daemon) readConn(c net.Conn) {
 			}()
 			continue
 		}
+		// Manual update check (⌃⇧r): force a check now, ignoring the poll
+		// cadence, and toast the result so the user gets feedback either way.
+		if cmd.Type == "checkUpdate" {
+			go func(c net.Conn) {
+				if gitRev == "" {
+					d.writeConn(c, map[string]any{"type": "toast", "text": "Dev build — update check unavailable"})
+					return
+				}
+				d.checkUpdate(d.ctx)
+				d.mu.Lock()
+				ue := d.updateEvent
+				d.mu.Unlock()
+				if ue != nil {
+					d.writeConn(c, map[string]any{"type": "toast", "text": "Update available — restart to apply"})
+				} else {
+					d.writeConn(c, map[string]any{"type": "toast", "text": "Up to date"})
+				}
+			}(c)
+			continue
+		}
 		// Permalink jump — MUST run before the nil-workspace guard: the whole
 		// point is channels we're not a member of (w == nil), resolved by the
 		// permalink's team subdomain instead.
