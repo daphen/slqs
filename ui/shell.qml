@@ -378,8 +378,14 @@ FloatingWindow {
 
                     Lib.Card {
                         id: chatCard
+                        // Left margin is a tight 4px gap to the sidebar when it's
+                        // open, but grows to match the 12px right margin as the
+                        // sidebar closes — so a closed sidebar leaves the card
+                        // evenly padded. Tracks sidebar.width so it springs in sync.
                         anchors { top: header.bottom; left: parent.left; right: parent.right; bottom: parent.bottom
-                                  topMargin: 6; leftMargin: 4; rightMargin: 12; bottomMargin: 12 }
+                                  topMargin: 6
+                                  leftMargin: 4 + 8 * (1 - Math.min(1, sidebar.width / 264))
+                                  rightMargin: 12; bottomMargin: 12 }
                     }
 
                     MessageList {
