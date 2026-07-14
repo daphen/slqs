@@ -38,16 +38,21 @@ FloatingWindow {
 
     readonly property bool isDiscord: Quickshell.env("SLK_SOCK") === "dsqrd"
     // Collapsible sidebar (Discord: `b` toggles it for more message room).
-    property bool sidebarHidden: false
+    property bool sidebarCollapsed: false   // `b` preference: keep the sidebar hidden
+    property bool sidebarHidden: false        // actual visual state (peeks open on h)
     function toggleSidebar() {
-        sidebarHidden = !sidebarHidden
+        sidebarCollapsed = !sidebarCollapsed
+        sidebarHidden = sidebarCollapsed
         // don't leave the keyboard on a now-zero-width pane
         if (sidebarHidden && focusedPanel === "sidebar") focusPanel("messages")
     }
 
     function focusPanel(name) {
-        // navigating back to the sidebar springs it open again
+        // Peek a collapsed sidebar open when you move INTO it (h / Tab)…
         if (name === "sidebar" && sidebarHidden) sidebarHidden = false
+        // …then collapse it again once you commit back to messages (picking a
+        // channel, l, etc.) — but only if you'd toggled it off with `b`.
+        if (name === "messages" && sidebarCollapsed) sidebarHidden = true
         focusedPanel = name
         sidebar.active = (name === "sidebar")
         // msgs.active / msgs.showNumbers are bound declaratively (below) so they
