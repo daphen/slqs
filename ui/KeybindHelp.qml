@@ -106,6 +106,11 @@ Item {
             anchors.centerIn: parent
             width: Math.min(sheet.colCount === 1 ? 420 : sheet.colCount === 2 ? 760 : 1040, parent.width - 60)
             height: Math.min(body.implicitHeight + 56, parent.height - 60)
+            // smoothly resize as filtering adds/removes rows
+            Behavior on height {
+                NumberAnimation { duration: 200; easing.type: Easing.BezierSpline
+                                  easing.bezierCurve: [0.165, 0.84, 0.44, 1.0, 1.0, 1.0] }
+            }
             radius: Theme.radius; color: Theme.bg_alt
             border.color: Theme.hairline; border.width: 1
             clip: true
