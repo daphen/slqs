@@ -20,6 +20,15 @@ FloatingWindow {
         anchors.verticalCenter: parent.verticalCenter
     }
 
+    // Shared panel spring — one source of truth for every panel reveal/collapse
+    // (sidebar, thread). Retune here and all of them change at once. Use as the
+    // animation inside a Behavior: `Behavior on width { PanelMotion {} }`.
+    component PanelMotion: NumberAnimation {
+        duration: 340
+        easing.type: Easing.BezierSpline
+        easing.bezierCurve: [0.34, 1.15, 0.64, 1.0, 1.0, 1.0]
+    }
+
     // Distinct per-backend title so niri-jump-or-exec can tell the Slack and
     // Discord instances apart (both share the org.quickshell app-id).
     title: (Quickshell.env("SLK_SOCK") === "dsqrd") ? "discord-client" : "slk-client"
@@ -324,15 +333,7 @@ FloatingWindow {
                     clip: true
                     height: parent.height
                     width: win.sidebarHidden ? 0 : 264
-                    // spring like the notification island's notch, but a gentler
-                    // overshoot (1.15 vs 1.4) — the full bounce was too much here
-                    Behavior on width {
-                        NumberAnimation {
-                            duration: 340
-                            easing.type: Easing.BezierSpline
-                            easing.bezierCurve: [0.34, 1.15, 0.64, 1.0, 1.0, 1.0]
-                        }
-                    }
+                    Behavior on width { PanelMotion {} }
                     onThreadsClicked: { Backend.showThreadsView(); win.focusPanel("messages") }
                     onWorkspacePickerRequested: workspacePicker.show()
                 }
@@ -486,10 +487,15 @@ FloatingWindow {
 
                     ThreadPanel {
                         id: thread
-                        visible: Backend.threadOpen
+                        // stay visible while it animates closed (width→0), not
+                        // just while threadOpen — else the slide-out never shows
+                        visible: width > 1
+                        clip: true
                         anchors.right: parent.right; anchors.top: parent.top; anchors.bottom: parent.bottom
                         anchors.topMargin: 8; anchors.rightMargin: 12; anchors.bottomMargin: 12
-                        width: Math.min(560, parent.width * 0.58)
+                        // reveal from the right edge with the shared panel spring
+                        width: Backend.threadOpen ? Math.min(560, parent.width * 0.58) : 0
+                        Behavior on width { PanelMotion {} }
                         z: 5
                         onExitReply: win.backToNormal()
                         onOpenPalette: palette.show()
