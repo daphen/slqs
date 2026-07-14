@@ -36,7 +36,18 @@ FloatingWindow {
 
     property bool search1: false   // /-search active (sidebar)
 
+    readonly property bool isDiscord: Quickshell.env("SLK_SOCK") === "dsqrd"
+    // Collapsible sidebar (Discord: `b` toggles it for more message room).
+    property bool sidebarHidden: false
+    function toggleSidebar() {
+        sidebarHidden = !sidebarHidden
+        // don't leave the keyboard on a now-zero-width pane
+        if (sidebarHidden && focusedPanel === "sidebar") focusPanel("messages")
+    }
+
     function focusPanel(name) {
+        // navigating back to the sidebar springs it open again
+        if (name === "sidebar" && sidebarHidden) sidebarHidden = false
         focusedPanel = name
         sidebar.active = (name === "sidebar")
         // msgs.active / msgs.showNumbers are bound declaratively (below) so they
@@ -180,7 +191,8 @@ FloatingWindow {
             // chats
             "enter":    { act: () => activate(), help: "Open selected", cat: "chats" },
             "/":        { act: () => palette.show(), help: "Jump palette", cat: "chats" },
-            "b":        { act: () => browse.show(), help: "Browse channels", cat: "chats" },
+            "b":        { act: () => { if (win.isDiscord) win.toggleSidebar(); else browse.show() },
+                          help: () => win.isDiscord ? "Toggle sidebar" : "Browse channels", cat: "chats" },
             "s":        { act: () => sidebar.toggleStarCurrent(), help: "Star / unstar channel", cat: "chats" },
             "u":        { act: () => win.openUpload(), help: "Attach a file", cat: "chats" },
             // slqs only (Discord has no equivalent): d = DM anyone, I = invite to channel.
@@ -304,7 +316,17 @@ FloatingWindow {
 
                 Sidebar {
                     id: sidebar
-                    width: 264; height: parent.height
+                    clip: true
+                    height: parent.height
+                    width: win.sidebarHidden ? 0 : 264
+                    // same spring as the notification island's notch
+                    Behavior on width {
+                        NumberAnimation {
+                            duration: 380
+                            easing.type: Easing.BezierSpline
+                            easing.bezierCurve: [0.34, 1.4, 0.64, 1.0, 1.0, 1.0]
+                        }
+                    }
                     onThreadsClicked: { Backend.showThreadsView(); win.focusPanel("messages") }
                     onWorkspacePickerRequested: workspacePicker.show()
                 }
