@@ -498,14 +498,25 @@ FloatingWindow {
                         color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12
                     }
                 }
+                // Persistent help affordance — stays pinned in the corner even
+                // when the rest of the hints collapse on a narrow window.
+                StatusCap {
+                    id: helpBadge
+                    visible: !Backend.updateAvailable
+                    text: "?"
+                    anchors.right: parent.right; anchors.rightMargin: 14
+                    anchors.verticalCenter: parent.verticalCenter
+                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                    TapHandler { onTapped: help.show() }
+                }
                 Row {
                     id: hintRow
                     visible: !Backend.updateAvailable
                     // hide when the left status text would collide — opacity
                     // (not visible) keeps implicitWidth measurable, so the
-                    // check can't feed back on itself
-                    opacity: (statusbar.width - leftStatus.width - implicitWidth - 56) >= 0 ? 1 : 0
-                    anchors.right: parent.right; anchors.rightMargin: 14
+                    // check can't feed back on itself. The ? badge stays put.
+                    opacity: (statusbar.width - leftStatus.width - implicitWidth - helpBadge.width - 70) >= 0 ? 1 : 0
+                    anchors.right: helpBadge.left; anchors.rightMargin: 12
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 6
                     StatusCap { text: "⌃k" }
@@ -527,9 +538,6 @@ FloatingWindow {
                     Item { width: 8; height: 1 }
                     StatusCap { text: "esc" }
                     CapLabel { text: "normal" }
-                    Item { width: 8; height: 1 }
-                    StatusCap { text: "?" }
-                    CapLabel { text: "help" }
                 }
                 Text { renderType: Text.NativeRendering;
                     visible: Backend.updateAvailable
