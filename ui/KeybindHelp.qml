@@ -18,8 +18,11 @@ Item {
     property string query: ""
     property bool searching: false
 
-    function show() { open = true; query = ""; searching = false; Qt.callLater(() => scope.forceActiveFocus()) }
+    function show() { open = true; resetSearch(); Qt.callLater(() => scope.forceActiveFocus()) }
     function close() { open = false }
+    // explicit searchField ref so clearing works from arrow-function key handlers
+    // too (QML doesn't inject object scope into arrow functions)
+    function resetSearch() { searching = false; query = ""; searchField.text = "" }
 
     function _help(h) { return (typeof h === "function") ? h() : h }
     function _pretty(id) {
@@ -101,7 +104,7 @@ Item {
         anchors.fill: parent
         Keys.onPressed: e => {
             if (e.key === Qt.Key_Escape) {
-                if (sheet.searching || sheet.query) { sheet.searching = false; sheet.query = "" }
+                if (sheet.searching || sheet.query) sheet.resetSearch()
                 else sheet.close()
                 e.accepted = true
             } else if (e.key === Qt.Key_Slash && !sheet.searching) {
@@ -154,16 +157,12 @@ Item {
                                    renderType: Text.NativeRendering }
                             Keys.onPressed: e => {
                                 if (e.key === Qt.Key_Escape) {
-                                    sheet.searching = false; sheet.query = ""; text = ""
+                                    sheet.resetSearch()
                                     scope.forceActiveFocus(); e.accepted = true
                                 }
                             }
                         }
                     }
-                }
-                Connections {
-                    target: sheet
-                    function onSearchingChanged() { if (!sheet.searching) searchField.text = "" }
                 }
 
                 Row {
