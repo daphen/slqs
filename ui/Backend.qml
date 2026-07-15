@@ -541,7 +541,22 @@ Item {
             }
     }
 
+    // vim ctrl+o: bounce between the two most recent channels
+    property var lastChannel: null
+    function toggleLastChannel() {
+        const prev = lastChannel
+        if (!prev || !prev.id || prev.id === currentChannelId) { toast("no previous channel"); return }
+        if (prev.workspace && prev.workspace !== currentWorkspace) {
+            currentWorkspace = prev.workspace
+            rebuildChannelModel()
+        }
+        selectChannel(prev.id, prev.name, prev.topic)
+    }
+
     function selectChannel(id, name, topic) {
+        if (currentChannelId && currentChannelId !== id)
+            lastChannel = { id: currentChannelId, name: currentChannel,
+                            topic: currentTopic, workspace: currentWorkspace }
         threadsView = false   // opening a channel leaves the Threads page
         mentionsView = false
         viewingNonMember = false   // a normal channel open clears any preview state

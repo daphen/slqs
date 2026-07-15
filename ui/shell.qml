@@ -183,6 +183,7 @@ FloatingWindow {
                 case Qt.Key_E: return "ctrl+e"
                 case Qt.Key_Y: return "ctrl+y"
                 case Qt.Key_S: return "ctrl+s"
+                case Qt.Key_O: return "ctrl+o"
                 case Qt.Key_I: return "ctrl+i"
             }
             return ""   // unmapped ctrl combo → ignore
@@ -222,6 +223,7 @@ FloatingWindow {
             "d":        { act: () => { if (!Backend.railHidden) peoplePicker.showDM() }, help: () => Backend.railHidden ? "" : "Message someone", cat: "chats" },
             "I":        { act: () => { if (!Backend.railHidden) peoplePicker.showInvite() }, help: () => Backend.railHidden ? "" : "Invite to channel", cat: "chats" },
             "ctrl+k":   { act: () => palette.show(), help: "Jump palette", cat: "chats" },
+            "ctrl+o":   { act: () => Backend.toggleLastChannel(), help: "Last channel", cat: "chats" },
             "ctrl+i":   { act: () => Backend.gotoFirstUnread(), help: "Go to first unread", cat: "chats" },
             "ctrl+s":   { act: () => workspacePicker.show(), help: () => Backend.railHidden ? "Switch server" : "Switch workspace", cat: "chats" },
             // Directional panel focus, insert-mode friendly (the composer maps the
@@ -261,6 +263,7 @@ FloatingWindow {
             "e":      { act: () => { const m = thread.currentMessage(); if (m && m.mine) thread.startEdit(m) }, help: "Edit your message", cat: "msg" },
             "D":      { act: () => askDelete(thread.currentMessage()), help: "Delete your message", cat: "msg" },
             "ctrl+k": { act: () => palette.show(), help: "Jump palette", cat: "chats" },
+            "ctrl+o": { act: () => Backend.toggleLastChannel(), help: "Last channel", cat: "chats" },
             "ctrl+i": { act: () => Backend.gotoFirstUnread(), help: "Go to first unread", cat: "chats" },
             "ctrl+s": { act: () => workspacePicker.show(), help: "Switch workspace", cat: "chats" },
             "u":      { act: () => win.openUpload(), help: "Attach a file", cat: "chats" },
