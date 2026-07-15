@@ -1454,12 +1454,12 @@ func (d *daemon) readConn(c net.Conn) {
 					d.broadcast(map[string]any{"type": "attachReady", "channel": id, "name": "", "ok": false})
 					return
 				}
-				fail := func() {
-					d.broadcast(map[string]any{"type": "attachReady", "channel": id, "name": "", "ok": false})
+				fail := func(reason string) {
+					d.broadcast(map[string]any{"type": "attachReady", "channel": id, "name": "", "ok": false, "err": reason})
 				}
 				data, err := exec.Command("wl-paste", "-t", mime).Output()
 				if err != nil || len(data) == 0 {
-					fail()
+					fail("clipboard image was empty")
 					return
 				}
 				name := "pasted." + ext
@@ -1472,7 +1472,7 @@ func (d *daemon) readConn(c net.Conn) {
 				fileID, err := w.client.StageUpload(d.ctx, name, data)
 				if err != nil {
 					log.Printf("upload: %v", err)
-					fail()
+					fail("upload failed: " + err.Error())
 					return
 				}
 				d.attachMu.Lock()
@@ -1494,13 +1494,13 @@ func (d *daemon) readConn(c net.Conn) {
 			d.attachMu.Unlock()
 			go func(w *workspace) {
 				defer close(done)
-				fail := func() {
-					d.broadcast(map[string]any{"type": "attachReady", "channel": id, "name": "", "ok": false})
+				fail := func(reason string) {
+					d.broadcast(map[string]any{"type": "attachReady", "channel": id, "name": "", "ok": false, "err": reason})
 				}
 				data, err := os.ReadFile(path)
 				if err != nil || len(data) == 0 {
 					log.Printf("uploadFile read %s: %v", path, err)
-					fail()
+					fail("can't read " + path)
 					return
 				}
 				name := filepath.Base(path)
@@ -1515,7 +1515,7 @@ func (d *daemon) readConn(c net.Conn) {
 				fileID, err := w.client.StageUpload(d.ctx, name, data)
 				if err != nil {
 					log.Printf("uploadFile stage: %v", err)
-					fail()
+					fail("upload failed: " + err.Error())
 					return
 				}
 				d.attachMu.Lock()

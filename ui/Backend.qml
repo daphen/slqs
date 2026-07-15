@@ -1066,7 +1066,12 @@ Item {
             // still awaiting the Ctrl+V result → paste the clipboard text instead.
             if (e.ok) { attachState = "ready"; attachName = e.name || "file"; attachSettled() }
             else if (_awaitingPaste) pasteFallback()
-            else attachState = "none"
+            else {
+                attachState = "none"
+                // failed uploads used to clear the chip silently — surface the
+                // daemon's reason so a rejected file isn't a mystery
+                if (e.err) toast(e.err)
+            }
             _awaitingPaste = false
         }
     }
