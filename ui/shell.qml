@@ -445,6 +445,10 @@ FloatingWindow {
                                   topMargin: 6
                                   leftMargin: 4 + 8 * (1 - Math.min(1, sidebar.width / 264))
                                   rightMargin: 12; bottomMargin: 12 }
+                        // focused-panel accent: the mlqs inbox hairline
+                        border.width: 1
+                        border.color: (win.focusedPanel === "messages" && !Backend.threadOpen)
+                                    ? Theme.hairlineSoft : "transparent"
                     }
 
                     MessageList {
