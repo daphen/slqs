@@ -539,7 +539,11 @@ func (d *daemon) unreadMentionCount(w *workspace, channelID, lastRead string) in
 		conds[i] = "text LIKE ?"
 		args = append(args, l)
 	}
-	q := "SELECT count(*) FROM messages WHERE channel_id=? AND ts>? AND is_deleted=0 AND (" + strings.Join(conds, " OR ") + ")"
+	// top-level only, matching the unread badge: a mention buried in a thread
+	// reply is invisible from the channel — its home is notifications and (for
+	// direct mentions, which auto-subscribe) the Threads view. Promoting the
+	// channel for it points the user at nothing.
+	q := "SELECT count(*) FROM messages WHERE channel_id=? AND ts>? AND is_deleted=0 AND (thread_ts='' OR thread_ts=ts) AND (" + strings.Join(conds, " OR ") + ")"
 	var n int
 	d.cacheDB.QueryRowContext(d.ctx, q, args...).Scan(&n)
 	return n
