@@ -53,9 +53,13 @@ view_in_imv() {
     # images land off-center (full-scaling used to re-center on rescale).
     # Nudge a center once the window has settled.
     (
-        sleep 0.4
-        pid=$(pgrep -n -x imv)
-        [ -n "$pid" ] && imv-msg "$pid" center
+        # the imv binary is a launcher; the real process is imv-wayland.
+        # Nudge twice — the first can race the image decode.
+        for delay in 0.4 0.9; do
+            sleep "$delay"
+            pid=$(pgrep -n -x imv-wayland || pgrep -n -x imv)
+            [ -n "$pid" ] && imv-msg "$pid" center
+        done
     ) >/dev/null 2>&1 &
 }
 
