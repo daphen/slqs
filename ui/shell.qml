@@ -191,6 +191,16 @@ FloatingWindow {
         return e.text   // j k h l g i q /
     }
 
+    // ctrl+s: with exactly two workspaces a picker is ceremony — flip straight
+    // to the other one; three or more still get the picker.
+    function switchWorkspaceOrPick() {
+        if (Backend.workspaces.length === 2) Backend.cycleWorkspace(1)
+        else workspacePicker.show()
+    }
+    function switchWorkspaceHelp(kind) {
+        return (Backend.workspaces.length === 2 ? "Toggle " : "Switch ") + kind
+    }
+
     // Each entry is { act, help, cat }: `act` runs on the key (routeKey calls it),
     // `help`/`cat` feed the `?` cheat sheet (KeybindHelp reads this table live, so
     // it can never drift). `help` may be a function for app-specific wording.
@@ -225,7 +235,7 @@ FloatingWindow {
             "ctrl+k":   { act: () => palette.show(), help: "Jump palette", cat: "chats" },
             "ctrl+o":   { act: () => Backend.toggleLastChannel(), help: "Last channel", cat: "chats" },
             "ctrl+i":   { act: () => Backend.gotoFirstUnread(), help: "Go to first unread", cat: "chats" },
-            "ctrl+s":   { act: () => workspacePicker.show(), help: () => Backend.railHidden ? "Switch server" : "Switch workspace", cat: "chats" },
+            "ctrl+s":   { act: () => switchWorkspaceOrPick(), help: () => switchWorkspaceHelp(Backend.railHidden ? "server" : "workspace"), cat: "chats" },
             // Directional panel focus, insert-mode friendly (the composer maps the
             // same chords through panelMove). Workspace switching stays on ctrl+s.
             "ctrl+l":   { act: () => focusPanel("messages"), help: "Focus messages", cat: "nav" },
@@ -265,7 +275,7 @@ FloatingWindow {
             "ctrl+k": { act: () => palette.show(), help: "Jump palette", cat: "chats" },
             "ctrl+o": { act: () => Backend.toggleLastChannel(), help: "Last channel", cat: "chats" },
             "ctrl+i": { act: () => Backend.gotoFirstUnread(), help: "Go to first unread", cat: "chats" },
-            "ctrl+s": { act: () => workspacePicker.show(), help: "Switch workspace", cat: "chats" },
+            "ctrl+s": { act: () => switchWorkspaceOrPick(), help: () => switchWorkspaceHelp("workspace"), cat: "chats" },
             "u":      { act: () => win.openUpload(), help: "Attach a file", cat: "chats" },
             "U":      { act: () => win.uploadClipboardPath(), help: "Upload file path from clipboard", cat: "chats" },
             "ctrl+h": { act: () => closeThreadAction(), help: "Back to channel", cat: "nav" },
@@ -288,7 +298,7 @@ FloatingWindow {
             "h":      { act: () => focusPanel("sidebar"), help: "Focus sidebar", cat: "nav" },
             "ctrl+k": { act: () => palette.show(), help: "Jump palette", cat: "chats" },
             "ctrl+i": { act: () => Backend.gotoFirstUnread(), help: "Go to first unread", cat: "chats" },
-            "ctrl+s": { act: () => workspacePicker.show(), help: "Switch workspace", cat: "chats" },
+            "ctrl+s": { act: () => switchWorkspaceOrPick(), help: () => switchWorkspaceHelp("workspace"), cat: "chats" },
             // threads-view specific (feeds the THREADS section)
             "enter":  { act: () => threadsPage.openCurrent(), help: "Open thread", cat: "thread" },
             "D":      { act: () => { const t = Backend.currentSubThreads[threadsPage.currentIndex]
