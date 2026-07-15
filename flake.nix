@@ -35,10 +35,6 @@
 
           # a UI is already up (window stays mapped in this app — jump-or-exec
           # handles focus): a second one is never wanted
-          if pgrep -f "quickshell.* -p .*share/slqs/ui" >/dev/null 2>&1; then
-            exit 0
-          fi
-
           # serialize the daemon aliveness check + spawn: concurrent launches
           # used to each see "no daemon" and spawn duplicates
           exec 9>"$XDG_RUNTIME_DIR/slqs-launch.lock"
@@ -56,7 +52,13 @@
             rm -f "$sock"
             setsid nohup ${daemon}/bin/slqs >/tmp/slqs.log 2>&1 </dev/null 9>&- &
           fi
-          for _ in $(seq 1 150); do [ -S "$sock" ] && break; sleep 0.1; done
+          for _ in $(seq 1 300); do [ -S "$sock" ] && break; sleep 0.1; done
+
+          # single-instance UI — checked AFTER the daemon health pass, so the
+          # launcher can revive a dead daemon while a window is still up
+          if pgrep -f "quickshell.* -p .*share/slqs/ui" >/dev/null 2>&1; then
+            exit 0
+          fi
           # close the launch lock for qs — an inherited fd 9 holds the lock
           # for the UI's whole lifetime and deadlocks future launches
           exec qs -p "${daemon}/share/slqs/ui" 9>&-
