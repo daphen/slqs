@@ -2157,6 +2157,12 @@ func main() {
 			m, w := time.Now(), time.Now().Round(0)
 			if w.Sub(wall)-m.Sub(mono) > time.Minute {
 				log.Printf("wake from suspend — resync")
+				// close the dead sockets now: the read loop errors instantly
+				// and the connection manager redials, instead of waiting out
+				// the 60s read deadline on a half-open connection
+				for _, ws := range d.wsList {
+					ws.client.StopWebSocket()
+				}
 				time.Sleep(5 * time.Second) // let the network come back first
 				d.broadcast(map[string]any{"type": "resync"})
 			}
