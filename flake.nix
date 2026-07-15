@@ -54,10 +54,12 @@
             # render (UI racing a not-yet-ready daemon). Clear any stale socket
             # first so the wait lands on the fresh daemon.
             rm -f "$sock"
-            setsid nohup ${daemon}/bin/slqs >/tmp/slqs.log 2>&1 </dev/null &
+            setsid nohup ${daemon}/bin/slqs >/tmp/slqs.log 2>&1 </dev/null 9>&- &
           fi
           for _ in $(seq 1 150); do [ -S "$sock" ] && break; sleep 0.1; done
-          exec qs -p "${daemon}/share/slqs/ui"
+          # close the launch lock for qs — an inherited fd 9 holds the lock
+          # for the UI's whole lifetime and deadlocks future launches
+          exec qs -p "${daemon}/share/slqs/ui" 9>&-
         '';
       };
     in {
