@@ -27,11 +27,22 @@
 
       client = pkgs.writeShellApplication {
         name = "slqs-client";
-        runtimeInputs = [ daemon pkgs.quickshell pkgs.procps pkgs.coreutils pkgs.mpv pkgs.imv pkgs.ffmpeg-headless pkgs.jq pkgs.curl pkgs.xdg-utils ];
+        runtimeInputs = [ daemon pkgs.quickshell pkgs.procps pkgs.coreutils pkgs.mpv pkgs.imv pkgs.ffmpeg-headless pkgs.jq pkgs.curl pkgs.xdg-utils pkgs.util-linux ];
         text = ''
           export QML2_IMPORT_PATH="$HOME/.local/share/qml:${daemon}/share/slqs/ui/vendor''${QML2_IMPORT_PATH:+:$QML2_IMPORT_PATH}"
           export SLK_MEDIA_VIEWER="${daemon}/share/slqs/media-viewer.sh"
           sock="$XDG_RUNTIME_DIR/slqs.sock"
+
+          # a UI is already up (window stays mapped in this app — jump-or-exec
+          # handles focus): a second one is never wanted
+          if pgrep -f "quickshell.* -p .*share/slqs/ui" >/dev/null 2>&1; then
+            exit 0
+          fi
+
+          # serialize the daemon aliveness check + spawn: concurrent launches
+          # used to each see "no daemon" and spawn duplicates
+          exec 9>"$XDG_RUNTIME_DIR/slqs-launch.lock"
+          flock 9
           alive=""
           for pid in $(pgrep -x slqs 2>/dev/null); do
             # a zombie (unreaped child) matches pgrep but serves nothing
