@@ -54,8 +54,10 @@ view_in_imv() {
     # Nudge a center once the window has settled.
     (
         # the imv binary is a launcher; the real process is imv-wayland.
-        # Nudge twice — the first can race the image decode.
-        for delay in 0.4 0.9; do
+        # Rapid-fire: the first centers land inside niri's open animation,
+        # so the misplaced first layout is never actually seen; the late
+        # ones cover slow decodes.
+        for delay in 0.05 0.05 0.05 0.1 0.15 0.3 0.6; do
             sleep "$delay"
             pid=$(pgrep -n -x imv-wayland || pgrep -n -x imv)
             [ -n "$pid" ] && imv-msg "$pid" center
