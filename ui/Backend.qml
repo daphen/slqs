@@ -379,8 +379,25 @@ Item {
     property bool   threadOpenToLatest: false  // true when opened to catch up replies (land at bottom)
     property string threadTitle: ""
     property bool   threadsView: false   // the dedicated Threads page is showing
-    function showThreadsView() { if (!hasThreads) return; threadsView = true; safeWrite(JSON.stringify({ type: "refreshThreads" }) + "\n") }
+    function showThreadsView() { if (!hasThreads) return; mentionsView = false; threadsView = true; safeWrite(JSON.stringify({ type: "refreshThreads" }) + "\n") }
     function hideThreadsView() { threadsView = false }
+
+    property bool   mentionsView: false   // the dedicated Mentions page is showing
+    property var    mentions: []
+    readonly property var currentMentions: (mentions || []).filter(m => m.workspace === currentWorkspace)
+    function showMentionsView() {
+        if (!hasThreads) return   // slack-only, like threads
+        threadsView = false
+        mentionsView = true
+        safeWrite(JSON.stringify({ type: "refreshMentions" }) + "\n")
+    }
+    function hideMentionsView() { mentionsView = false }
+    function openMention(m) {
+        if (!m) return
+        mentionsView = false
+        const isReply = m.threadTs && m.threadTs !== m.ts
+        openPermalink(m.channel, m.ts, isReply ? m.threadTs : "", m.workspace, "")
+    }
 
     // slkd pushes the workspace list first, then the channels.
     function setWorkspaces(list, rail, threads) {
@@ -526,6 +543,7 @@ Item {
 
     function selectChannel(id, name, topic) {
         threadsView = false   // opening a channel leaves the Threads page
+        mentionsView = false
         viewingNonMember = false   // a normal channel open clears any preview state
         currentChannelId = id
         currentChannel = name
@@ -682,6 +700,7 @@ Item {
                 rebuildChannelModel()
             }
             threadsView = false
+            mentionsView = false
             currentChannelId = channelId
             currentChannel = ch.name
             currentTopic = ch.topic || ""
@@ -965,11 +984,13 @@ Item {
         else if (e.type === "browse") { browseResults = e.channels || []; browseLoaded() }
         else if (e.type === "toast") { if (e.text) toast(e.text) }
         else if (e.type === "channels") setChannels(e.channels, e.subThreads)
+        else if (e.type === "mentions") mentions = e.items || []
         else if (e.type === "recent") {
             // A jump into a channel we haven't joined: adopt it now that its
             // window has arrived (the view wasn't switched up front).
             if (e.jump && e.channel !== currentChannelId && _findChannel(e.channel) === null) {
                 threadsView = false
+                mentionsView = false
                 currentChannelId = e.channel
                 currentChannel = e.channelName ? ("#" + e.channelName) : e.channel
                 currentTopic = ""
@@ -1045,7 +1066,7 @@ Item {
             currentWorkspace = workspace
             rebuildChannelModel()
             selectChannel(id, ch.name, ch.topic)
-        } else if (id !== currentChannelId || threadsView) {
+        } else if (id !== currentChannelId || threadsView || mentionsView) {
             selectChannel(id, ch.name, ch.topic)
         } else {
             // Already viewing this channel — it's live, so skip the clear +
@@ -1068,7 +1089,7 @@ Item {
     // Tell slkd what channel we're viewing so it suppresses notifications for
     // it while the window is focused (slkd tracks focus via niri's event stream).
     function sendFocus() {
-        safeWrite(JSON.stringify({ type: "focus", channel: threadsView ? "" : currentChannelId }) + "\n")
+        safeWrite(JSON.stringify({ type: "focus", channel: (threadsView || mentionsView) ? "" : currentChannelId }) + "\n")
     }
 
     // Open a focused message's first image in the custom media viewer (same

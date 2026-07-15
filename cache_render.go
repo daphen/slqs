@@ -1043,3 +1043,57 @@ func (d *daemon) buildSubThreads(w *workspace) []map[string]any {
 	})
 	return out
 }
+
+// buildMentions lists recent messages that mention self — direct @you,
+// @here/@channel/@everyone, or a user group — thread replies included: this
+// is the page where mentions buried in unfollowed threads become findable.
+// Newest first; the mention itself is the activity.
+func (d *daemon) buildMentions(w *workspace) []map[string]any {
+	likes := []string{"%<@" + w.selfID + ">%", "%<!here>%", "%<!channel>%", "%<!everyone>%"}
+	for _, g := range w.myGroups {
+		likes = append(likes, "%<!subteam^"+g+">%")
+	}
+	conds := make([]string, len(likes))
+	args := []any{w.selfID}
+	for i, l := range likes {
+		conds[i] = "text LIKE ?"
+		args = append(args, l)
+	}
+	rows, err := d.cacheDB.QueryContext(d.ctx,
+		`SELECT channel_id, ts, COALESCE(thread_ts,''), user_id, text, COALESCE(raw_json,'')
+		 FROM messages WHERE is_deleted=0 AND text<>'' AND user_id<>? AND (`+strings.Join(conds, " OR ")+`)
+		 ORDER BY ts DESC LIMIT 300`, args...)
+	if err != nil {
+		return nil
+	}
+	defer rows.Close()
+	var out []map[string]any
+	for rows.Next() && len(out) < 60 {
+		var cid, ts, tts, uid, text, raw string
+		if rows.Scan(&cid, &ts, &tts, &uid, &text, &raw) != nil {
+			continue
+		}
+		cname := w.chans[cid]
+		if cname == "" {
+			continue
+		}
+		pm := d.msgFromRaw(w, cid, uid, ts, text, 0, raw)
+		preview := stripMentionMarks(strings.Join(strings.Fields(d.render(w, text)), " "))
+		if len(preview) > 140 {
+			preview = preview[:140]
+		}
+		tsec := ts
+		if i := strings.IndexByte(ts, '.'); i >= 0 {
+			tsec = ts[:i]
+		}
+		lsec, _ := strconv.ParseInt(tsec, 10, 64)
+		out = append(out, map[string]any{
+			"channel": cid, "channelName": cname, "workspace": w.teamID,
+			"ts": ts, "threadTs": tts, "title": pm["author"], "preview": preview,
+			"avatar": pm["avatar"], "color": pm["color"], "initials": pm["initials"],
+			"lastTime": time.Unix(lsec, 0).Format("Jan 02, 15:04"),
+			"inThread": tts != "" && tts != ts,
+		})
+	}
+	return out
+}

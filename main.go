@@ -1242,6 +1242,16 @@ func (d *daemon) readConn(c net.Conn) {
 		// Slack (subscriptions.thread.getView) so last_read reflects reads made
 		// in the official client — otherwise a thread read elsewhere keeps
 		// showing a false unread. Parallel per workspace, then re-push.
+		if cmd.Type == "refreshMentions" {
+			go func(c net.Conn) {
+				items := []map[string]any{}
+				for _, w := range d.wsList {
+					items = append(items, d.buildMentions(w)...)
+				}
+				d.writeConn(c, map[string]any{"type": "mentions", "items": items})
+			}(c)
+			continue
+		}
 		if cmd.Type == "refreshThreads" {
 			go func() {
 				var wg sync.WaitGroup

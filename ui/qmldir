@@ -8,6 +8,7 @@ Composer Composer.qml
 ThreadPanel ThreadPanel.qml
 ChannelPalette ChannelPalette.qml
 ThreadsPage ThreadsPage.qml
+MentionsPage MentionsPage.qml
 EmojiPicker EmojiPicker.qml
 Autocomplete Autocomplete.qml
 BrowsePicker BrowsePicker.qml

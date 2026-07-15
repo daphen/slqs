@@ -16,38 +16,50 @@ Rectangle {
     opacity: active ? 1.0 : 0.8
     Behavior on opacity { NumberAnimation { duration: 120 } }
     signal threadsClicked()
+    signal mentionsClicked()
     signal workspacePickerRequested()
 
-    // The pinned "Threads" row sits above the channel list as a virtual
-    // top item; threadsSelected===true means the cursor is on it.
+    // Pinned virtual rows above the channel list: Threads, then Mentions.
+    // Counts walk through them like list rows (13k from row 5 included).
     property bool threadsSelected: false
+    property bool mentionsSelected: false
     function move(d) {
         if (threadsSelected) {
-            // leaving Threads costs one step; the rest of the count walks the list
-            if (d > 0) { threadsSelected = false; list.currentIndex = Math.min(list.count - 1, d - 1) }
+            if (d > 0) {
+                threadsSelected = false
+                if (d === 1) { mentionsSelected = true; return }
+                list.currentIndex = Math.min(list.count - 1, d - 2)
+            }
             return
         }
-        // Threads is a virtual top item only when the backend supports threads —
-        // any upward overshoot past row 0 lands on it (13k from row 5 included).
+        if (mentionsSelected) {
+            mentionsSelected = false
+            if (d < 0) { threadsSelected = true; return }
+            list.currentIndex = Math.min(list.count - 1, d - 1)
+            return
+        }
         if (Backend.hasThreads && d < 0 && list.currentIndex + d < 0) {
-            threadsSelected = true
+            // overshoot past row 0: one step lands on Mentions, more on Threads
+            if (list.currentIndex + d <= -2) threadsSelected = true
+            else mentionsSelected = true
             list.currentIndex = 0
             list.positionViewAtBeginning()
             return
         }
         list.currentIndex = Math.max(0, Math.min(list.count - 1, list.currentIndex + d))
     }
-    function toTop()    { threadsSelected = Backend.hasThreads; list.currentIndex = 0; list.positionViewAtBeginning() }
-    function toBottom() { threadsSelected = false; list.currentIndex = list.count - 1 }
+    function toTop()    { threadsSelected = Backend.hasThreads; mentionsSelected = false; list.currentIndex = 0; list.positionViewAtBeginning() }
+    function toBottom() { threadsSelected = false; mentionsSelected = false; list.currentIndex = list.count - 1 }
     function openCurrent() {
         if (threadsSelected) { sidebar.threadsClicked(); return }
+        if (mentionsSelected) { sidebar.mentionsClicked(); return }
         const it = Backend.channels.get(list.currentIndex)
         if (it) Backend.selectChannel(it.id, it.name, it.topic)
     }
     // Star/unstar the cursor row; the rebuild reorders sections, so chase the
     // channel to its new position instead of letting the cursor dump to the top.
     function toggleStarCurrent() {
-        if (threadsSelected) return
+        if (threadsSelected || mentionsSelected) return
         const it = Backend.channels.get(list.currentIndex)
         if (!it) return
         const id = it.id
@@ -128,8 +140,11 @@ Rectangle {
         anchors.leftMargin: 10; anchors.rightMargin: 10; anchors.bottomMargin: 10
         spacing: 10
 
-        // Pinned "Threads" entry — opens the threads list (Ctrl+K palette).
+        // Pinned rows: Threads + Mentions, grouped tightly as one block.
         // Hidden when the backend has no threads (Discord).
+        Column {
+        width: parent.width
+        spacing: 2
         Rectangle {
             visible: Backend.hasThreads
             width: parent.width; height: Backend.hasThreads ? 36 : 0; clip: true; radius: height / 2
@@ -156,7 +171,28 @@ Rectangle {
                        font.pixelSize: 12; font.weight: 500 }
             }
             HoverHandler { id: thHov }
-            TapHandler { onTapped: { sidebar.threadsSelected = true; sidebar.threadsClicked() } }
+            TapHandler { onTapped: { sidebar.threadsSelected = true; sidebar.mentionsSelected = false; sidebar.threadsClicked() } }
+        }
+
+        // Pinned "Mentions" entry — every recent @you across the workspace.
+        Rectangle {
+            visible: Backend.hasThreads
+            width: parent.width; height: Backend.hasThreads ? 36 : 0; clip: true; radius: height / 2
+            readonly property bool mePrimary: sidebar.mentionsSelected && sidebar.active
+            color: mePrimary ? Theme.fg : meHov.hovered ? Theme.hover : "transparent"
+            Row {
+                anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 8; spacing: 7
+                Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
+                       text: "@"; color: parent.parent.mePrimary ? Theme.bg : Theme.fg_muted
+                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15 }
+                Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
+                       text: "Mentions"; color: parent.parent.mePrimary ? Theme.bg : Theme.fg
+                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
+                       font.pixelSize: 14; font.weight: Theme.fontWeight }
+            }
+            HoverHandler { id: meHov }
+            TapHandler { onTapped: { sidebar.mentionsSelected = true; sidebar.threadsSelected = false; sidebar.mentionsClicked() } }
+        }
         }
 
         ListView {
@@ -230,7 +266,7 @@ Rectangle {
                 // the focused panel — otherwise the open channel shows just the
                 // faint isOpen indicator (below), so it doesn't read as a live
                 // cursor while you're navigating messages/threads.
-                readonly property bool primary: sidebar.active && !sidebar.threadsSelected && cursor
+                readonly property bool primary: sidebar.active && !sidebar.threadsSelected && !sidebar.mentionsSelected && cursor
                 // Focus highlight matches the chat: subtle overlay + accent bar
                 // (90ms / 120ms). Open channel stays faintly findable when the
                 // cursor is elsewhere, but isn't a second "active" marker.
@@ -255,12 +291,14 @@ Rectangle {
                 // relative line number (vim hybrid: absolute on cursor row),
                 // shown only while the sidebar is focused — drives N j/k jumps.
                 Text { renderType: Text.NativeRendering
-                    visible: sidebar.active && (!row.cursor || sidebar.threadsSelected)
+                    visible: sidebar.active && (!row.cursor || sidebar.threadsSelected || sidebar.mentionsSelected)
                     anchors.left: parent.left; anchors.leftMargin: 12
                     width: 18; horizontalAlignment: Text.AlignRight
                     anchors.verticalCenter: parent.verticalCenter
                     // cursor on the virtual Threads row: distances count from it
-                    text: sidebar.threadsSelected ? row.index + 1 : Math.abs(row.index - list.currentIndex)
+                    text: sidebar.threadsSelected ? row.index + 2
+                        : sidebar.mentionsSelected ? row.index + 1
+                        : Math.abs(row.index - list.currentIndex)
                     color: row.primary ? Theme.bg : Theme.fg
                     opacity: 0.65
                     font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
@@ -270,7 +308,7 @@ Rectangle {
                 // Cursor row: the same small accent bar the chat gutter uses,
                 // centered in the number column.
                 Rectangle {
-                    visible: sidebar.active && row.cursor && !sidebar.threadsSelected
+                    visible: sidebar.active && row.cursor && !sidebar.threadsSelected && !sidebar.mentionsSelected
                     anchors.left: parent.left; anchors.leftMargin: 20
                     anchors.verticalCenter: parent.verticalCenter
                     width: 3; height: 16; radius: 2; color: Theme.cursor
@@ -352,7 +390,7 @@ Rectangle {
                 }
 
                 HoverHandler { id: hov }
-                TapHandler { onTapped: { sidebar.threadsSelected = false; list.currentIndex = row.index; Backend.selectChannel(row.id, row.name, row.topic) } }
+                TapHandler { onTapped: { sidebar.threadsSelected = false; sidebar.mentionsSelected = false; list.currentIndex = row.index; Backend.selectChannel(row.id, row.name, row.topic) } }
             }
 
             ScrollBar.vertical: ScrollBar { width: 6; policy: ScrollBar.AsNeeded }

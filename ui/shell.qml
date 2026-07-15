@@ -158,6 +158,7 @@ FloatingWindow {
     function currentMode() {
         if (Backend.threadOpen) return "thread"
         if (Backend.threadsView && focusedPanel === "messages") return "threadsPage"
+        if (Backend.mentionsView && focusedPanel === "messages") return "mentionsPage"
         return "channel"
     }
 
@@ -294,6 +295,21 @@ FloatingWindow {
             "ctrl+shift+r": { act: () => Backend.checkForUpdates(), help: "Check for updates", cat: "view" },
             "esc":    { act: () => Backend.hideThreadsView(), help: "Close threads view", cat: "view" },
         },
+        "mentionsPage": {
+            "j":      { act: () => mentionsPage.move(1),  help: "Move down", cat: "nav" },
+            "k":      { act: () => mentionsPage.move(-1), help: "Move up", cat: "nav" },
+            "g":      { act: () => mentionsPage.toTop(),    help: "Jump to top", cat: "nav" },
+            "G":      { act: () => mentionsPage.toBottom(), help: "Jump to bottom", cat: "nav" },
+            "ctrl+d": { act: () => mentionsPage.half(1),  help: "Half-page down", cat: "nav" },
+            "ctrl+u": { act: () => mentionsPage.half(-1), help: "Half-page up", cat: "nav" },
+            "h":      { act: () => focusPanel("sidebar"), help: "Focus sidebar", cat: "nav" },
+            "ctrl+k": { act: () => palette.show(), help: "Jump palette", cat: "chats" },
+            "enter":  { act: () => mentionsPage.openCurrent(), help: "Open mention", cat: "mention" },
+            "q":      { act: () => Backend.hideMentionsView(), help: "Close mentions view", cat: "mention" },
+            "?":      { act: () => help.show(), help: "This help", cat: "view" },
+            "ctrl+shift+r": { act: () => Backend.checkForUpdates(), help: "Check for updates", cat: "view" },
+            "esc":    { act: () => Backend.hideMentionsView(), help: "Close mentions view", cat: "view" },
+        },
     })
 
     function routeKey(e) {
@@ -361,6 +377,7 @@ FloatingWindow {
                     width: win.sidebarHidden ? 0 : 264
                     Behavior on width { PanelMotion {} }
                     onThreadsClicked: { Backend.showThreadsView(); win.focusPanel("messages") }
+                    onMentionsClicked: { Backend.showMentionsView(); win.focusPanel("messages") }
                     onWorkspacePickerRequested: workspacePicker.show()
                 }
 
@@ -510,6 +527,14 @@ FloatingWindow {
                         // backend without them (Discord)
                         visible: Backend.hasThreads && Backend.threadsView
                         active: Backend.hasThreads && Backend.threadsView && !Backend.threadOpen
+                        z: 4
+                    }
+
+                    MentionsPage {
+                        id: mentionsPage
+                        anchors.fill: parent
+                        visible: Backend.hasThreads && Backend.mentionsView
+                        active: Backend.hasThreads && Backend.mentionsView && !Backend.threadOpen
                         z: 4
                     }
 

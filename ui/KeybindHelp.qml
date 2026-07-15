@@ -62,6 +62,8 @@ Item {
         ]
         if (Backend.hasThreads)
             S.push({ title: "THREADS", rows: _rows([["thread", "thread"], ["threadsPage", "thread"]], null) })
+        if (Backend.hasThreads)
+            S.push({ title: "MENTIONS", rows: _rows([["mentionsPage", "mention"]], null) })
         S.push({ title: "MESSAGES",        rows: _rows([["channel", "msg"]], null) })
         S.push({ title: "VIEWS & GENERAL", rows: _rows([["channel", "view"]], [{ keys: "q", help: "Close panel / overlay" }]) })
         return S
