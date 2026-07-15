@@ -48,6 +48,15 @@ win_h=$(( screen_h * 85 / 100 ))
 # page between them.
 view_in_imv() {
     setsid -f imv -b "$bg" -W "$win_w" -H "$win_h" "$@" >/dev/null 2>&1
+    # With scaling_mode=shrink imv keeps the layout it computed for the
+    # REQUESTED size; when the compositor's real configure differs, small
+    # images land off-center (full-scaling used to re-center on rescale).
+    # Nudge a center once the window has settled.
+    (
+        sleep 0.4
+        pid=$(pgrep -n -x imv)
+        [ -n "$pid" ] && imv-msg "$pid" center
+    ) >/dev/null 2>&1 &
 }
 
 view_in_mpv() {
