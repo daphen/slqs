@@ -2147,6 +2147,22 @@ func main() {
 	if len(d.wsList) == 0 {
 		log.Fatal("no usable workspaces")
 	}
+	// Suspend detection: monotonic pauses while wall time doesn't, so a
+	// divergence means we slept. Websocket events from the gap were never
+	// delivered — tell clients to refetch what they're showing.
+	go func() {
+		mono, wall := time.Now(), time.Now().Round(0)
+		for {
+			time.Sleep(5 * time.Second)
+			m, w := time.Now(), time.Now().Round(0)
+			if w.Sub(wall)-m.Sub(mono) > time.Minute {
+				log.Printf("wake from suspend — resync")
+				time.Sleep(5 * time.Second) // let the network come back first
+				d.broadcast(map[string]any{"type": "resync"})
+			}
+			mono, wall = m, w
+		}
+	}()
 	log.Printf("%d workspace(s) ready", len(d.wsList))
 
 	// Mobile-push suppression: keep Slack's away timer reset while active by

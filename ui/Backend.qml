@@ -998,6 +998,16 @@ Item {
         else if (e.type === "delete") applyDelete(e.channel, e.ts)
         else if (e.type === "browse") { browseResults = e.channels || []; browseLoaded() }
         else if (e.type === "toast") { if (e.text) toast(e.text) }
+        else if (e.type === "resync") {
+            // daemon woke from suspend or its gateway re-identified: events
+            // from the gap were never delivered — refetch what's on screen
+            // (the recent reply resets the model)
+            if (currentChannelId !== "") {
+                safeWrite(JSON.stringify({ type: "recent", channel: currentChannelId }) + "\n")
+                if (threadOpen && threadParentTs)
+                    safeWrite(JSON.stringify({ type: "replies", channel: currentChannelId, thread: threadParentTs }) + "\n")
+            }
+        }
         else if (e.type === "channels") setChannels(e.channels, e.subThreads)
         else if (e.type === "mentions") mentions = e.items || []
         else if (e.type === "recent") {
