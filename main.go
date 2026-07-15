@@ -2226,10 +2226,13 @@ func main() {
 			ue := d.updateEvent
 			d.mu.Unlock()
 			log.Println("client connected")
-			if ue != nil { // replay update-available state to a (re)connecting client
-				if b, err := json.Marshal(ue); err == nil {
-					c.Write(b)
-				}
+			if ue != nil {
+				// replay update-available state to a (re)connecting client.
+				// MUST go through writeConn: a raw Write without the trailing
+				// newline glued this onto the next event (workspaces), killing
+				// both lines in the client's parser — the recurring blank
+				// sidebar on every ship day.
+				d.writeConn(c, ue)
 			}
 			// A fresh client (app (re)start) → re-check for updates unless we
 			// just did; the warm daemon otherwise only polls every 3h.
