@@ -396,9 +396,6 @@ FloatingWindow {
 
                 Item {
                     width: parent.width - sidebar.width - rail.width; height: parent.height
-                    // Active panel gets the border; inactive dims slightly.
-                    opacity: (win.focusedPanel === "messages" || Backend.threadOpen) ? 1.0 : 0.8
-                    Behavior on opacity { NumberAnimation { duration: 120 } }
 
                     // focused-panel accent: full border (message pane, no thread open)
                     Rectangle {

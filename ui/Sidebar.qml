@@ -12,9 +12,6 @@ Rectangle {
     // freeze channel-list reordering while the user navigates here
     onActiveChanged: Backend.sidebarNavigating = active
     Component.onCompleted: Backend.sidebarNavigating = active
-    // Active panel gets the border (below); inactive dims slightly.
-    opacity: active ? 1.0 : 0.8
-    Behavior on opacity { NumberAnimation { duration: 120 } }
     signal threadsClicked()
     signal mentionsClicked()
     signal workspacePickerRequested()
