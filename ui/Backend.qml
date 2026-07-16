@@ -773,6 +773,13 @@ Item {
         attachState = "uploading"; attachName = path.split("/").pop()
         safeWrite(JSON.stringify({ type: "uploadFile", channel: currentChannelId, path: path, thread: thread || "" }) + "\n")
     }
+    // The daemon asked (askCompress) before uploading an oversized image/video;
+    // yes → shrink under the size cap and stage the result.
+    function compressUpload(channel, thread, path) {
+        if (!channel || !path) return
+        attachState = "uploading"; attachName = path.split("/").pop()
+        safeWrite(JSON.stringify({ type: "compressUpload", channel: channel, path: path, thread: thread || "" }) + "\n")
+    }
     function dropAttach() {
         if (attachState === "none") return
         attachState = "none"; attachName = ""
@@ -784,6 +791,8 @@ Item {
     // A staged attachment finished uploading — drop into the composer so a bare
     // Enter sends it (handy for the u/U keybinds triggered from normal mode).
     signal attachSettled()
+    // Daemon found an oversized image/video and wants a yes/no on compressing.
+    signal askCompress(var info)
 
     // --- optimistic send: show your message instantly, reconcile with the echo ---
     property var _selfProfile: null   // {author,initials,color,avatar} learned from your own messages
@@ -1064,6 +1073,13 @@ Item {
             statusGen++
         }
         else if (e.type === "reactors") applyReactors(e.ts, e.reactions)
+        else if (e.type === "askCompress") {
+            // oversized image/video — clear the optimistic chip and let the UI
+            // ask; a yes routes back through compressUpload()
+            attachState = "none"; attachName = ""
+            askCompress({ channel: e.channel, thread: e.thread || "", path: e.path,
+                          name: e.name || "file", mb: e.mb || 0 })
+        }
         else if (e.type === "attachUploading") {
             // Daemon found a clipboard image and began uploading → show the
             // "uploading" chip now. Text pastes never reach here, so no false flash.

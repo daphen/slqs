@@ -707,6 +707,24 @@ FloatingWindow {
                 onOpenChanged: if (!open) win.backToNormal()
             }
 
+            // Oversized image/video: the daemon asks before doing anything, so
+            // yes → compress-and-stage, no → nothing uploaded.
+            ConfirmDialog {
+                id: confirmCompress
+                z: 102
+                title: "Compress and send?"
+                property var target: null
+                onConfirmed: { if (target) Backend.compressUpload(target.channel, target.thread, target.path); target = null }
+                onOpenChanged: if (!open) { target = null; win.backToNormal() }
+                Connections {
+                    target: Backend
+                    function onAskCompress(info) {
+                        confirmCompress.target = info
+                        confirmCompress.ask(info.name + "  ·  " + info.mb + " MB → over Discord's 10 MB limit")
+                    }
+                }
+            }
+
             KeybindHelp {
                 id: help
                 z: 103
