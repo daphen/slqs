@@ -75,7 +75,7 @@ type threadSubChangeRecord struct {
 	active                        bool
 }
 
-func (m *mockEventHandler) OnMessage(channelID, userID, ts, text, threadTS, subtype string, edited bool, files []slack.File, blocks slack.Blocks, attachments []slack.Attachment, botID, username string) {
+func (m *mockEventHandler) OnMessage(channelID, userID, ts, text, threadTS, subtype string, edited, changed bool, files []slack.File, blocks slack.Blocks, attachments []slack.Attachment, botID, username string) {
 	m.messages = append(m.messages, text)
 	m.subtypes = append(m.subtypes, subtype)
 	m.lastBlocks = blocks
@@ -97,7 +97,7 @@ func (m *mockEventHandler) OnReactionRemoved(channelID, ts, userID, emoji string
 func (m *mockEventHandler) OnPresenceChange(userID, presence string) {
 	m.presenceChanges = append(m.presenceChanges, userID+":"+presence)
 }
-func (m *mockEventHandler) OnUserTyping(channelID, userID string) {
+func (m *mockEventHandler) OnUserTyping(channelID, threadTS, userID string) {
 	m.typingEvents = append(m.typingEvents, channelID+":"+userID)
 }
 func (m *mockEventHandler) OnConnect()    {}
@@ -157,7 +157,7 @@ func TestEventHandlerInterface(t *testing.T) {
 	handler := &mockEventHandler{}
 	var _ EventHandler = handler
 
-	handler.OnMessage("C1", "U1", "123.456", "hello", "", "", false, nil, slack.Blocks{}, nil, "", "")
+	handler.OnMessage("C1", "U1", "123.456", "hello", "", "", false, false, nil, slack.Blocks{}, nil, "", "")
 	if len(handler.messages) != 1 || handler.messages[0] != "hello" {
 		t.Error("expected message to be recorded")
 	}

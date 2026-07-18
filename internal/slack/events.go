@@ -16,7 +16,10 @@ type EventHandler interface {
 	// for bot posts, "thread_broadcast" for thread replies that the
 	// author also sent to the main channel. files carries any file
 	// attachments on the message (empty for plain text messages).
-	OnMessage(channelID, userID, ts, text, threadTS, subtype string, edited bool, files []slack.File, blocks slack.Blocks, attachments []slack.Attachment, botID, username string)
+	// changed is true for message_changed events (edits AND link unfurls,
+	// which keep the same ts) so the daemon can broadcast a live replace even
+	// when it isn't a user edit; edited stays reserved for genuine user edits.
+	OnMessage(channelID, userID, ts, text, threadTS, subtype string, edited, changed bool, files []slack.File, blocks slack.Blocks, attachments []slack.Attachment, botID, username string)
 	OnMessageDeleted(channelID, ts string)
 	OnReactionAdded(channelID, ts, userID, emoji string)
 	OnReactionRemoved(channelID, ts, userID, emoji string)
@@ -311,12 +314,12 @@ func dispatchWebSocketEvent(data []byte, handler EventHandler) {
 			// this subtype).
 			debuglog.WS("message: channel=%s user=%s ts=%s subtype=%q thread_ts=%s files=%d",
 				msg.Channel, msg.User, msg.TS, msg.SubType, msg.ThreadTS, len(msg.Files))
-			handler.OnMessage(msg.Channel, msg.User, msg.TS, msg.Text, msg.ThreadTS, msg.SubType, false, msg.Files, msg.Blocks, msg.Attachments, msg.BotID, msg.Username)
+			handler.OnMessage(msg.Channel, msg.User, msg.TS, msg.Text, msg.ThreadTS, msg.SubType, false, false, msg.Files, msg.Blocks, msg.Attachments, msg.BotID, msg.Username)
 		case "message_changed":
 			if msg.Message != nil {
 				debuglog.WS("message_changed: channel=%s user=%s ts=%s thread_ts=%s edited=true",
 					msg.Channel, msg.Message.User, msg.Message.TS, msg.Message.ThreadTS)
-				handler.OnMessage(msg.Channel, msg.Message.User, msg.Message.TS, msg.Message.Text, msg.Message.ThreadTS, "", msg.Message.Edited != nil, msg.Message.Files, msg.Message.Blocks, msg.Message.Attachments, msg.Message.BotID, msg.Message.Username)
+				handler.OnMessage(msg.Channel, msg.Message.User, msg.Message.TS, msg.Message.Text, msg.Message.ThreadTS, "", msg.Message.Edited != nil, true, msg.Message.Files, msg.Message.Blocks, msg.Message.Attachments, msg.Message.BotID, msg.Message.Username)
 			}
 		case "message_deleted":
 			debuglog.WS("message_deleted: channel=%s deleted_ts=%s", msg.Channel, msg.DeletedTS)

@@ -28,7 +28,7 @@ func (h *wsHandler) OnConnect() {
 }
 func (h *wsHandler) OnDisconnect() { log.Printf("[%s] websocket disconnected", h.w.teamName) }
 
-func (h *wsHandler) OnMessage(channelID, userID, ts, text, threadTS, subtype string, edited bool, files []slack.File, blocks slack.Blocks, attachments []slack.Attachment, botID, username string) {
+func (h *wsHandler) OnMessage(channelID, userID, ts, text, threadTS, subtype string, edited, changed bool, files []slack.File, blocks slack.Blocks, attachments []slack.Attachment, botID, username string) {
 	authorID := userID
 	if authorID == "" && botID != "" {
 		authorID = botID
@@ -52,9 +52,11 @@ func (h *wsHandler) OnMessage(channelID, userID, ts, text, threadTS, subtype str
 		log.Printf("[%s] ws upsert message: %v", h.w.teamName, err)
 	}
 	h.d.writeDB.SetChannelSyncedAt(channelID, time.Now().Unix())
-	// Edits keep the same ts, so the poll loop (ts > lastTS) never re-emits
-	// them — broadcast the updated message directly so the client replaces it.
-	if edited && h.w.chans[channelID] != "" {
+	// Edits AND link unfurls arrive as message_changed and keep the same ts,
+	// so the poll loop (ts > lastTS) never re-emits them — broadcast the updated
+	// message directly so the client replaces it in place (this is what makes
+	// unfurls/thumbnails appear without leaving and re-entering the channel).
+	if changed && h.w.chans[channelID] != "" {
 		h.d.resolveUnknownUsers(h.w, []string{authorID})
 		h.d.broadcast(map[string]any{
 			"type": "message", "workspace": h.w.teamID, "channel": channelID, "thread": threadTS,

@@ -8,7 +8,9 @@ require (
 	charm.land/huh/v2 v2.0.3
 	charm.land/lipgloss/v2 v2.0.3
 	github.com/charmbracelet/x/ansi v0.11.7
+	github.com/esiqveland/notify v0.13.3
 	github.com/gen2brain/beeep v0.11.2
+	github.com/godbus/dbus/v5 v5.1.0
 	github.com/gorilla/websocket v1.5.3
 	github.com/mattn/go-sixel v0.0.9
 	github.com/muesli/reflow v0.3.0
@@ -18,6 +20,7 @@ require (
 	github.com/yuin/goldmark v1.7.13
 	golang.design/x/clipboard v0.7.1
 	golang.org/x/image v0.39.0
+	golang.org/x/net v0.57.0
 	golang.org/x/sync v0.22.0
 	golang.org/x/sys v0.47.0
 	golang.org/x/term v0.45.0
@@ -39,9 +42,7 @@ require (
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.7.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
-	github.com/esiqveland/notify v0.13.3 // indirect
 	github.com/go-ole/go-ole v1.3.0 // indirect
-	github.com/godbus/dbus/v5 v5.1.0 // indirect
 	github.com/google/uuid v1.6.0 // indirect
 	github.com/jackmordaunt/icns/v3 v3.0.1 // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect
@@ -59,7 +60,6 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/exp/shiny v0.0.0-20250606033433-dcc06ee1d476 // indirect
 	golang.org/x/mobile v0.0.0-20250606033058-a2a15c67f36f // indirect
-	golang.org/x/net v0.57.0 // indirect
 	modernc.org/libc v1.72.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
