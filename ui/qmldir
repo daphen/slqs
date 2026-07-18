@@ -6,6 +6,7 @@ MessageDelegate MessageDelegate.qml
 StatusEmoji StatusEmoji.qml
 Composer Composer.qml
 ThreadPanel ThreadPanel.qml
+ProfilePanel ProfilePanel.qml
 ChannelPalette ChannelPalette.qml
 ThreadsPage ThreadsPage.qml
 MentionsPage MentionsPage.qml

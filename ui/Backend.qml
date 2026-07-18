@@ -894,6 +894,29 @@ Item {
         const t = plainText(msg.text)
         if (t.length) { Quickshell.execDetached(["wl-copy", "--", t]); copiedTs = msg.ts; copiedClear.restart() }
     }
+    // Y: copy a link to the message. Both link shapes are constructible locally —
+    // Slack archives URLs from the workspace subdomain (in the workspaces payload),
+    // Discord from guild/channel/message ids.
+    function copyLink(msg) {
+        if (!msg || !msg.ts) return
+        let url = ""
+        if (railHidden) {
+            url = "https://discord.com/channels/" + (currentWorkspace || "@me") + "/" + currentChannelId + "/" + msg.ts
+        } else {
+            let sub = ""
+            for (let i = 0; i < workspaces.length; i++)
+                if (workspaces[i].id === currentWorkspace) { sub = workspaces[i].subdomain || ""; break }
+            if (!sub) { toast("Couldn't build link (no workspace subdomain)"); return }
+            url = "https://" + sub + ".slack.com/archives/" + currentChannelId + "/p" + msg.ts.replace(".", "")
+            // reply permalinks need the thread context to resolve in Slack
+            if (threadOpen && threadParentTs && msg.ts !== threadParentTs)
+                url += "?thread_ts=" + threadParentTs + "&cid=" + currentChannelId
+        }
+        Quickshell.execDetached(["wl-copy", "--", url])
+        copiedTs = msg.ts
+        copiedClear.restart()
+        toast("Link copied")
+    }
     // A deleted message (echoed back over the websocket) — drop it everywhere.
     function applyDelete(channelId, ts) {
         const arr = _store[channelId]
@@ -1073,6 +1096,20 @@ Item {
             statusGen++
         }
         else if (e.type === "reactors") applyReactors(e.ts, e.reactions)
+        else if (e.type === "voice") {
+            voiceState = e.state || "idle"
+            if (voiceState === "recording") voiceStartedAt = Date.now()
+        }
+        else if (e.type === "playback") {
+            if (e.state === "playing") playingId = String(e.id || "")
+            else if (String(e.id || "") === playingId) playingId = ""
+        }
+        else if (e.type === "profile") {
+            if (String(e.user || "") === profileUser) {
+                profileData = e.profile || ({})
+                profileOpen = true
+            }
+        }
         else if (e.type === "askCompress") {
             // oversized image/video — clear the optimistic chip and let the UI
             // ask; a yes routes back through compressUpload()
@@ -1148,6 +1185,45 @@ Item {
     property bool mediaLoading: false
     property string mediaLoadingTs: ""   // ts of the message being opened → on-row "Opening media…" badge
     Timer { id: mediaLoadTimer; interval: 20000; onTriggered: { backend.mediaLoading = false; backend.toast("Media didn’t open — try again") } }
+
+    // Voice notes (Discord only): V records off the default mic, enter sends,
+    // esc cancels. The daemon owns the ffmpeg recording; we just mirror its state.
+    property string voiceState: "idle"   // idle | recording | sending
+    property double voiceStartedAt: 0
+    function voiceRecord() {
+        if (voiceState === "idle" && currentChannelId)
+            safeWrite(JSON.stringify({ type: "voiceStart", channel: currentChannelId }) + "\n")
+    }
+    function voiceSend() {
+        if (voiceState === "recording")
+            safeWrite(JSON.stringify({ type: "voiceStop", send: true }) + "\n")
+    }
+    function voiceCancel() {
+        if (voiceState === "recording")
+            safeWrite(JSON.stringify({ type: "voiceStop", send: false }) + "\n")
+    }
+    // In-line audio playback (voice notes): the daemon plays via ffplay, no
+    // window. The pill whose message id matches playingId renders accented.
+    property string playingId: ""
+    function playStop() {
+        if (playingId) safeWrite(JSON.stringify({ type: "playStop" }) + "\n")
+    }
+
+    // Profile panel (slqs): Shift+P on a message opens the author's card in a
+    // right-hand panel. Opens only when the daemon's users.info answer lands,
+    // so the panel never shows an empty skeleton.
+    property bool profileOpen: false
+    property var  profileData: ({})
+    property string profileUser: ""
+    // one right-hand panel at a time: opening either closes the other
+    onProfileOpenChanged: if (profileOpen && threadOpen) closeThread()
+    onThreadOpenChanged: if (threadOpen) profileOpen = false
+    function openProfile(uid) {
+        if (!uid || railHidden) return
+        profileUser = uid
+        safeWrite(JSON.stringify({ type: "profile", workspace: currentWorkspace, user: uid }) + "\n")
+    }
+    function closeProfile() { profileOpen = false }
     // Media is often cached, so the download (view→viewReady) is instant — but the
     // viewer (mpv especially) still takes a beat to appear. Hold the indicator for a
     // grace window after viewReady so it's visible on cached opens too.
@@ -1162,6 +1238,14 @@ Item {
         const items = imgs.map(function (i) {
             return { id: i.id, url: i.full, ext: i.ext, type: i.type }
         })
+        // A lone audio (voice note) plays IN-LINE: the daemon runs ffplay, the
+        // pill accents while playing. v again (or q) stops. No viewer window.
+        if (items.length === 1 && items[0].type === "audio") {
+            if (playingId === String(items[0].id)) playStop()
+            else safeWrite(JSON.stringify({ type: "play", channel: currentChannelId,
+                id: items[0].id, url: items[0].url, ext: items[0].ext }) + "\n")
+            return
+        }
         // Images alone arrow in imv. Anything with a video goes to mpv as one
         // playlist (stills + videos, < / > to step) so a mixed message is
         // navigable in a single viewer; a lone video keeps the plain mpv path.

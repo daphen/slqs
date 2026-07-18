@@ -1144,6 +1144,41 @@ func (d *daemon) readConn(c net.Conn) {
 			}
 			continue
 		}
+		// profile fetches a user's full card (users.info) for the profile panel —
+		// live fetch so status/title are current, not the startup users.list snapshot.
+		if cmd.Type == "profile" {
+			pw := d.wss[cmd.Workspace]
+			if pw != nil && cmd.User != "" {
+				user := cmd.User
+				go func(w *workspace) {
+					u, err := w.client.GetUserProfile(user)
+					if err != nil {
+						log.Printf("profile: %v", err)
+						d.broadcast(map[string]any{"type": "toast", "text": "Couldn't load profile"})
+						return
+					}
+					name := u.Profile.DisplayName
+					if name == "" {
+						name = u.Profile.RealName
+					}
+					b, _ := json.Marshal(map[string]any{
+						"type": "profile", "workspace": w.teamID, "user": u.ID,
+						"profile": map[string]any{
+							"name": name, "realName": u.Profile.RealName, "handle": u.Name,
+							"title": u.Profile.Title, "statusText": u.Profile.StatusText,
+							"statusEmoji": u.Profile.StatusEmoji, "email": u.Profile.Email,
+							"phone": u.Profile.Phone, "avatar": u.Profile.Image512,
+							"tz": u.TZLabel, "tzOffset": u.TZOffset, "isBot": u.IsBot,
+						},
+					})
+					b = append(b, '\n')
+					d.mu.Lock()
+					c.Write(b)
+					d.mu.Unlock()
+				}(pw)
+			}
+			continue
+		}
 		// invite adds a user to the current channel (conversations.invite). Route
 		// by workspace, fall back to the channel-id index.
 		if cmd.Type == "invite" {

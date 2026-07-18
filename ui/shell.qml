@@ -154,8 +154,10 @@ FloatingWindow {
     // a keyId, picks the table for the current mode, and dispatches. Adding a
     // binding = one line in the relevant table; no nested if/else.
     function closeThreadAction() { Backend.closeThread(); backToNormal() }
+    function closeProfileAction() { Backend.closeProfile(); backToNormal() }
 
     function currentMode() {
+        if (Backend.profileOpen) return "profile"
         if (Backend.threadOpen) return "thread"
         if (Backend.threadsView && focusedPanel === "messages") return "threadsPage"
         if (Backend.mentionsView && focusedPanel === "messages") return "mentionsPage"
@@ -249,6 +251,15 @@ FloatingWindow {
             "y":        { act: () => { if (focusedPanel === "messages") Backend.copyText(msgs.currentMessage()) }, help: "Copy text", cat: "msg" },
             "o":        { act: () => { if (focusedPanel === "messages") Backend.openChannelRef(msgs.currentMessage()) }, help: "Open link", cat: "msg" },
             "v":        { act: () => { if (focusedPanel === "messages") Backend.viewImage(msgs.currentMessage()) }, help: "View image", cat: "msg" },
+            // voice notes are Discord-only (Slack's clips API is closed)
+            "V":        { act: () => { if (win.isDiscord) Backend.voiceRecord() },
+                          help: () => win.isDiscord ? "Record voice note" : "", cat: "msg" },
+            // author actions are slqs-only (Discord lacks the daemon verbs)
+            "Y":        { act: () => { if (focusedPanel === "messages") Backend.copyLink(msgs.currentMessage()) }, help: "Copy message link", cat: "msg" },
+            "M":        { act: () => { if (!Backend.railHidden && focusedPanel === "messages") { const m = msgs.currentMessage(); if (m && m.uid) Backend.openDM(m.uid) } },
+                          help: () => Backend.railHidden ? "" : "DM author", cat: "msg" },
+            "P":        { act: () => { if (!Backend.railHidden && focusedPanel === "messages") { const m = msgs.currentMessage(); if (m && m.uid) Backend.openProfile(m.uid) } },
+                          help: () => Backend.railHidden ? "" : "View profile", cat: "msg" },
             // views & general
             "?":        { act: () => help.show(), help: "This help", cat: "view" },
             "ctrl+shift+r": { act: () => Backend.checkForUpdates(), help: "Check for updates", cat: "view" },
@@ -267,9 +278,14 @@ FloatingWindow {
             "ctrl+g": { act: () => thread.move(9999), help: "Jump to bottom", cat: "nav" },
             "enter":  { act: () => Backend.enterAction(thread.currentMessage()), help: "Open media/link", cat: "msg" },
             "v":      { act: () => Backend.viewImage(thread.currentMessage()), help: "View image", cat: "msg" },
+            "M":      { act: () => { if (!Backend.railHidden) { const m = thread.currentMessage(); if (m && m.uid) Backend.openDM(m.uid) } },
+                        help: () => Backend.railHidden ? "" : "DM author", cat: "msg" },
+            "P":      { act: () => { if (!Backend.railHidden) { const m = thread.currentMessage(); if (m && m.uid) Backend.openProfile(m.uid) } },
+                        help: () => Backend.railHidden ? "" : "View profile", cat: "msg" },
             "o":      { act: () => Backend.openChannelRef(thread.currentMessage()), help: "Open link", cat: "msg" },
             "r":      { act: () => reactTo(thread.currentMessage()), help: "React", cat: "msg" },
             "y":      { act: () => Backend.copyText(thread.currentMessage()), help: "Copy text", cat: "msg" },
+            "Y":      { act: () => Backend.copyLink(thread.currentMessage()), help: "Copy message link", cat: "msg" },
             "e":      { act: () => { const m = thread.currentMessage(); if (m && m.mine) thread.startEdit(m) }, help: "Edit your message", cat: "msg" },
             "D":      { act: () => askDelete(thread.currentMessage()), help: "Delete your message", cat: "msg" },
             "ctrl+k": { act: () => palette.show(), help: "Jump palette", cat: "chats" },
@@ -286,6 +302,14 @@ FloatingWindow {
             "?":      { act: () => help.show(), help: "This help", cat: "view" },
             "ctrl+shift+r": { act: () => Backend.checkForUpdates(), help: "Check for updates", cat: "view" },
             "esc":    { act: () => closeThreadAction(), help: "Close thread", cat: "view" },
+        },
+        "profile": {
+            "M":      { act: () => { const u = Backend.profileUser; closeProfileAction(); Backend.openDM(u) }, help: "DM them", cat: "profile" },
+            "q":      { act: () => closeProfileAction(), help: "Close profile", cat: "profile" },
+            "h":      { act: () => closeProfileAction(), help: "Back to channel", cat: "profile" },
+            "ctrl+h": { act: () => closeProfileAction(), help: "Back to channel", cat: "nav" },
+            "?":      { act: () => help.show(), help: "This help", cat: "view" },
+            "esc":    { act: () => closeProfileAction(), help: "Close profile", cat: "view" },
         },
         "threadsPage": {
             "j":      { act: () => threadsPage.move(1),  help: "Move down", cat: "nav" },
@@ -344,6 +368,15 @@ FloatingWindow {
         }
         const id = keyId(e, ctrl)
         if (!id) return
+        // a live voice recording claims enter (send) and esc (cancel) before anything else
+        if (Backend.voiceState === "recording" && (id === "enter" || id === "esc")) {
+            if (id === "enter") Backend.voiceSend(); else Backend.voiceCancel()
+            e.accepted = true; return
+        }
+        // q stops in-line audio playback wherever you are
+        if (Backend.playingId && id === "q") {
+            Backend.playStop(); e.accepted = true; return
+        }
         // Ctrl+D/U must not multi-fire on a held/repeated press (one tap = one half-page)
         if (e.isAutoRepeat && (id === "ctrl+d" || id === "ctrl+u")) { e.accepted = true; return }
         // numeric count prefix (for j/k jumps like 15k); 0 only extends a count
@@ -534,6 +567,47 @@ FloatingWindow {
                         }
                     }
 
+                    // Voice-note badge — same grammar as the media badge: shows the
+                    // running recording (elapsed + the two live binds) or the send.
+                    Rectangle {
+                        id: voiceBadge
+                        z: 201
+                        visible: opacity > 0
+                        opacity: Backend.voiceState !== "idle" ? 1 : 0
+                        anchors.horizontalCenter: parent.horizontalCenter
+                        anchors.bottom: footer.top; anchors.bottomMargin: 8
+                        width: vbRow.implicitWidth + 28; height: 32; radius: 8
+                        color: Theme.mode === "light" ? Theme.ink : Theme.fg
+                        border.width: 1; border.color: Theme.hairline
+                        Behavior on opacity { NumberAnimation { duration: 140 } }
+                        property int secs: 0
+                        Timer {
+                            interval: 1000; repeat: true; triggeredOnStart: true
+                            running: Backend.voiceState === "recording"
+                            onTriggered: voiceBadge.secs = Math.max(0, Math.round((Date.now() - Backend.voiceStartedAt) / 1000))
+                        }
+                        Row {
+                            id: vbRow; anchors.centerIn: parent; spacing: 8
+                            Rectangle {
+                                width: 8; height: 8; radius: 4; color: Theme.red
+                                anchors.verticalCenter: parent.verticalCenter
+                                SequentialAnimation on opacity {
+                                    running: Backend.voiceState === "recording"; loops: Animation.Infinite
+                                    NumberAnimation { from: 1; to: 0.25; duration: 550 }
+                                    NumberAnimation { from: 0.25; to: 1; duration: 550 }
+                                }
+                            }
+                            Text {
+                                anchors.verticalCenter: parent.verticalCenter
+                                text: Backend.voiceState === "sending" ? "Sending voice note…"
+                                    : "Recording  " + Math.floor(voiceBadge.secs / 60) + ":" + ("0" + (voiceBadge.secs % 60)).slice(-2) + "   ⏎ send · esc cancel"
+                                color: Theme.bg
+                                renderType: Text.NativeRendering
+                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13
+                            }
+                        }
+                    }
+
                     ThreadsPage {
                         id: threadsPage
                         anchors.fill: parent
@@ -569,6 +643,20 @@ FloatingWindow {
                         onOpenPalette: palette.show()
                         // H = back to the channel (closes the thread panel); L = rightmost, just normal mode.
                         onPanelMove: (d) => { if (d < 0) win.closeThreadAction(); else win.backToNormal() }
+                    }
+
+                    // Profile card panel (slqs): same slide-in grammar as the
+                    // thread panel, narrower. Only one right panel at a time —
+                    // Backend closes whichever other panel is open.
+                    ProfilePanel {
+                        id: profilePanel
+                        width: Math.min(420, parent.width * 0.44)
+                        anchors.top: parent.top; anchors.bottom: parent.bottom
+                        anchors.topMargin: 8; anchors.bottomMargin: 12
+                        x: Backend.profileOpen ? (parent.width - width - 12) : parent.width
+                        Behavior on x { PanelMotion {} }
+                        visible: !Backend.railHidden && x < parent.width - 1
+                        z: 6
                     }
                 }
             }

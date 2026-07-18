@@ -722,10 +722,13 @@ func (d *daemon) sendChannels(c net.Conn) {
 	type wsEntry struct {
 		ID   string `json:"id"`
 		Name string `json:"name"`
+		// subdomain lets the client construct archives permalinks (Y copies a
+		// message link) without a chat.getPermalink roundtrip
+		Subdomain string `json:"subdomain"`
 	}
 	var wsList []wsEntry
 	for _, w := range d.wsList {
-		wsList = append(wsList, wsEntry{w.teamID, w.teamName})
+		wsList = append(wsList, wsEntry{w.teamID, w.teamName, w.client.TeamSubdomain()})
 	}
 	d.writeConn(c, map[string]any{"type": "workspaces", "workspaces": wsList})
 

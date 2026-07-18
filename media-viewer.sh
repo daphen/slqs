@@ -120,9 +120,15 @@ case "$type" in
                 ;;
         esac
         ;;
-    video|audio)
-        # mpv plays both. niri floats it via the same app-id rule as imv.
+    video)
+        # niri floats it via the same app-id rule as imv.
         view_in_mpv "${files[@]}"
+        ;;
+    audio)
+        # voice notes: play ONCE (a looping voice note is noise); force a small
+        # window so there's something visible to replay (space) or close (q).
+        setsid -f mpv --no-terminal --force-window=immediate --keep-open=yes \
+            --loop-file=no --geometry="${win_w}x120" "${files[@]}" >/dev/null 2>&1
         ;;
     *)
         # YT or anything else — hand off to system default.
