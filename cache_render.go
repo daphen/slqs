@@ -200,6 +200,14 @@ func (d *daemon) msgFromRaw(w *workspace, channelID, userID, ts, text string, re
 		sec = ts[:i]
 	}
 	s, _ := strconv.ParseInt(sec, 10, 64)
+	imagesJSON := d.imagesJSON(w, channelID, ts, rj.Files, append(rj.Attachments, imagesFromBlocks(raw)...))
+	linkURL := firstLink(body)
+	// a lone link that unfurled into an inline card/media (Spotify, image …)
+	// doesn't also need its raw URL as text — show just the card. `link` still
+	// holds the URL so `o` opens it.
+	if imagesJSON != "" && imagesJSON != "[]" && isLoneLink(body) {
+		body = ""
+	}
 	return map[string]any{
 		"author":        author,
 		"uid":           userID,
@@ -210,8 +218,8 @@ func (d *daemon) msgFromRaw(w *workspace, channelID, userID, ts, text string, re
 		"text":          d.render(w, body),
 		"grouped":       false,
 		"reactionsJson": d.reactionsJSONFor(w, channelID, ts),
-		"imagesJson":    d.imagesJSON(w, channelID, ts, rj.Files, append(rj.Attachments, imagesFromBlocks(raw)...)),
-		"link":          firstLink(body),
+		"imagesJson":    imagesJSON,
+		"link":          linkURL,
 		"channelRef":    firstChanRef(body), // first #channel mention id, for `o` to open
 		"ts":            ts,
 		"reply_count":   replyCount,

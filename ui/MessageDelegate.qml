@@ -280,10 +280,11 @@ Item {
             spacing: 4; topPadding: del.images.length > 0 ? 2 : 0
             Repeater {
                 model: del.images
-                delegate: ClippingRectangle {
-                    // ClippingRectangle reparents children into an internal content
-                    // item, so `parent.<prop>` from children resolves to undefined
-                    // (and a failed visible binding stays TRUE) — always go via the id.
+                delegate: Rectangle {
+                    // Root is a plain Rectangle so TEXT children (file/audio/music
+                    // chips) render directly — routing them through a rounded-clip
+                    // FBO (ClippingRectangle) resampled them soft/unreadable at
+                    // fractional scale. Full-bleed images get their own clip below.
                     id: pillRect
                     // index into del.images directly — a `modelData` here would
                     // collide with the message's modelData from the ListView.
@@ -464,35 +465,43 @@ Item {
                         }
                     }
 
-                    // gifs animate inline (AnimatedImage); stills use Image.
-                    // Only the matching element loads its source.
-                    Image {
-                        id: still
+                    // Full-bleed image/gif: clipped for rounded corners (text
+                    // cards are NOT inside this, so they stay crisp).
+                    ClippingRectangle {
                         anchors.fill: parent
-                        visible: img.type !== "gif" && !pillRect.isAudio && !pillRect.isFile && !pillRect.isMusic
-                        source: visible ? (img.path || "") : ""
-                        fillMode: Image.PreserveAspectCrop; asynchronous: true; cache: true
-                        sourceSize.width: 760   // HiDPI-crisp at the inline cap
-                        // a load raced against the daemon's download fails once and
-                        // Qt never retries on its own — nudge it until the file lands
-                        property int retries: 0
-                        onStatusChanged: if (status === Image.Error && retries < 6) stillRetry.restart()
-                        Timer {
-                            id: stillRetry; interval: 700
-                            onTriggered: {
-                                still.retries++
-                                const s = still.source
-                                still.source = ""
-                                still.source = s
+                        radius: pillRect.radius
+                        color: "transparent"
+                        visible: !pillRect.isFile && !pillRect.isAudio && !pillRect.isMusic
+                        // gifs animate inline (AnimatedImage); stills use Image.
+                        // Only the matching element loads its source.
+                        Image {
+                            id: still
+                            anchors.fill: parent
+                            visible: img.type !== "gif"
+                            source: visible ? (img.path || "") : ""
+                            fillMode: Image.PreserveAspectCrop; asynchronous: true; cache: true
+                            sourceSize.width: 760   // HiDPI-crisp at the inline cap
+                            // a load raced against the daemon's download fails once and
+                            // Qt never retries on its own — nudge it until the file lands
+                            property int retries: 0
+                            onStatusChanged: if (status === Image.Error && retries < 6) stillRetry.restart()
+                            Timer {
+                                id: stillRetry; interval: 700
+                                onTriggered: {
+                                    still.retries++
+                                    const s = still.source
+                                    still.source = ""
+                                    still.source = s
+                                }
                             }
                         }
-                    }
-                    AnimatedImage {
-                        anchors.fill: parent
-                        visible: img.type === "gif"
-                        source: img.type === "gif" ? (img.path || "") : ""
-                        fillMode: Image.PreserveAspectCrop; cache: true
-                        playing: visible; speed: 1.0
+                        AnimatedImage {
+                            anchors.fill: parent
+                            visible: img.type === "gif"
+                            source: img.type === "gif" ? (img.path || "") : ""
+                            fillMode: Image.PreserveAspectCrop; cache: true
+                            playing: visible; speed: 1.0
+                        }
                     }
                     // video: still poster (via the Image above) with a play badge.
                     // Press `v` on the message to download + play it in mpv.

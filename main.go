@@ -69,6 +69,8 @@ var (
 	reStrike    = regexp.MustCompile(`~([^~\n]+)~`)
 	reMpdmN     = regexp.MustCompile(`-\d+$`)
 	reLink      = regexp.MustCompile(`<(https?://[^|>\s]+)`)
+	reAngleTok  = regexp.MustCompile(`<[^>]*>`)
+	reBareURL   = regexp.MustCompile(`https?://\S+`)
 	reChanRef   = regexp.MustCompile(`<#([A-Z0-9]+)`) // first channel mention id, for `o` to open
 	reCodeBlock = regexp.MustCompile("(?s)```.*?```")
 )
@@ -80,6 +82,15 @@ func firstLink(text string) string {
 		return html.UnescapeString(m[1])
 	}
 	return ""
+}
+
+// isLoneLink reports whether text is nothing but link(s) — Slack <url|label>
+// tokens and bare URLs — so a message that unfurled into a card can drop its
+// raw-URL text and show just the card.
+func isLoneLink(text string) bool {
+	t := reAngleTok.ReplaceAllString(text, "")
+	t = reBareURL.ReplaceAllString(t, "")
+	return strings.TrimSpace(t) == ""
 }
 
 // firstChanRef returns the channel id of the first <#CID|name> mention in text,
