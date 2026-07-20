@@ -1047,6 +1047,7 @@ func (d *daemon) pollWorkspace(ctx context.Context, w *workspace) {
 				"msg":     d.msgFromRaw(w, chID, uID, ts, text, rc, raw),
 			})
 			d.maybeNotify(w, chID, uID, text, threadTS)
+			d.maybeMarkActiveRead(w, chID, uID, ts, threadTS)
 			if threadTS != "" && threadTS != ts {
 				// a live reply just landed — bump the parent's "N replies" in the channel view
 				d.broadcast(map[string]any{"type": "replyCountInc", "workspace": w.teamID, "channel": chID, "ts": threadTS})
@@ -1804,6 +1805,31 @@ func (d *daemon) sendReplies(c net.Conn, w *workspace, channelID, threadTS strin
 	d.mu.Lock()
 	c.Write(b)
 	d.mu.Unlock()
+}
+
+// maybeMarkActiveRead marks a channel read on the server when a live message
+// arrives in the channel you're actively viewing with the window focused — so
+// reading on desktop clears the unread on your phone too. Without this, the
+// client only acked on channel-open, so messages arriving while you sat in the
+// channel stayed "unread" server-side and kept badging mobile.
+func (d *daemon) maybeMarkActiveRead(w *workspace, chID, uID, ts, threadTS string) {
+	if uID == w.selfID {
+		return // own messages are marked read by the act of sending
+	}
+	if threadTS != "" && threadTS != ts {
+		return // thread reply — the client acks those via markThreadRead
+	}
+	d.focusMu.RLock()
+	active := d.appActive && d.activeWS == w.teamID && d.activeCh == chID
+	d.focusMu.RUnlock()
+	if !active {
+		return
+	}
+	go func() {
+		if err := w.client.MarkChannel(d.ctx, chID, ts); err != nil {
+			log.Printf("[%s] auto-markread: %v", w.teamName, err)
+		}
+	}()
 }
 
 // maybeNotify fires a desktop notification for a new message using slk's own
