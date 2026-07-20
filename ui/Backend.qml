@@ -204,7 +204,10 @@ Item {
     }
     function searchEmoji(q, limit) {
         q = (q || "").toLowerCase()
-        const cust = _emojiByWs[currentWorkspace] || ({})   // only this workspace's customs
+        // Slack customs are workspace-locked; Discord with Nitro can use any
+        // guild's customs anywhere (incl. DMs, where currentWorkspace is @me
+        // and the per-guild map is empty) — so dsqrd searches the merged map.
+        const cust = railHidden ? _emoji : (_emojiByWs[currentWorkspace] || ({}))
         if (!q) {
             const out = []
             const seen = ({})
