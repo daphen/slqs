@@ -860,6 +860,7 @@ func (d *daemon) formatMsg(w *workspace, channelID, userID, ts, text, username s
 	s, _ := strconv.ParseInt(sec, 10, 64)
 	return map[string]any{
 		"author":        author,
+		"uid":           userID,
 		"initials":      initials(author),
 		"color":         colorFor(userID),
 		"avatar":        d.avatarPath(userID),
