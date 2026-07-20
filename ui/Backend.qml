@@ -1106,6 +1106,8 @@ Item {
             voiceState = e.state || "idle"
             if (voiceState === "recording") voiceStartedAt = Date.now()
         }
+        else if (e.type === "gifs") gifsReady(e.gen || 0, e.items || [])
+        else if (e.type === "gifPreview") gifPreviewReady(e.gen || 0, String(e.id || ""), e.path || "")
         else if (e.type === "playback") {
             if (e.state === "playing") playingId = String(e.id || "")
             else if (String(e.id || "") === playingId) playingId = ""
@@ -1213,6 +1215,18 @@ Item {
     property string playingId: ""
     function playStop() {
         if (playingId) safeWrite(JSON.stringify({ type: "playStop" }) + "\n")
+    }
+
+    // GIF browser (/gif in the composer, Discord only): Discord's /gifs API
+    // proxies the provider; sending a gif = sending its page URL as a message
+    // (the server unfurls it into the gifv embed we already render).
+    property int gifGen: 0
+    signal gifsReady(int gen, var items)
+    signal gifPreviewReady(int gen, string id, string path)
+    function searchGifs(q) {
+        gifGen++
+        safeWrite(JSON.stringify({ type: "gifs", q: q || "", gen: gifGen }) + "\n")
+        return gifGen
     }
 
     // Profile panel (slqs): Shift+P on a message opens the author's card in a

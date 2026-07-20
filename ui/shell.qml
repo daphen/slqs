@@ -525,6 +525,7 @@ FloatingWindow {
                             anchors.leftMargin: Theme.insetCard; anchors.rightMargin: Theme.insetCard
                             onExitInsert: win.backToNormal()
                             onOpenPalette: palette.show()
+                            onGifCommand: (q) => gifPicker.show(q)
                             onPageScroll: (d) => win.halfPage(d)
                             onPanelMove: (d) => win.focusPanel(d < 0 ? "sidebar" : "messages")
                             // Clicking into the composer makes the messages panel the
@@ -763,6 +764,12 @@ FloatingWindow {
                 z: 101
                 property var target: null   // message being reacted to
                 onPicked: name => { if (target) Backend.toggleReaction(target, name); target = null }
+                onOpenChanged: if (!open) win.backToNormal()
+            }
+
+            GifPicker {
+                id: gifPicker
+                z: 101
                 onOpenChanged: if (!open) win.backToNormal()
             }
 
