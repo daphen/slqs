@@ -40,7 +40,7 @@ Item {
             gifs.clear()
             for (let i = 0; i < items.length; i++)
                 gifs.append({ gid: String(items[i].id), title: items[i].title || "",
-                              url: items[i].url, path: "" })
+                              url: items[i].url || "", category: !!items[i].category, path: "" })
             picker.sel = 0
             grid.positionViewAtBeginning()
         }
@@ -57,7 +57,11 @@ Item {
     }
     function accept() {
         const g = gifs.get(sel)
-        if (!g || !g.url) return
+        if (!g) return
+        // a trending category tile drills into a search for its name; a real
+        // gif sends its page url (the server unfurls it into the gifv embed)
+        if (g.category) { search.text = g.title; doSearch(); return }
+        if (!g.url) return
         hide()
         Backend.sendMessage(g.url)
     }
@@ -140,6 +144,7 @@ Item {
                     required property string gid
                     required property string title
                     required property string url
+                    required property bool category
                     required property string path
                     width: grid.cellWidth; height: grid.cellHeight
                     Rectangle {
@@ -169,6 +174,27 @@ Item {
                                 NumberAnimation { from: 0.9; to: 0.3; duration: 600 }
                                 NumberAnimation { from: 0.3; to: 0.9; duration: 600 }
                             }
+                        }
+                        // category tiles: name label over a darkening scrim so
+                        // it reads against any preview
+                        Rectangle {
+                            visible: category
+                            anchors.left: parent.left; anchors.right: parent.right; anchors.bottom: parent.bottom
+                            height: 26
+                            gradient: Gradient {
+                                GradientStop { position: 0; color: "transparent" }
+                                GradientStop { position: 1; color: Qt.rgba(0, 0, 0, 0.55) }
+                            }
+                        }
+                        Text {
+                            visible: category
+                            renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                            anchors.left: parent.left; anchors.bottom: parent.bottom
+                            anchors.leftMargin: 8; anchors.bottomMargin: 6
+                            text: title
+                            color: "white"
+                            font.family: Theme.fontFamily; font.pixelSize: 12; font.weight: 600
+                            font.capitalization: Font.Capitalize
                         }
                         HoverHandler { cursorShape: Qt.PointingHandCursor }
                         TapHandler { onTapped: { picker.sel = index; picker.accept() } }
