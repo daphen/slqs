@@ -981,7 +981,10 @@ Item {
     function sendReplyTo(ts, text) {
         const t = (text || "").trim()
         if ((t.length === 0 && attachState === "none") || !ts) return
-        safeWrite(JSON.stringify({ type: "send", channel: currentChannelId, text: resolveMentions(t), thread: ts }) + "\n")
+        // Slack thread replies from the channel composer broadcast back to the
+        // channel — the reply stays visible where you sent it from. Discord
+        // sends `thread` as a plain reply reference and ignores the flag.
+        safeWrite(JSON.stringify({ type: "send", channel: currentChannelId, text: resolveMentions(t), thread: ts, broadcast: hasThreads }) + "\n")
         clearAttach()
         sentMessage()
     }

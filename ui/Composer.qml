@@ -49,10 +49,15 @@ Rectangle {
         input.cursorPosition = input.text.length
         input.forceActiveFocus()
     }
-    // `R` on a focused message → reply to it (Discord reply / Slack thread reply).
+    // `R` on a focused message → reply to it (Discord reply / Slack thread
+    // reply that broadcasts back to the channel — quick reply without opening
+    // the panel). On a message already in a thread, target the PARENT so the
+    // reply continues that thread instead of nesting one on the broadcast copy.
     function startReply(msg) {
         if (!msg || !msg.ts) return
-        editingTs = ""; replyTs = msg.ts; replyAuthor = msg.author || ""
+        editingTs = ""
+        replyTs = (Backend.hasThreads && msg.thread_ts) ? msg.thread_ts : msg.ts
+        replyAuthor = msg.author || ""
         input.forceActiveFocus()
     }
     function cancelEdit() { editingTs = ""; replyTs = ""; replyAuthor = ""; input.clear() }
@@ -74,7 +79,8 @@ Rectangle {
         anchors.top: parent.top; anchors.topMargin: 8
         spacing: 6
         Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
-               text: root.editingTs !== "" ? "✎  Editing message" : ("↰  Replying to " + root.replyAuthor)
+               text: root.editingTs !== "" ? "✎  Editing message"
+                   : ("↰  Replying to " + root.replyAuthor + (Backend.hasThreads ? "  ·  in thread + channel" : ""))
                color: root.inkFg
                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
         Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
