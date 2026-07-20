@@ -515,6 +515,40 @@ func (d *daemon) imagesJSON(w *workspace, channelID, ts string, files []slack.Fi
 		add(f.ID+"-hq", src, ext, f.URLPrivate, mtype, fw, fh)
 	}
 	for _, a := range attachments {
+		// music unfurls (Spotify …): structured card — art + title + artist —
+		// instead of a bare square image + the title folded into body text
+		if strings.EqualFold(a.ServiceName, "Spotify") || strings.Contains(a.FromURL, "open.spotify.com") {
+			art := a.ThumbURL
+			if art == "" {
+				art = a.ImageURL
+			}
+			full := a.FromURL
+			if full == "" {
+				full = a.TitleLink
+			}
+			uh := fnv.New64a()
+			uh.Write([]byte(a.FromURL + a.Title))
+			id := fmt.Sprintf("music-%016x", uh.Sum64())
+			var artPath string
+			ready := true
+			if art != "" {
+				dst := filepath.Join(dir, id+".jpg")
+				artPath = "file://" + dst
+				if _, err := os.Stat(dst); err != nil {
+					ready = false
+					pending = append(pending, task{dst, art, false})
+				}
+			}
+			if channelID == "" && !ready {
+				continue // post-download rebroadcast: art still missing, skip
+			}
+			out = append(out, map[string]any{
+				"type": "music", "art": artPath, "title": a.Title,
+				"artist": a.AuthorName, "provider": "Spotify", "full": full,
+				"id": id, "path": "", "w": 0, "h": 0, "pending": !ready,
+			})
+			continue
+		}
 		url := a.ImageURL
 		if url == "" {
 			url = a.ThumbURL

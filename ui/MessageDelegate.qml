@@ -301,12 +301,15 @@ Item {
                     // voice notes / audio uploads: playable pill (waveform + duration)
                     readonly property bool isAudio: img.type === "audio"
                     readonly property bool playing: isAudio && Backend.playingId === String(img.id || "")
+                    // music unfurls (Spotify …): compact card, art + title + artist
+                    readonly property bool isMusic: img.type === "music"
                     readonly property real ar: isVideo ? 0.5625 : ((img.w > 0 && img.h > 0) ? img.h / img.w : 0.66)
                     width: isFile ? Math.ceil(fileRow.implicitWidth) + 24
                          : isAudio ? Math.ceil(audioRow.implicitWidth) + 26
+                         : isMusic ? Math.min(360, del.width - 80)
                          : (isVideo ? Math.min(320, maxW) : Math.min(maxW, img.w || maxW))
-                    height: isFile ? 32 : isAudio ? 36 : width * ar
-                    border.width: (isFile || isAudio) ? 1 : 0
+                    height: isFile ? 32 : isAudio ? 36 : isMusic ? 64 : width * ar
+                    border.width: (isFile || isAudio || isMusic) ? 1 : 0
                     border.color: Theme.hairlineSoft
 
                     Row {
@@ -406,12 +409,67 @@ Item {
                             font.features: { "tnum": 1 }
                         }
                     }
+                    // music unfurl card: album art + title + artist + provider.
+                    Row {
+                        visible: pillRect.isMusic
+                        anchors.fill: parent
+                        anchors.margins: 8
+                        spacing: 10
+                        ClippingRectangle {
+                            width: 48; height: 48; radius: 6
+                            color: Theme.surface
+                            anchors.verticalCenter: parent.verticalCenter
+                            Image {
+                                anchors.fill: parent
+                                source: pillRect.isMusic ? (img.art || "") : ""
+                                fillMode: Image.PreserveAspectCrop
+                                asynchronous: true; cache: true
+                                sourceSize.width: 96; sourceSize.height: 96
+                            }
+                        }
+                        Column {
+                            anchors.verticalCenter: parent.verticalCenter
+                            width: parent.width - 48 - parent.spacing
+                            spacing: 2
+                            Text {
+                                renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                                width: parent.width; elide: Text.ElideRight
+                                text: img.title || ""
+                                color: Theme.fg
+                                font.family: Theme.fontFamily; font.pixelSize: 13; font.weight: 600
+                            }
+                            Text {
+                                renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                                visible: (img.artist || "") !== ""
+                                width: parent.width; elide: Text.ElideRight
+                                text: img.artist || ""
+                                color: Theme.fg_secondary
+                                font.family: Theme.fontFamily; font.pixelSize: 12
+                            }
+                            Row {
+                                spacing: 5
+                                Rectangle {
+                                    width: 8; height: 8; radius: 4
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    color: (img.provider || "") === "Spotify" ? "#1DB954" : Theme.fg_muted
+                                }
+                                Text {
+                                    renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    text: (img.provider || "Music") + "  ·  o opens"
+                                    color: Theme.fg_muted
+                                    font.family: Theme.fontFamily; font.pixelSize: 11
+                                }
+                            }
+                        }
+                    }
+
                     // gifs animate inline (AnimatedImage); stills use Image.
                     // Only the matching element loads its source.
                     Image {
                         id: still
                         anchors.fill: parent
-                        visible: img.type !== "gif" && !pillRect.isAudio && !pillRect.isFile
+                        visible: img.type !== "gif" && !pillRect.isAudio && !pillRect.isFile && !pillRect.isMusic
                         source: visible ? (img.path || "") : ""
                         fillMode: Image.PreserveAspectCrop; asynchronous: true; cache: true
                         sourceSize.width: 760   // HiDPI-crisp at the inline cap
