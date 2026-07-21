@@ -195,11 +195,15 @@ Item {
     // exact (0) > prefix (1) > word-boundary, after _/-/space (2) > substring (3);
     // -1 = no match. This is what puts ":heart:" above ":anthropic-heart:".
     function _emojiRank(name, q) {
-        const i = name.indexOf(q)
+        // q is already lowercased; match case-insensitively so uppercase-named
+        // emoji (e.g. PES_Salute) match a ":pes" query. Original name is kept
+        // for display/insertion by the caller.
+        const lname = name.toLowerCase()
+        const i = lname.indexOf(q)
         if (i < 0) return -1
-        if (name === q) return 0
+        if (lname === q) return 0
         if (i === 0) return 1
-        const prev = name[i - 1]
+        const prev = lname[i - 1]
         return (prev === "_" || prev === "-" || prev === " ") ? 2 : 3
     }
     function searchEmoji(q, limit) {
