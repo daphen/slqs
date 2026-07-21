@@ -1190,10 +1190,21 @@ func (d *daemon) readConn(c net.Conn) {
 					// Force it visible for this session.
 					d.mu.Lock()
 					d.forceDM[chID] = true
+					conns := make([]net.Conn, 0, len(d.conns))
+					for cc := range d.conns {
+						conns = append(conns, cc)
+					}
 					d.mu.Unlock()
 					d.registerChannel(w, slack.Channel{
 						GroupConversation: slack.GroupConversation{Conversation: slack.Conversation{ID: chID, User: user, IsIM: true}},
 					})
+					// These IMs are usually already in w.chans (just filtered from
+					// the sidebar), so registerChannel takes its early-return and
+					// never re-pushes. Push the refreshed list explicitly — else the
+					// client never learns the DM and the open below finds no channel.
+					for _, cc := range conns {
+						d.sendChannels(cc)
+					}
 					d.broadcast(map[string]any{"type": "open", "workspace": w.teamID, "channel": chID, "thread": ""})
 				}(dw)
 			}
