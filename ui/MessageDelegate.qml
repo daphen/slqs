@@ -218,6 +218,7 @@ Item {
             Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: del.author; color: Theme.mode === "light" ? Theme.ink : Theme.fg
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15; font.weight: 500 }
             StatusEmoji {
+                px: 22
                 anchors.verticalCenter: parent.verticalCenter
                 emoji: Backend.statusOf("", del.uid)
             }

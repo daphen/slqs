@@ -1246,7 +1246,7 @@ Item {
     onProfileOpenChanged: if (profileOpen && threadOpen) closeThread()
     onThreadOpenChanged: if (threadOpen) profileOpen = false
     function openProfile(uid) {
-        if (!uid || railHidden) return
+        if (!uid) return   // works for both slqs and dsqrd (each daemon serves `profile`)
         profileUser = uid
         safeWrite(JSON.stringify({ type: "profile", workspace: currentWorkspace, user: uid }) + "\n")
     }

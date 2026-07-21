@@ -258,8 +258,8 @@ FloatingWindow {
             "Y":        { act: () => { if (focusedPanel === "messages") Backend.copyLink(msgs.currentMessage()) }, help: "Copy message link", cat: "msg" },
             "M":        { act: () => { if (!Backend.railHidden && focusedPanel === "messages") { const m = msgs.currentMessage(); if (m && m.uid) Backend.openDM(m.uid) } },
                           help: () => Backend.railHidden ? "" : "DM author", cat: "msg" },
-            "P":        { act: () => { if (!Backend.railHidden && focusedPanel === "messages") { const m = msgs.currentMessage(); if (m && m.uid) Backend.openProfile(m.uid) } },
-                          help: () => Backend.railHidden ? "" : "View profile", cat: "msg" },
+            "P":        { act: () => { if (focusedPanel === "messages") { const m = msgs.currentMessage(); if (m && m.uid) Backend.openProfile(m.uid) } },
+                          help: () => "View profile", cat: "msg" },
             // views & general
             "?":        { act: () => help.show(), help: "This help", cat: "view" },
             "ctrl+shift+r": { act: () => Backend.checkForUpdates(), help: "Check for updates", cat: "view" },
@@ -280,8 +280,8 @@ FloatingWindow {
             "v":      { act: () => Backend.viewImage(thread.currentMessage()), help: "View image", cat: "msg" },
             "M":      { act: () => { if (!Backend.railHidden) { const m = thread.currentMessage(); if (m && m.uid) Backend.openDM(m.uid) } },
                         help: () => Backend.railHidden ? "" : "DM author", cat: "msg" },
-            "P":      { act: () => { if (!Backend.railHidden) { const m = thread.currentMessage(); if (m && m.uid) Backend.openProfile(m.uid) } },
-                        help: () => Backend.railHidden ? "" : "View profile", cat: "msg" },
+            "P":      { act: () => { const m = thread.currentMessage(); if (m && m.uid) Backend.openProfile(m.uid) },
+                        help: () => "View profile", cat: "msg" },
             "o":      { act: () => Backend.openChannelRef(thread.currentMessage()), help: "Open link", cat: "msg" },
             "r":      { act: () => reactTo(thread.currentMessage()), help: "React", cat: "msg" },
             "y":      { act: () => Backend.copyText(thread.currentMessage()), help: "Copy text", cat: "msg" },
@@ -646,9 +646,10 @@ FloatingWindow {
                         onPanelMove: (d) => { if (d < 0) win.closeThreadAction(); else win.backToNormal() }
                     }
 
-                    // Profile card panel (slqs): same slide-in grammar as the
-                    // thread panel, narrower. Only one right panel at a time —
-                    // Backend closes whichever other panel is open.
+                    // Profile card panel: same slide-in grammar as the thread
+                    // panel, narrower. Only one right panel at a time — Backend
+                    // closes whichever other panel is open. Works for slqs and
+                    // dsqrd; each daemon serves the `profile` event.
                     ProfilePanel {
                         id: profilePanel
                         width: Math.min(420, parent.width * 0.44)
@@ -656,7 +657,7 @@ FloatingWindow {
                         anchors.topMargin: 8; anchors.bottomMargin: 12
                         x: Backend.profileOpen ? (parent.width - width - 12) : parent.width
                         Behavior on x { PanelMotion {} }
-                        visible: !Backend.railHidden && x < parent.width - 1
+                        visible: x < parent.width - 1
                         z: 6
                     }
                 }

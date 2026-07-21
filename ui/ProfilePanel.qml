@@ -40,6 +40,7 @@ Rectangle {
     component Detail: Column {
         property string label: ""
         property string value: ""
+        property bool wrap: false
         visible: value !== ""
         width: parent.width
         spacing: 3
@@ -56,7 +57,8 @@ Rectangle {
             width: parent.width
             text: parent.value
             color: Theme.fg
-            elide: Text.ElideRight
+            elide: parent.wrap ? Text.ElideNone : Text.ElideRight
+            wrapMode: parent.wrap ? Text.Wrap : Text.NoWrap
             font.family: Theme.fontFamily; font.pixelSize: 13
         }
     }
@@ -112,6 +114,7 @@ Rectangle {
                 const bits = []
                 if (panel.p.realName && panel.p.realName !== panel.p.name) bits.push(panel.p.realName)
                 if (panel.p.handle) bits.push("@" + panel.p.handle)
+                if (panel.p.pronouns) bits.push(panel.p.pronouns)
                 if (panel.p.isBot) bits.push("bot")
                 return bits.join("  ·  ")
             }
@@ -134,6 +137,7 @@ Rectangle {
         Item { width: 1; height: 18 }
         Rectangle { width: parent.width; height: 1; color: Theme.hairline }
 
+        Detail { label: "About";      value: panel.p.bio || ""; wrap: true }
         Detail { label: "Title";      value: panel.p.title || "" }
         Detail { label: "Local time"; value: panel.localTime() }
         Detail { label: "Email";      value: panel.p.email || "" }
