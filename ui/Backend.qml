@@ -1130,7 +1130,7 @@ Item {
             // ask; a yes routes back through compressUpload()
             attachState = "none"; attachName = ""
             askCompress({ channel: e.channel, thread: e.thread || "", path: e.path,
-                          name: e.name || "file", mb: e.mb || 0 })
+                          name: e.name || "file", mb: e.mb || 0, limit: e.limit || 10 })
         }
         else if (e.type === "attachUploading") {
             // Daemon found a clipboard image and began uploading → show the
