@@ -56,7 +56,7 @@ Item {
             anchors.centerIn: parent; height: 20; radius: 10
             width: dayLbl.implicitWidth + 22
             color: Theme.bg; border.color: Theme.hairline; border.width: 1
-            Text { id: dayLbl; anchors.centerIn: parent; renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+            Text { id: dayLbl; anchors.centerIn: parent; renderTypeQuality: Text.VeryHighRenderTypeQuality
                    text: Backend.dayLabel(del.day); color: Theme.fg_muted
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12; font.weight: 500 }
         }
@@ -131,7 +131,7 @@ Item {
                 Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
             }
             Text {   // the copy icon (nf-fa-copy)
-                renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                renderTypeQuality: Text.VeryHighRenderTypeQuality
                 anchors.centerIn: parent
                 text: ""; color: Theme.cursor
                 font.family: Theme.fontFamily; font.pixelSize: 16
@@ -141,7 +141,7 @@ Item {
                 Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
             }
         }
-        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+        Text { renderTypeQuality: Text.VeryHighRenderTypeQuality
             visible: !del.cursor
             anchors.right: parent.right; anchors.rightMargin: 7
             anchors.verticalCenter: parent.verticalCenter
@@ -164,7 +164,7 @@ Item {
             width: 36; height: 36; radius: 8
             color: del.color                    // colored fallback behind the image
 
-            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
+            Text { renderTypeQuality: Text.VeryHighRenderTypeQuality;
                 anchors.centerIn: parent; text: del.initials; color: Theme.ink
                 visible: avatarImg.status !== Image.Ready
                 font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14; font.weight: 500
@@ -182,7 +182,7 @@ Item {
                 }
             }
         }
-        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
+        Text { renderTypeQuality: Text.VeryHighRenderTypeQuality;
             visible: del.grouped && hov.hovered
             anchors.horizontalCenter: parent.horizontalCenter; y: 1
             text: del.time; color: Theme.fg_muted; font.features: ({ "tnum": 1 })
@@ -202,12 +202,12 @@ Item {
             visible: del.isReply
             width: parent.width
             spacing: 5
-            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: "↰"; color: Theme.fg_muted
+            Text { renderTypeQuality: Text.VeryHighRenderTypeQuality; text: "↰"; color: Theme.fg_muted
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
-            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: del.replyAuthor; color: Theme.sky
+            Text { renderTypeQuality: Text.VeryHighRenderTypeQuality; text: del.replyAuthor; color: Theme.sky
                    visible: del.replyAuthor.length > 0
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 500 }
-            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: del.replyText; color: Theme.fg_muted
+            Text { renderTypeQuality: Text.VeryHighRenderTypeQuality; text: del.replyText; color: Theme.fg_muted
                    width: Math.max(0, body.width - 140); elide: Text.ElideRight
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
         }
@@ -215,18 +215,18 @@ Item {
         Row {
             visible: !del.grouped
             spacing: 8
-            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: del.author; color: Theme.mode === "light" ? Theme.ink : Theme.fg
+            Text { renderTypeQuality: Text.VeryHighRenderTypeQuality; text: del.author; color: Theme.mode === "light" ? Theme.ink : Theme.fg
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15; font.weight: 500 }
             StatusEmoji {
                 px: 22
                 anchors.verticalCenter: parent.verticalCenter
                 emoji: Backend.statusOf("", del.uid)
             }
-            Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: del.time + (del.edited ? "  (edited)" : ""); color: Theme.fg_muted; font.features: ({ "tnum": 1 }); anchors.bottom: parent.bottom; anchors.bottomMargin: 1
+            Text { renderTypeQuality: Text.VeryHighRenderTypeQuality; text: del.time + (del.edited ? "  (edited)" : ""); color: Theme.fg_muted; font.features: ({ "tnum": 1 }); anchors.bottom: parent.bottom; anchors.bottomMargin: 1
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12 }
         }
 
-        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
+        Text { renderTypeQuality: Text.VeryHighRenderTypeQuality;
             visible: del.text.length > 0 && !del.emojiOnly
             width: parent.width
             // grouped rows have no visible header, so the marker rides the body there
@@ -268,7 +268,7 @@ Item {
                         visible: !part.modelData.img
                         text: part.modelData.glyph || ""
                         anchors.verticalCenter: parent.verticalCenter
-                        renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                        renderTypeQuality: Text.VeryHighRenderTypeQuality
                         color: Theme.mode === "light" ? Theme.ink : Theme.fg
                         font.family: "Noto Color Emoji"; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 36
                     }
@@ -328,14 +328,14 @@ Item {
                             anchors.verticalCenter: parent.verticalCenter
                         }
                         Text {
-                            renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                            renderTypeQuality: Text.VeryHighRenderTypeQuality
                             anchors.verticalCenter: parent.verticalCenter
                             text: img.name || "file"
                             color: Theme.fg
                             font.family: Theme.fontFamily; font.pixelSize: 12; font.weight: 500
                         }
                         Text {
-                            renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                            renderTypeQuality: Text.VeryHighRenderTypeQuality
                             anchors.verticalCenter: parent.verticalCenter
                             text: (img.ext || "").toUpperCase()
                                   + (img.size ? "  ·  " + (img.size > 1048576
@@ -391,7 +391,7 @@ Item {
                         }
                         // plain audio uploads have no waveform — show the filename
                         Text {
-                            renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                            renderTypeQuality: Text.VeryHighRenderTypeQuality
                             visible: pillRect.isAudio && !(img.waveform || "")
                             anchors.verticalCenter: parent.verticalCenter
                             text: img.name || "audio"
@@ -399,7 +399,7 @@ Item {
                             font.family: Theme.fontFamily; font.pixelSize: 12; font.weight: 500
                         }
                         Text {
-                            renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                            renderTypeQuality: Text.VeryHighRenderTypeQuality
                             anchors.verticalCenter: parent.verticalCenter
                             text: {
                                 if (pillRect.playing) return "· q stops"
@@ -434,14 +434,14 @@ Item {
                             width: parent.width - 48 - parent.spacing
                             spacing: 2
                             Text {
-                                renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                                renderTypeQuality: Text.VeryHighRenderTypeQuality
                                 width: parent.width; elide: Text.ElideRight
                                 text: img.title || ""
                                 color: Theme.fg
                                 font.family: Theme.fontFamily; font.pixelSize: 13; font.weight: 600
                             }
                             Text {
-                                renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                                renderTypeQuality: Text.VeryHighRenderTypeQuality
                                 visible: (img.artist || "") !== ""
                                 width: parent.width; elide: Text.ElideRight
                                 text: img.artist || ""
@@ -456,7 +456,7 @@ Item {
                                     color: (img.provider || "") === "Spotify" ? "#1DB954" : Theme.fg_muted
                                 }
                                 Text {
-                                    renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                                    renderTypeQuality: Text.VeryHighRenderTypeQuality
                                     anchors.verticalCenter: parent.verticalCenter
                                     text: (img.provider || "Music") + "  ·  o opens"
                                     color: Theme.fg_muted
@@ -512,7 +512,7 @@ Item {
                         width: 52; height: 52; radius: 26
                         color: Qt.rgba(0, 0, 0, 0.5)
                         border.color: Qt.rgba(1, 1, 1, 0.85); border.width: 2
-                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                        Text { renderTypeQuality: Text.VeryHighRenderTypeQuality
                                anchors.centerIn: parent; anchors.horizontalCenterOffset: 2
                                text: "▶"; color: "white"; font.pixelSize: 22 }
                     }
@@ -546,9 +546,9 @@ Item {
                             source: pill._path; fillMode: Image.PreserveAspectFit
                             sourceSize.width: 36; sourceSize.height: 36
                         }
-                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: pill._path === ""; text: modelData.e; font.pixelSize: 17
+                        Text { renderTypeQuality: Text.VeryHighRenderTypeQuality; visible: pill._path === ""; text: modelData.e; font.pixelSize: 17
                                anchors.verticalCenter: parent.verticalCenter }
-                        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality; text: modelData.n; color: Theme.fg_muted
+                        Text { renderTypeQuality: Text.VeryHighRenderTypeQuality; text: modelData.n; color: Theme.fg_muted
                                anchors.verticalCenter: parent.verticalCenter
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12; font.weight: 500 }
                     }
@@ -558,7 +558,7 @@ Item {
 
         // broadcast — a thread reply also sent to the channel. In the channel it
         // reads "replied to a thread"; in the thread it reads "also sent to channel".
-        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
+        Text { renderTypeQuality: Text.VeryHighRenderTypeQuality;
             visible: del.subtype === "thread_broadcast"
             topPadding: 3
             text: del.inThread ? "↪ also sent to channel" : "↪ replied to a thread"
@@ -566,7 +566,7 @@ Item {
             font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12; font.italic: true
         }
         // thread indicator — Enter opens it
-        Text { renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality;
+        Text { renderTypeQuality: Text.VeryHighRenderTypeQuality;
             visible: del.reply_count > 0
             topPadding: 3
             text: "  " + del.reply_count + (del.reply_count === 1 ? " reply" : " replies")

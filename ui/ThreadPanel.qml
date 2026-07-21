@@ -80,13 +80,13 @@ Rectangle {
         Row {
             anchors.left: parent.left; anchors.leftMargin: 16
             anchors.verticalCenter: parent.verticalCenter; spacing: 8
-            Text { renderType: Text.QtRendering; text: "Thread"; color: Theme.fg
+            Text { text: "Thread"; color: Theme.fg
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 16; font.weight: 500 }
-            Text { renderType: Text.QtRendering; text: "— " + Backend.threadTitle; color: Theme.fg_muted
+            Text { text: "— " + Backend.threadTitle; color: Theme.fg_muted
                    anchors.verticalCenter: parent.verticalCenter
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14 }
         }
-        Text { renderType: Text.QtRendering;
+        Text { 
             anchors.right: parent.right; anchors.rightMargin: 14; anchors.verticalCenter: parent.verticalCenter
             text: "q to close"; color: Theme.fg_muted
             font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12
@@ -142,7 +142,7 @@ Rectangle {
         height: Backend.threadTyping ? 22 : 0
         clip: true
         Behavior on height { NumberAnimation { duration: 120 } }
-        Text { renderType: Text.QtRendering; x: 16
+        Text { x: 16
                anchors.top: parent.top; anchors.bottom: parent.bottom; verticalAlignment: Text.AlignVCenter
                text: Backend.threadTypingWho + " is typing…"; color: Theme.fg_muted
                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
@@ -166,16 +166,16 @@ Rectangle {
             anchors.top: parent.top; anchors.left: parent.left
             anchors.leftMargin: 14; anchors.topMargin: 8 + thFooter.bcastH
             spacing: 6
-            Text { renderType: Text.QtRendering; text: "📎"; anchors.verticalCenter: parent.verticalCenter
+            Text { text: "📎"; anchors.verticalCenter: parent.verticalCenter
                    font.family: Theme.fontFamily; font.pixelSize: 13 }
-            Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
+            Text { anchors.verticalCenter: parent.verticalCenter
                    text: Backend.attachState === "uploading" ? ("uploading " + (Backend.attachName || "file") + "…") : (Backend.attachName || "file")
                    color: Backend.attachState === "uploading" ? Theme.fg_muted : Theme.fg
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
-            Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
+            Text { anchors.verticalCenter: parent.verticalCenter
                    text: Backend.attachState === "ready" ? "✓" : ""; color: Theme.green
                    font.family: Theme.fontFamily; font.pixelSize: 13 }
-            Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
+            Text { anchors.verticalCenter: parent.verticalCenter
                    text: "  ✕"; color: Theme.fg_muted
                    font.family: Theme.fontFamily; font.pixelSize: 13
                    TapHandler { onTapped: Backend.dropAttach() } }
@@ -191,10 +191,10 @@ Rectangle {
                 width: 14; height: 14; radius: 3; anchors.verticalCenter: parent.verticalCenter
                 color: panel.alsoToChannel ? Theme.cursor : "transparent"
                 border.color: panel.alsoToChannel ? Theme.cursor : Theme.hairline; border.width: 1
-                Text { renderType: Text.QtRendering; anchors.centerIn: parent; visible: panel.alsoToChannel
+                Text { anchors.centerIn: parent; visible: panel.alsoToChannel
                        text: "✓"; color: Theme.ink; font.pixelSize: 10; font.weight: 500 }
             }
-            Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
+            Text { anchors.verticalCenter: parent.verticalCenter
                    text: "Also send to channel"; color: panel.alsoToChannel ? Theme.fg : Theme.fg_muted
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12 }
             TapHandler { onTapped: panel.alsoToChannel = !panel.alsoToChannel }
@@ -229,7 +229,7 @@ Rectangle {
                     if (contentY >= r.y) contentY = r.y
                     else if (contentY + height <= r.y + r.height) contentY = r.y + r.height - height
                 }
-            TextArea { renderType: TextArea.QtRendering;
+            TextArea { 
                 id: replyInput
                 width: replyFlick.width
                 onCursorRectangleChanged: replyFlick.ensureVisible(cursorRectangle)

@@ -21,7 +21,6 @@ Item {
         anchors.centerIn: parent
         text: se.emoji
         font.pixelSize: se.px - 2
-        renderType: Text.QtRendering
     }
     Image {
         visible: se.src !== ""

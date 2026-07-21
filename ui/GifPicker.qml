@@ -101,7 +101,6 @@ Item {
                     }
                     TextInput {
                         id: search
-                        renderType: TextInput.QtRendering
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - 36; color: Theme.fg; clip: true
                         font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 16
@@ -121,7 +120,7 @@ Item {
                                 else if (e.key === Qt.Key_L) { picker.move(1); e.accepted = true }
                             }
                         }
-                        Text { renderType: Text.QtRendering; visible: !search.text; text: "Search GIFs… (empty = trending)"
+                        Text { visible: !search.text; text: "Search GIFs… (empty = trending)"
                                color: Theme.fg_muted; font: search.font }
                     }
                 }
@@ -164,7 +163,7 @@ Item {
                         }
                         // shimmer placeholder until the preview conversion lands
                         Text {
-                            renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                            renderTypeQuality: Text.VeryHighRenderTypeQuality
                             visible: path === ""
                             anchors.centerIn: parent
                             text: "···"; color: Theme.fg_muted
@@ -188,7 +187,7 @@ Item {
                         }
                         Text {
                             visible: category
-                            renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                            renderTypeQuality: Text.VeryHighRenderTypeQuality
                             anchors.left: parent.left; anchors.bottom: parent.bottom
                             anchors.leftMargin: 8; anchors.bottomMargin: 6
                             text: title

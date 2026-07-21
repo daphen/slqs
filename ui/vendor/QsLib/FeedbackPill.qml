@@ -37,7 +37,6 @@ Rectangle {
         }
         Text {
             id: label
-            renderType: Text.NativeRendering
             anchors.verticalCenter: parent.verticalCenter
             color: Theme.bg
             font.family: Theme.fontFamily

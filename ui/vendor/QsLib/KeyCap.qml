@@ -20,7 +20,6 @@ Rectangle {
     border.color: Theme.hairline
     Text {
         id: capText
-        renderType: Text.NativeRendering
         anchors.centerIn: parent
         color: cap.textColor
         font.family: Theme.fontFamily

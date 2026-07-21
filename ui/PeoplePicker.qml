@@ -66,9 +66,9 @@ Item {
                 }
                 Row {
                     anchors.fill: searchField; anchors.leftMargin: 14; anchors.rightMargin: 14; spacing: 10
-                    Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter; text: "@"
+                    Text { anchors.verticalCenter: parent.verticalCenter; text: "@"
                            color: Theme.fg_muted; font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 19 }
-                    TextInput { renderType: TextInput.QtRendering;
+                    TextInput { 
                         id: search
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - 36; color: Theme.fg; clip: true
@@ -84,7 +84,7 @@ Item {
                                 else if (e.key === Qt.Key_K) { pp.move(-1); e.accepted = true }
                             }
                         }
-                        Text { renderType: Text.QtRendering; visible: !search.text
+                        Text { visible: !search.text
                                text: pp.mode === "invite" ? "Invite someone to this channel…" : "Message someone…"
                                color: Theme.fg_muted; font: search.font }
                     }
@@ -117,14 +117,14 @@ Item {
                     }
                     Row {
                         anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 14; spacing: 9
-                        Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
+                        Text { anchors.verticalCenter: parent.verticalCenter
                                text: "@"; color: Theme.fg_muted
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15 }
-                        Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
+                        Text { anchors.verticalCenter: parent.verticalCenter
                                text: row.modelData.name; color: Theme.fg
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15 }
                     }
-                    Text { renderType: Text.QtRendering
+                    Text { 
                            anchors.right: parent.right; anchors.rightMargin: 14; anchors.verticalCenter: parent.verticalCenter
                            text: pp.mode === "invite" ? "invite" : "message"
                            color: Theme.green

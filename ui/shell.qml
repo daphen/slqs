@@ -437,13 +437,13 @@ FloatingWindow {
                         Row {
                             anchors.left: parent.left; anchors.leftMargin: 18
                             anchors.verticalCenter: parent.verticalCenter; spacing: 9
-                            Text { renderType: Text.QtRendering; text: "#"; color: Theme.fg_muted; anchors.verticalCenter: parent.verticalCenter
+                            Text { text: "#"; color: Theme.fg_muted; anchors.verticalCenter: parent.verticalCenter
                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 19 }
-                            Text { renderType: Text.QtRendering; text: Backend.currentChannel; color: Theme.fg; anchors.verticalCenter: parent.verticalCenter
+                            Text { text: Backend.currentChannel; color: Theme.fg; anchors.verticalCenter: parent.verticalCenter
                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 17; font.weight: 500 }
                             Rectangle { visible: Backend.currentTopic.length > 0; width: 1; height: 16; color: Theme.hairline
                                         anchors.verticalCenter: parent.verticalCenter }
-                            Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
+                            Text { anchors.verticalCenter: parent.verticalCenter
                                    // collapse the (often multi-line) topic to one elided line
                                    text: Backend.currentTopic.replace(/[\r\n]+/g, "  ")
                                    color: Theme.fg_muted; elide: Text.ElideRight
@@ -460,7 +460,7 @@ FloatingWindow {
                             width: joinLbl.implicitWidth + 22; height: 26; radius: 6
                             color: joinMA.containsMouse ? Theme.selection : Theme.surface
                             border.width: 1; border.color: Theme.sky
-                            Text { id: joinLbl; renderType: Text.QtRendering; anchors.centerIn: parent
+                            Text { id: joinLbl; anchors.centerIn: parent
                                    text: "+ Join channel"; color: Theme.sky
                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 500 }
                             MouseArea { id: joinMA; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
@@ -509,7 +509,7 @@ FloatingWindow {
                             height: Backend.typing ? 22 : 0
                             clip: true
                             Behavior on height { NumberAnimation { duration: 120 } }
-                            Text { renderType: Text.QtRendering;
+                            Text { 
                                 x: 20; anchors.top: parent.top; anchors.bottom: parent.bottom
                                 verticalAlignment: Text.AlignVCenter
                                 text: Backend.typingWho + " is typing…"
@@ -562,7 +562,6 @@ FloatingWindow {
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
                                 text: "Opening media…"; color: Theme.bg
-                                renderType: Text.QtRendering
                                 font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13
                             }
                         }
@@ -603,7 +602,6 @@ FloatingWindow {
                                 text: Backend.voiceState === "sending" ? "Sending voice note…"
                                     : "Recording  " + Math.floor(voiceBadge.secs / 60) + ":" + ("0" + (voiceBadge.secs % 60)).slice(-2) + "   ⏎ send · esc cancel"
                                 color: Theme.bg
-                                renderType: Text.QtRendering
                                 font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13
                             }
                         }
@@ -635,10 +633,14 @@ FloatingWindow {
                         width: Math.min(560, parent.width * 0.58)
                         anchors.top: parent.top; anchors.bottom: parent.bottom
                         anchors.topMargin: 8; anchors.bottomMargin: 12
-                        x: Backend.threadOpen ? (parent.width - width - 12) : parent.width
-                        Behavior on x { PanelMotion {} }
+                        anchors.right: parent.right
+                        // slide via a panel-width-relative right margin (not an x
+                        // tied to parent.width) so toggling the sidebar — which
+                        // animates the container width — can't drag a closed panel in.
+                        anchors.rightMargin: Backend.threadOpen ? 12 : -(width + 24)
+                        Behavior on anchors.rightMargin { PanelMotion {} }
                         // never render a thread container on a threadless backend (Discord)
-                        visible: Backend.hasThreads && x < parent.width - 1
+                        visible: Backend.hasThreads && anchors.rightMargin > -width
                         z: 5
                         onExitReply: win.backToNormal()
                         onOpenPalette: palette.show()
@@ -655,9 +657,10 @@ FloatingWindow {
                         width: Math.min(420, parent.width * 0.44)
                         anchors.top: parent.top; anchors.bottom: parent.bottom
                         anchors.topMargin: 8; anchors.bottomMargin: 12
-                        x: Backend.profileOpen ? (parent.width - width - 12) : parent.width
-                        Behavior on x { PanelMotion {} }
-                        visible: x < parent.width - 1
+                        anchors.right: parent.right
+                        anchors.rightMargin: Backend.profileOpen ? 12 : -(width + 24)
+                        Behavior on anchors.rightMargin { PanelMotion {} }
+                        visible: anchors.rightMargin > -width
                         z: 6
                     }
                 }
@@ -678,7 +681,7 @@ FloatingWindow {
                         width: modeLabel.implicitWidth + 16; height: 22; radius: 7
                         anchors.verticalCenter: parent.verticalCenter
                         color: win.insertMode ? Theme.cursor : Theme.green
-                        Text { renderType: Text.QtRendering;
+                        Text { 
                             id: modeLabel; anchors.centerIn: parent
                             text: win.insertMode ? "INSERT" : "NORMAL"
                             // Contrast against the chip's own bg: dark text on a light
@@ -689,7 +692,7 @@ FloatingWindow {
                             font.pixelSize: 11; font.weight: 500; font.letterSpacing: 0.5
                         }
                     }
-                    Text { renderType: Text.QtRendering;
+                    Text { 
                         anchors.verticalCenter: parent.verticalCenter
                         text: "panel: " + win.focusedPanel + "   #" + Backend.currentChannel
                               + (win.pendingCount > 0 ? "      " + win.pendingCount : "")
@@ -737,7 +740,7 @@ FloatingWindow {
                     StatusCap { text: "esc" }
                     CapLabel { text: "normal" }
                 }
-                Text { renderType: Text.QtRendering;
+                Text { 
                     visible: Backend.updateAvailable
                     anchors.right: parent.right; anchors.rightMargin: 14
                     anchors.verticalCenter: parent.verticalCenter
@@ -841,7 +844,7 @@ FloatingWindow {
                 color: Theme.surface; border.width: 1; border.color: Theme.hairline
                 Behavior on opacity { NumberAnimation { duration: 140 } }
                 Text {
-                    id: toastLbl; renderType: Text.QtRendering; anchors.centerIn: parent
+                    id: toastLbl; anchors.centerIn: parent
                     text: toast.message; color: Theme.fg
                     font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13
                 }

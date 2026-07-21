@@ -125,7 +125,7 @@ Item {
                 // header: title + search pill
                 Item {
                     width: parent.width; height: 30
-                    Text { renderType: Text.QtRendering
+                    Text { 
                            anchors.left: parent.left; anchors.verticalCenter: parent.verticalCenter
                            text: "Keybindings"; color: Theme.fg
                            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
@@ -146,7 +146,6 @@ Item {
                             color: sheet.query.length ? Theme.fg : Theme.fg_muted
                             font.family: Theme.fontFamily; font.pixelSize: 13
                             elide: Text.ElideLeft
-                            renderType: Text.QtRendering
                         }
                     }
                 }
@@ -167,7 +166,7 @@ Item {
                                     required property var modelData
                                     width: colRoot.width
                                     spacing: 6
-                                    Text { renderType: Text.QtRendering
+                                    Text { 
                                            text: secRoot.modelData.title; color: Theme.fg_muted
                                            font.family: Theme.fontFamily; font.pixelSize: 11; font.letterSpacing: 1 }
                                     Repeater {
@@ -180,11 +179,11 @@ Item {
                                             Rectangle {
                                                 width: 76; height: 24; radius: Theme.radiusSm
                                                 color: Theme.surface; border.color: Theme.hairline; border.width: 1
-                                                Text { renderType: Text.QtRendering
+                                                Text { 
                                                        anchors.centerIn: parent; text: rowRoot.modelData.keys; color: Theme.fg
                                                        font.family: Theme.fontFamily; font.pixelSize: 13 }
                                             }
-                                            Text { renderType: Text.QtRendering
+                                            Text { 
                                                    anchors.verticalCenter: parent.verticalCenter
                                                    width: parent.width - 76 - parent.spacing
                                                    text: rowRoot.modelData.help; color: Theme.fg; elide: Text.ElideRight
@@ -196,11 +195,11 @@ Item {
                         }
                     }
                 }
-                Text { renderType: Text.QtRendering
+                Text { 
                        visible: sheet.filtered.length === 0
                        text: "no keys match “" + sheet.query + "”"; color: Theme.fg_muted
                        font.family: Theme.fontFamily; font.pixelSize: 13 }
-                Text { renderType: Text.QtRendering
+                Text { 
                        anchors.horizontalCenter: parent.horizontalCenter
                        text: sheet.searching ? "type to filter · esc to clear" : "/ to search · esc, q or ? to close"
                        color: Theme.fg_muted

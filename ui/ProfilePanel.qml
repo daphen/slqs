@@ -46,14 +46,14 @@ Rectangle {
         spacing: 3
         topPadding: 14
         Text {
-            renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+            renderTypeQuality: Text.VeryHighRenderTypeQuality
             text: parent.label
             color: Theme.fg_muted
             font.family: Theme.fontFamily; font.pixelSize: 11; font.letterSpacing: 1.2
             font.capitalization: Font.AllUppercase
         }
         Text {
-            renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+            renderTypeQuality: Text.VeryHighRenderTypeQuality
             width: parent.width
             text: parent.value
             color: Theme.fg
@@ -103,7 +103,7 @@ Rectangle {
         Row {
             spacing: 8
             Text {
-                renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+                renderTypeQuality: Text.VeryHighRenderTypeQuality
                 text: panel.p.name || ""
                 color: Theme.fg
                 font.family: Theme.fontFamily; font.pixelSize: 19; font.weight: 600
@@ -131,7 +131,7 @@ Rectangle {
         Item { width: 1; height: 4 }
 
         Text {
-            renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+            renderTypeQuality: Text.VeryHighRenderTypeQuality
             text: {
                 const bits = []
                 if (panel.p.realName && panel.p.realName !== panel.p.name) bits.push(panel.p.realName)
@@ -146,7 +146,7 @@ Rectangle {
         }
 
         Text {
-            renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+            renderTypeQuality: Text.VeryHighRenderTypeQuality
             visible: (panel.p.activity || "") !== ""
             width: parent.width
             topPadding: 8
@@ -157,7 +157,7 @@ Rectangle {
         }
 
         Text {
-            renderType: Text.QtRendering; renderTypeQuality: Text.VeryHighRenderTypeQuality
+            renderTypeQuality: Text.VeryHighRenderTypeQuality
             visible: (panel.p.statusText || "") !== ""
             width: parent.width
             topPadding: 10
