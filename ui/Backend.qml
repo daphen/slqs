@@ -898,7 +898,10 @@ Item {
     Timer { id: copiedClear; interval: 1500; onTriggered: backend.copiedTs = "" }
     function copyText(msg) {
         if (!msg) return
-        const t = plainText(msg.text)
+        // Copy the portable shortcode for custom emoji, not Discord's raw
+        // <:name:id> / <a:name:id> token (editing keeps the token — it needs it
+        // to re-send — so this conversion lives here, not in plainText).
+        const t = plainText(msg.text).replace(/<a?:([A-Za-z0-9_]+):\d+>/g, ":$1:")
         if (t.length) { Quickshell.execDetached(["wl-copy", "--", t]); copiedTs = msg.ts; copiedClear.restart() }
     }
     // Y: copy a link to the message. Both link shapes are constructible locally —
