@@ -31,12 +31,12 @@ bg=${bg:-181818}
 # output's logical size. imv respects -W/-H at launch so niri sees the
 # desired size in the initial configure — no post-launch resize jump.
 # mpv has similar flags via --geometry=WxH.
-read -r screen_w screen_h <<<"$(
+read -r screen_w screen_h out_scale <<<"$(
     niri msg --json focused-output 2>/dev/null \
         | jq -r '
-            (.logical | "\(.width) \(.height)")
-            // (.modes[] | select(.is_current) | "\(.width) \(.height)")
-            // "1920 1080"
+            (.logical | "\(.width) \(.height) \(.scale // 1)")
+            // (.modes[] | select(.is_current) | "\(.width) \(.height) 1")
+            // "1920 1080 1"
         ' 2>/dev/null
 )"
 win_w=$(( screen_w * 75 / 100 ))
@@ -47,7 +47,20 @@ win_h=$(( screen_h * 85 / 100 ))
 # interactive in the background while you view. Multiple files → arrow keys
 # page between them.
 view_in_imv() {
-    setsid -f imv -b "$bg" -W "$win_w" -H "$win_h" "$@" >/dev/null 2>&1
+    # Size the window to the first image (identify = physical px; niri windows
+    # are logical — divide by scale), capped at the 75/85% ceiling. Fixed-size
+    # windows left small images swimming in a void with scaling_mode=shrink.
+    local w=$win_w h=$win_h dims
+    dims=$(identify -format '%w %h' "$1[0]" 2>/dev/null | head -n1)
+    if [ -n "$dims" ]; then
+        read -r iw ih <<< "$dims"
+        read -r w h < <(awk -v iw="$iw" -v ih="$ih" -v s="${out_scale:-1}" -v mw="$win_w" -v mh="$win_h" '
+            BEGIN { w = iw / s; h = ih / s
+                if (w > mw) { h = h * mw / w; w = mw }
+                if (h > mh) { w = w * mh / h; h = mh }
+                printf "%d %d\n", (w < 200 ? 200 : w), (h < 150 ? 150 : h) }')
+    fi
+    setsid -f imv -b "$bg" -W "$w" -H "$h" "$@" >/dev/null 2>&1
     # With scaling_mode=shrink imv keeps the layout it computed for the
     # REQUESTED size; when the compositor's real configure differs, small
     # images land off-center (full-scaling used to re-center on rescale).
