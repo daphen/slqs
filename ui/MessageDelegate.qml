@@ -370,12 +370,26 @@ Item {
                             readonly property var wfBars: {
                                 const b64 = img.waveform || ""
                                 if (!b64) return []
-                                let raw
-                                try { raw = Qt.atob(b64) } catch (e) { return [] }
-                                if (!raw.length) return []
+                                // Discord's waveform is raw u8 RMS bytes. Decode base64 by
+                                // hand — Qt.atob returns a STRING and turns any byte >127
+                                // into U+FFFD (charCodeAt 65533), which drove one bar's
+                                // height to thousands of px: a thin line down the whole pane.
+                                const T = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+                                const s = b64.replace(/[^A-Za-z0-9+/]/g, "")
+                                const bytes = []
+                                for (let i = 0; i + 1 < s.length; i += 4) {
+                                    const e0 = T.indexOf(s[i]), e1 = T.indexOf(s[i + 1])
+                                    const e2 = i + 2 < s.length ? T.indexOf(s[i + 2]) : -1
+                                    const e3 = i + 3 < s.length ? T.indexOf(s[i + 3]) : -1
+                                    if (e0 < 0 || e1 < 0) break
+                                    bytes.push((e0 << 2) | (e1 >> 4))
+                                    if (e2 >= 0) bytes.push(((e1 & 15) << 4) | (e2 >> 2))
+                                    if (e3 >= 0) bytes.push(((e2 & 3) << 6) | e3)
+                                }
+                                if (!bytes.length) return []
                                 const out = []
                                 for (let i = 0; i < 24; i++)
-                                    out.push(raw.charCodeAt(Math.min(raw.length - 1, Math.floor(i * raw.length / 24))) / 255)
+                                    out.push(bytes[Math.min(bytes.length - 1, Math.floor(i * bytes.length / 24))] / 255)
                                 return out
                             }
                             Repeater {
@@ -383,7 +397,7 @@ Item {
                                 delegate: Rectangle {
                                     required property real modelData
                                     width: 2; radius: 1
-                                    height: Math.max(3, Math.round(3 + modelData * 13))
+                                    height: Math.max(3, Math.round(3 + Math.min(1, modelData) * 13))
                                     anchors.verticalCenter: parent.verticalCenter
                                     color: pillRect.playing ? Theme.cursor : Theme.fg_secondary
                                 }
