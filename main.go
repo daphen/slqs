@@ -359,6 +359,7 @@ type daemon struct {
 	conns map[net.Conn]struct{}
 
 	userMiss map[string]bool // author IDs users.info couldn't resolve — don't refetch (guarded by mu)
+	forceDM  map[string]bool // DM ids opened this session — shown even without a watermark/messages (guarded by mu)
 
 	updateEvent map[string]any // latest updateAvailable event, replayed to new clients
 	updMu       sync.Mutex
@@ -1183,6 +1184,13 @@ func (d *daemon) readConn(c net.Conn) {
 						d.broadcast(map[string]any{"type": "toast", "text": "Couldn't open DM"})
 						return
 					}
+					// A freshly-opened DM has no read watermark or cached
+					// messages, so sendChannels' "hide never-opened DMs" filter
+					// would drop it and the client's open would find no channel.
+					// Force it visible for this session.
+					d.mu.Lock()
+					d.forceDM[chID] = true
+					d.mu.Unlock()
 					d.registerChannel(w, slack.Channel{
 						GroupConversation: slack.GroupConversation{Conversation: slack.Conversation{ID: chID, User: user, IsIM: true}},
 					})
@@ -2207,6 +2215,7 @@ func main() {
 		lastBackfill:        map[string]time.Time{},
 		conns:               map[net.Conn]struct{}{},
 		userMiss:            map[string]bool{},
+		forceDM:             map[string]bool{},
 	}
 	cachePath := filepath.Join(xdgData(), "cache.db")
 	dsn := "file:" + cachePath + "?mode=ro&_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)"

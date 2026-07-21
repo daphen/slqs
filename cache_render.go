@@ -763,6 +763,13 @@ func (d *daemon) sendChannels(c net.Conn) {
 		User      string `json:"user"` // DM counterpart, for presence dots
 		last      string
 	}
+	d.mu.Lock()
+	forceDM := make(map[string]bool, len(d.forceDM))
+	for k, v := range d.forceDM {
+		forceDM[k] = v
+	}
+	d.mu.Unlock()
+
 	var entries []entry
 	var subs []map[string]any
 	for _, w := range d.wsList {
@@ -775,7 +782,7 @@ func (d *daemon) sendChannels(c net.Conn) {
 			lastV, lrV := last.String, lr.String
 			// DMs: only ones actually "open" (a read watermark or synced messages);
 			// slk hides the long tail of never-opened DMs.
-			if kind == "dm" && !(lrV != "" && lrV != "0") && lastV == "" {
+			if kind == "dm" && !(lrV != "" && lrV != "0") && lastV == "" && !forceDM[id] {
 				continue
 			}
 			unread := 0
