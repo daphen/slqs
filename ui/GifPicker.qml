@@ -101,7 +101,7 @@ Item {
                     }
                     TextInput {
                         id: search
-                        renderType: TextInput.NativeRendering
+                        renderType: TextInput.QtRendering
                         anchors.verticalCenter: parent.verticalCenter
                         width: parent.width - 36; color: Theme.fg; clip: true
                         font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 16
@@ -121,7 +121,7 @@ Item {
                                 else if (e.key === Qt.Key_L) { picker.move(1); e.accepted = true }
                             }
                         }
-                        Text { renderType: Text.NativeRendering; visible: !search.text; text: "Search GIFs… (empty = trending)"
+                        Text { renderType: Text.QtRendering; visible: !search.text; text: "Search GIFs… (empty = trending)"
                                color: Theme.fg_muted; font: search.font }
                     }
                 }

@@ -42,7 +42,7 @@ Rectangle {
                     Behavior on height { NumberAnimation { duration: 120 } }
                 }
 
-                Text { renderType: Text.NativeRendering
+                Text { renderType: Text.QtRendering
                     anchors.centerIn: parent
                     text: rail.glyphFor(modelData)
                     color: parent.active ? Theme.fg : Theme.fg_muted

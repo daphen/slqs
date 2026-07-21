@@ -34,13 +34,13 @@ Item {
         Row {
             anchors.left: parent.left; anchors.leftMargin: 18
             anchors.verticalCenter: parent.verticalCenter; spacing: 9
-            Text { renderType: Text.NativeRendering; text: "@"; color: Theme.fg_muted
+            Text { renderType: Text.QtRendering; text: "@"; color: Theme.fg_muted
                    anchors.verticalCenter: parent.verticalCenter
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 17 }
-            Text { renderType: Text.NativeRendering; text: "Mentions"; color: Theme.fg
+            Text { renderType: Text.QtRendering; text: "Mentions"; color: Theme.fg
                    anchors.verticalCenter: parent.verticalCenter
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 17; font.weight: 500 }
-            Text { renderType: Text.NativeRendering; text: Backend.currentMentions.length + " recent"
+            Text { renderType: Text.QtRendering; text: Backend.currentMentions.length + " recent"
                    color: Theme.fg_muted; anchors.verticalCenter: parent.verticalCenter
                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14 }
         }
@@ -99,7 +99,7 @@ Item {
                         Rectangle {
                             width: 24; height: 24; radius: 6; color: modelData.color || Theme.surface
                             anchors.verticalCenter: parent.verticalCenter
-                            Text { renderType: Text.NativeRendering; anchors.centerIn: parent
+                            Text { renderType: Text.QtRendering; anchors.centerIn: parent
                                    visible: img.status !== Image.Ready
                                    text: modelData.initials || "?"; color: Theme.ink
                                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 11; font.weight: 500 }
@@ -110,25 +110,25 @@ Item {
                                         fillMode: Image.PreserveAspectCrop; sourceSize.width: 48; sourceSize.height: 48 }
                             }
                         }
-                        Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
+                        Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
                                text: modelData.title || ""; color: Theme.mode === "light" ? Theme.ink : Theme.fg
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15; font.weight: 500 }
-                        Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
+                        Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
                                text: "#" + (modelData.channelName || ""); color: Theme.fg_muted
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
-                        Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
+                        Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
                                visible: !!modelData.inThread
                                text: "↳ in thread"; color: Theme.sky
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12; font.weight: 500 }
                     }
-                    Text { renderType: Text.NativeRendering
+                    Text { renderType: Text.QtRendering
                            anchors.right: parent.right; anchors.verticalCenter: parent.verticalCenter
                            text: modelData.lastTime || ""; color: Theme.fg_muted
                            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 12 }
                 }
 
                 // the mentioning message
-                Text { renderType: Text.NativeRendering
+                Text { renderType: Text.QtRendering
                        width: parent.width; text: modelData.preview || ""
                        color: Theme.mode === "light" ? Theme.fg_muted : Theme.fg_secondary; wrapMode: Text.Wrap; maximumLineCount: 2; elide: Text.ElideRight
                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14 }
@@ -143,7 +143,7 @@ Item {
 
         // empty state
         Text {
-            renderType: Text.NativeRendering
+            renderType: Text.QtRendering
             anchors.centerIn: parent; visible: list.count === 0
             text: "No recent mentions"; color: Theme.fg_muted
             font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15

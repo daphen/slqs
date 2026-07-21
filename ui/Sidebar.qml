@@ -92,7 +92,7 @@ Rectangle {
                         color: active ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.10) : tabHov.hovered ? Theme.hover : "transparent"
                         border.width: 1
                         border.color: active ? Theme.hairline : "transparent"
-                        Text { id: tabLbl; renderType: Text.NativeRendering
+                        Text { id: tabLbl; renderType: Text.QtRendering
                             anchors.centerIn: parent; width: parent.width - 12; elide: Text.ElideRight
                             horizontalAlignment: Text.AlignHCenter
                             text: modelData.name
@@ -115,15 +115,15 @@ Rectangle {
                 Row {
                     anchors.left: parent.left; anchors.leftMargin: 4
                     anchors.verticalCenter: parent.verticalCenter; spacing: 6
-                    Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
+                    Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
                         text: Backend.currentWorkspaceName || "Direct Messages"; color: Theme.fg
                         font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                         font.pixelSize: 15; font.weight: 500 }
-                    Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
+                    Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
                         text: "⌄"; color: Theme.fg_muted
                         font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
                 }
-                Text { renderType: Text.NativeRendering; anchors.right: parent.right; anchors.rightMargin: 4
+                Text { renderType: Text.QtRendering; anchors.right: parent.right; anchors.rightMargin: 4
                     anchors.verticalCenter: parent.verticalCenter; text: "⌃S"; color: Theme.fg_muted
                     font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 11 }
                 HoverHandler { id: wsHdrHov }
@@ -150,10 +150,10 @@ Rectangle {
             color: thPrimary ? Theme.fg : thHov.hovered ? Theme.hover : "transparent"
             Row {
                 anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 8; spacing: 7
-                Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
+                Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
                        text: "↳"; color: parent.parent.thPrimary ? Theme.bg : Theme.fg_muted
                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15 }
-                Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
+                Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
                        text: "Threads"; color: parent.parent.thPrimary ? Theme.bg : Theme.fg
                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                        font.pixelSize: 14; font.weight: Backend.threadUnreadTotal > 0 ? 500 : Theme.fontWeight }
@@ -162,7 +162,7 @@ Rectangle {
                 visible: Backend.threadUnreadTotal > 0
                 anchors.right: parent.right; anchors.rightMargin: 8; anchors.verticalCenter: parent.verticalCenter
                 height: 17; width: Math.max(17, tb.implicitWidth + 10); radius: 9; color: Theme.cursor
-                Text { id: tb; renderType: Text.NativeRendering; anchors.centerIn: parent
+                Text { id: tb; renderType: Text.QtRendering; anchors.centerIn: parent
                        text: Backend.threadUnreadTotal; color: Theme.ink
                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                        font.pixelSize: 12; font.weight: 500 }
@@ -179,10 +179,10 @@ Rectangle {
             color: mePrimary ? Theme.fg : meHov.hovered ? Theme.hover : "transparent"
             Row {
                 anchors.fill: parent; anchors.leftMargin: 12; anchors.rightMargin: 8; spacing: 7
-                Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
+                Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
                        text: "@"; color: parent.parent.mePrimary ? Theme.bg : Theme.fg_muted
                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 15 }
-                Text { renderType: Text.NativeRendering; anchors.verticalCenter: parent.verticalCenter
+                Text { renderType: Text.QtRendering; anchors.verticalCenter: parent.verticalCenter
                        text: "Mentions"; color: parent.parent.mePrimary ? Theme.bg : Theme.fg
                        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                        font.pixelSize: 14; font.weight: Theme.fontWeight }
@@ -227,7 +227,7 @@ Rectangle {
                     width: parent.width; height: 1
                     color: Theme.hairlineSoft
                 }
-                Text { renderType: Text.NativeRendering
+                Text { renderType: Text.QtRendering
                     anchors.left: parent.left; anchors.leftMargin: 12
                     anchors.bottom: parent.bottom; anchors.bottomMargin: 8
                     text: section.toUpperCase()
@@ -287,7 +287,7 @@ Rectangle {
 
                 // relative line number (vim hybrid: absolute on cursor row),
                 // shown only while the sidebar is focused — drives N j/k jumps.
-                Text { renderType: Text.NativeRendering
+                Text { renderType: Text.QtRendering
                     visible: sidebar.active && (!row.cursor || sidebar.threadsSelected || sidebar.mentionsSelected)
                     anchors.left: parent.left; anchors.leftMargin: 12
                     width: 18; horizontalAlignment: Text.AlignRight
@@ -322,7 +322,7 @@ Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
                         width: (row.kind === "dm" && row.avatar) ? 18 : 14
                         height: 18
-                        Text { renderType: Text.NativeRendering;
+                        Text { renderType: Text.QtRendering;
                             anchors.centerIn: parent
                             visible: !(row.kind === "dm" && dmAv.status === Image.Ready)
                             text: row.kind === "dm" ? "●" : "#"
@@ -341,7 +341,7 @@ Rectangle {
                             }
                         }
                     }
-                    Text { renderType: Text.NativeRendering;
+                    Text { renderType: Text.QtRendering;
                         id: chName
                         anchors.verticalCenter: parent.verticalCenter
                         readonly property real avail: parent.width - chIcon.width - parent.spacing
@@ -368,7 +368,7 @@ Rectangle {
                     anchors.verticalCenter: parent.verticalCenter
                     height: 18; width: Math.max(18, ub.implicitWidth + 10); radius: 9
                     color: Theme.cursor
-                    Text { id: ub; renderType: Text.NativeRendering; anchors.fill: parent
+                    Text { id: ub; renderType: Text.QtRendering; anchors.fill: parent
                            horizontalAlignment: Text.AlignHCenter; verticalAlignment: Text.AlignVCenter
                            text: row.unread; color: Theme.ink
                            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
@@ -376,7 +376,7 @@ Rectangle {
                 }
                 // Quiet unread (plain channel): bare muted count, no chip — keeps
                 // the row's two-level hierarchy for low-priority activity.
-                Text { renderType: Text.NativeRendering
+                Text { renderType: Text.QtRendering
                     visible: row.unread > 0 && !row.loudUnread
                     anchors.right: parent.right; anchors.rightMargin: 22
                     anchors.verticalCenter: parent.verticalCenter
