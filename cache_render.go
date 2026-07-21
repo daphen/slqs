@@ -809,6 +809,12 @@ func (d *daemon) sendChannels(c net.Conn) {
 			avatar := ""
 			if u := w.dmUser[id]; u != "" {
 				avatar = d.avatarPath(u)
+				// A DM registered before the user directory loaded is cached
+				// under the raw counterpart id; prefer the live-resolved name so
+				// the title self-heals to the person's name.
+				if rn := w.users[u]; rn != "" {
+					name = rn
+				}
 			}
 			mention := d.channelMention(w, id, kind, base, unread)
 			entries = append(entries, entry{id, name, kind, topic, unread, mention, avatar, w.teamID, w.dmUser[id], lastV})

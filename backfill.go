@@ -144,6 +144,16 @@ func (d *daemon) backfillChannels(w *workspace) bool {
 		if len(updates) > 0 {
 			d.writeDB.BatchUpdateChannelReadState(updates)
 		}
+		// client.counts is Slack's sidebar truth: every conversation it returns
+		// is one you should see. Force-show them so the "hide dormant DMs" filter
+		// in sendChannels can't drop a group-DM you were invited to or an active
+		// DM whose messages we haven't cached yet. (channel ids are inert here —
+		// the filter only consults forceDM for dm-kind entries.)
+		d.mu.Lock()
+		for _, u := range unreads {
+			d.forceDM[u.ChannelID] = true
+		}
+		d.mu.Unlock()
 	}
 
 	rows, err := d.writeDB.BackfillCandidates(w.teamID, unreadIDs)
