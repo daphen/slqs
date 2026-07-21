@@ -768,11 +768,16 @@ func (d *daemon) sendChannels(c net.Conn) {
 	for k, v := range d.forceDM {
 		forceDM[k] = v
 	}
+	userMiss := make(map[string]bool, len(d.userMiss))
+	for k, v := range d.userMiss {
+		userMiss[k] = v
+	}
 	d.mu.Unlock()
 
 	var entries []entry
 	var subs []map[string]any
 	for _, w := range d.wsList {
+		var needResolve []string // DM counterparts absent from the user directory
 		for id, name := range w.chans {
 			kind := w.chanKind[id]
 			var last, lr sql.NullString
@@ -811,15 +816,28 @@ func (d *daemon) sendChannels(c net.Conn) {
 				avatar = d.avatarPath(u)
 				// A DM registered before the user directory loaded is cached
 				// under the raw counterpart id; prefer the live-resolved name so
-				// the title self-heals to the person's name.
+				// the title self-heals to the person's name. External/guest users
+				// aren't in the bootstrap users.list snapshot, so fetch them
+				// on-demand (below) and re-push once resolved.
 				if rn := w.users[u]; rn != "" {
 					name = rn
+				} else if !userMiss[u] {
+					needResolve = append(needResolve, u)
 				}
 			}
 			mention := d.channelMention(w, id, kind, base, unread)
 			entries = append(entries, entry{id, name, kind, topic, unread, mention, avatar, w.teamID, w.dmUser[id], lastV})
 		}
 		subs = append(subs, d.buildSubThreads(w)...)
+		// Resolve any DM counterparts missing from the directory, then re-push so
+		// their raw-id titles heal. Guarded on userMiss above so a permanently
+		// unresolvable counterpart can't cause a re-push loop.
+		if len(needResolve) > 0 {
+			go func(w *workspace, ids []string) {
+				d.resolveUnknownUsers(w, ids)
+				d.refreshChannels()
+			}(w, needResolve)
+		}
 	}
 	sort.SliceStable(entries, func(i, j int) bool { return entries[i].last > entries[j].last })
 
