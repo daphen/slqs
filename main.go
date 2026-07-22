@@ -1298,6 +1298,35 @@ func (d *daemon) readConn(c net.Conn) {
 				// (~/.cache/slqs/view) kept apart from the inline thumbnail cache.
 				viewDir := filepath.Join(os.Getenv("HOME"), ".cache", "slqs", "view")
 				os.MkdirAll(viewDir, 0755)
+				// A lone video STREAMS straight into mpv instead of download-
+				// then-play: screen recordings run to hundreds of MB, and the
+				// full download blew past the UI's 20s patience. mpv opens its
+				// window immediately and buffers. A previously-downloaded copy
+				// still plays locally via the normal path below.
+				if mediatype == "video" && len(items) == 1 {
+					im := items[0]
+					ext := im.Ext
+					if ext == "" {
+						ext = "mp4"
+					}
+					if _, err := os.Stat(filepath.Join(viewDir, im.Id+"."+ext)); err != nil {
+						mp := exec.Command("mpv", "--force-window=immediate",
+							"--http-header-fields-append=Authorization: Bearer "+w.token,
+							"--http-header-fields-append=Cookie: d="+w.cookie,
+							im.Url)
+						mp.Stdout, mp.Stderr = nil, nil
+						if err := mp.Start(); err == nil {
+							go mp.Wait()
+							b, _ := json.Marshal(map[string]any{"type": "viewSpawned"})
+							b = append(b, '\n')
+							d.mu.Lock()
+							c.Write(b)
+							d.mu.Unlock()
+							return
+						}
+						// mpv missing/unstartable — fall through to download-then-open
+					}
+				}
 				var paths []string
 				for _, im := range items {
 					ext := im.Ext
