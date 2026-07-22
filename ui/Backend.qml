@@ -1664,6 +1664,12 @@ Item {
             parser: SplitParser { onRead: data => backend.onEvent(data) }
             onConnectionStateChanged: {
                 if (!connected) { reconnect.restart(); return }
+                // Stamp lastRecv on connect so the dead-socket timer measures 8s of
+                // silence from HERE, not from epoch 0. Without this the first tick
+                // (~1s in) always fired (now - 0 ≫ 8000) and tore down the in-flight
+                // bootstrap — a race only the slow daemon (dsqrd) lost, landing empty.
+                // A failed connect leaves lastRecv at 0, so retry-until-up still fires.
+                backend.lastRecv = Date.now()
                 // On (re)connect slkd re-sends the channel list; refresh the open
                 // channel's messages (and thread) too — a slkd restart drops the
                 // socket and would otherwise leave a stale/empty view.
@@ -1680,11 +1686,12 @@ Item {
     }
     Component.onCompleted: _redial()
 
-    // Re-dial whenever we haven't heard from the daemon recently. lastRecv starts
-    // at 0, so a cold start re-dials immediately instead of sitting empty until
-    // you reopen the window. The daemon pings every 3s; 8s of silence =
-    // dead/never-connected. A large tick gap means the session was frozen
-    // (suspend) — re-dial for a fresh bootstrap even if the socket survived.
+    // Re-dial whenever we haven't heard from the daemon recently. lastRecv is 0
+    // until the first successful connect (stamped in onConnectionStateChanged),
+    // so before a connection lands this fires every tick — retry-until-daemon-up.
+    // Once connected, the daemon pings every 3s; 8s of silence = dead. A large
+    // tick gap means the session was frozen (suspend) — re-dial for a fresh
+    // bootstrap even if the socket survived.
     Timer {
         id: reconnect
         interval: 1000; repeat: true; running: true
