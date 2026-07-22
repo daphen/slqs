@@ -1348,7 +1348,11 @@ func (d *daemon) readConn(c net.Conn) {
 						ext = "mp4"
 					}
 					if _, err := os.Stat(filepath.Join(viewDir, im.Id+"."+ext)); err != nil {
-						mp := exec.Command("mpv", "--force-window=immediate",
+						// size like media-viewer.sh's mpv (75%x85% of the
+						// screen) — without it the window comes up at the
+						// video's native size, tiny for small recordings
+						mp := exec.Command("mpv", "--no-terminal", "--force-window=immediate",
+							"--autofit=75%x85%", "--loop",
 							"--http-header-fields-append=Authorization: Bearer "+w.token,
 							"--http-header-fields-append=Cookie: d="+w.cookie,
 							im.Url)
