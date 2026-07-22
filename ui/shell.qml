@@ -32,7 +32,7 @@ FloatingWindow {
 
     // Distinct per-backend title so niri-jump-or-exec can tell the Slack and
     // Discord instances apart (both share the org.quickshell app-id).
-    title: (Quickshell.env("SLK_SOCK") === "dsqrd") ? "discord-client" : "slqs"
+    title: (Quickshell.env("SLK_SOCK") === "dsqrd") ? "dsqrd" : "slqs"
 
     // Window-focus tracking for notification suppression lives in slkd, which
     // watches niri's event stream (FloatingWindow exposes no focus property).
