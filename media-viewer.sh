@@ -54,8 +54,19 @@ view_in_imv() {
     dims=$(identify -format '%w %h' "$1[0]" 2>/dev/null | head -n1)
     if [ -n "$dims" ]; then
         read -r iw ih <<< "$dims"
-        read -r w h < <(awk -v iw="$iw" -v ih="$ih" -v s="${out_scale:-1}" -v mw="$win_w" -v mh="$win_h" '
+        read -r w h < <(awk -v iw="$iw" -v ih="$ih" -v s="${out_scale:-1}" \
+                            -v mw="$win_w" -v mh="$win_h" \
+                            -v sw="${screen_w:-1920}" -v sh="${screen_h:-1080}" '
             BEGIN { w = iw / s; h = ih / s
+                # Floor: a small image (e.g. a 645px cropped screenshot) opens
+                # in a window at least ~60% of the screen so it is readable,
+                # aspect preserved, upscale capped at 3x to bound blur.
+                fw = sw * 0.60; fh = sh * 0.60
+                if (w < fw && h < fh) {
+                    k = fw / w; if (fh / h < k) k = fh / h; if (k > 3) k = 3
+                    w = w * k; h = h * k
+                }
+                # Ceiling: never exceed the 75/85% cap.
                 if (w > mw) { h = h * mw / w; w = mw }
                 if (h > mh) { w = w * mh / h; h = mh }
                 printf "%d %d\n", (w < 200 ? 200 : w), (h < 150 ? 150 : h) }')
