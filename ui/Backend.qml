@@ -768,9 +768,16 @@ Item {
     property string attachName: ""
     property bool _awaitingPaste: false   // Ctrl+V sent; awaiting the daemon's image-or-text verdict
     property string _pendingImagePath: "" // local file:// of a staged paste image (for optimistic preview)
+    // A send clears the composer synchronously, but the daemon's attach events
+    // (attachUploading/attachReady) arrive async — a straggler after the send
+    // used to resurrect the chip. Only honor those events while an upload the
+    // user actually started is still armed; clearAttach (called on every send)
+    // disarms it.
+    property bool _attachArmed: false
     function pasteImage(thread) {
         if (!currentChannelId) return
         _awaitingPaste = true
+        _attachArmed = true
         safeWrite(JSON.stringify({ type: "uploadClipboard", channel: currentChannelId, thread: thread || "" }) + "\n")
     }
     // Stage a file from disk (any type). Like pasteImage, it doesn't send —
@@ -778,6 +785,7 @@ Item {
     function uploadFile(path, thread) {
         if (!currentChannelId || !path) return
         attachState = "uploading"; attachName = path.split("/").pop()
+        _attachArmed = true
         safeWrite(JSON.stringify({ type: "uploadFile", channel: currentChannelId, path: path, thread: thread || "" }) + "\n")
     }
     // The daemon asked (askCompress) before uploading an oversized image/video;
@@ -785,6 +793,7 @@ Item {
     function compressUpload(channel, thread, path) {
         if (!channel || !path) return
         attachState = "uploading"; attachName = path.split("/").pop()
+        _attachArmed = true
         safeWrite(JSON.stringify({ type: "compressUpload", channel: channel, path: path, thread: thread || "" }) + "\n")
     }
     function dropAttach() {
@@ -792,7 +801,7 @@ Item {
         attachState = "none"; attachName = ""
         safeWrite(JSON.stringify({ type: "dropAttach", channel: currentChannelId }) + "\n")
     }
-    function clearAttach() { attachState = "none"; attachName = ""; _awaitingPaste = false; _pendingImagePath = "" }
+    function clearAttach() { attachState = "none"; attachName = ""; _awaitingPaste = false; _pendingImagePath = ""; _attachArmed = false }
     // Clipboard held no image → the focused input should paste text instead.
     signal pasteFallback()
     // A staged attachment finished uploading — drop into the composer so a bare
@@ -1141,6 +1150,7 @@ Item {
         else if (e.type === "attachUploading") {
             // Daemon found a clipboard image and began uploading → show the
             // "uploading" chip now. Text pastes never reach here, so no false flash.
+            if (!_attachArmed) return   // straggler after a send already cleared the composer
             _awaitingPaste = false
             attachState = "uploading"; attachName = e.name || "image"
             _pendingImagePath = e.path || ""
@@ -1148,6 +1158,7 @@ Item {
         else if (e.type === "attachReady") {
             // Upload finished (ok) — or no image / failed. A no-image verdict while
             // still awaiting the Ctrl+V result → paste the clipboard text instead.
+            if (!_attachArmed) return   // straggler after a send: don't resurrect the chip
             if (e.ok) { attachState = "ready"; attachName = e.name || "file"; attachSettled() }
             else if (_awaitingPaste) pasteFallback()
             else {
