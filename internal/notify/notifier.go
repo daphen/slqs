@@ -56,9 +56,9 @@ func New(enabled bool) *Notifier {
 	if !enabled {
 		return n
 	}
-	// Own session-bus connection so notifications carry AppName "slk".
+	// Own session-bus connection so notifications carry AppName "Slack".
 	// beeep hardcodes "DefaultAppName", which downstream consumers (e.g.
-	// a bar's per-app notification badge) can't attribute to slk. Fall
+	// a bar's per-app notification badge) can't attribute to the client. Fall
 	// back to beeep if the session bus isn't reachable.
 	conn, err := dbus.SessionBus()
 	if err != nil {
@@ -165,7 +165,7 @@ func (n *Notifier) sendDBus(key, title, body, image string) (uint32, error) {
 	replaces := n.lastID[key]
 	n.mu.Unlock()
 	note := enotify.Notification{
-		AppName:    "slk",
+		AppName:    "Slack",
 		ReplacesID: replaces,
 		Summary:    title,
 		Body:       body,
