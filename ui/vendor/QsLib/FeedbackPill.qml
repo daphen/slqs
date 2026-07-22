@@ -18,7 +18,7 @@ Rectangle {
     color: Theme.mode === "light" ? Theme.ink : Theme.fg
     border.width: 1
     border.color: Theme.hairline
-    Behavior on opacity { NumberAnimation { duration: 140 } }
+    Behavior on opacity { NumberAnimation { duration: Motion.base } }
 
     Row {
         id: row
@@ -31,8 +31,8 @@ Rectangle {
             SequentialAnimation on opacity {
                 running: pill.visible
                 loops: Animation.Infinite
-                NumberAnimation { from: 1; to: 0.25; duration: 550 }
-                NumberAnimation { from: 0.25; to: 1; duration: 550 }
+                NumberAnimation { from: 1; to: 0.25; duration: Motion.pulse }
+                NumberAnimation { from: 0.25; to: 1; duration: Motion.pulse }
             }
         }
         Text {

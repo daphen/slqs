@@ -1,9 +1,11 @@
 module QsLib
 singleton Theme Theme.qml
 singleton Html Html.qml
+singleton Motion Motion.qml
 Icon Icon.qml
 KeyCap KeyCap.qml
 CapLabel CapLabel.qml
 FeedbackPill FeedbackPill.qml
 Card Card.qml
+Dropdown Dropdown.qml
 ScrollFeel ScrollFeel.qml
