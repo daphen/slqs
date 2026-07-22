@@ -28,7 +28,10 @@ Item {
     // from a host's global key router (which would strand its binds after a
     // close). A modal caller that owns focus can turn this on.
     property bool grabsKeys: false
+    property bool showChin: grabsKeys   // keyboard-hint footer; only when nav is on
+    property real scrimOpacity: 0       // dim behind the panel so it reads clearly (0 = none)
     signal activated(var id)
+    signal closed()             // fired on hide so a host can reclaim key focus
 
     property int sel: 0
 
@@ -50,7 +53,7 @@ Item {
         open = true
         if (grabsKeys) Qt.callLater(() => keyCatch.forceActiveFocus())
     }
-    function hide() { open = false }
+    function hide() { if (open) { open = false; dd.closed() } }
     function toggle() { if (open) hide(); else show() }
     function move(d) {
         const n = (model || []).length
@@ -61,8 +64,11 @@ Item {
         if (r) { hide(); dd.activated(r.id) }
     }
 
-    // Transparent outside-click catcher — a dropdown doesn't dim the screen the
-    // way the full pickers do; it just dismisses on a click elsewhere.
+    // Optional scrim to separate the panel from busy content behind it
+    // (dd's own opacity fades it in/out with the dropdown).
+    Rectangle { anchors.fill: parent; color: Theme.ink; opacity: dd.scrimOpacity; visible: opacity > 0 }
+
+    // Click-catcher — dismiss on a click outside the panel.
     MouseArea { anchors.fill: parent; onClicked: dd.hide() }
 
     Item {
@@ -73,10 +79,10 @@ Item {
         Keys.onReturnPressed: dd.accept()
         Keys.onEscapePressed: dd.hide()
         Keys.onPressed: e => {
-            if (e.modifiers & Qt.ControlModifier) {
-                if (e.key === Qt.Key_J) { dd.move(1); e.accepted = true }
-                else if (e.key === Qt.Key_K) { dd.move(-1); e.accepted = true }
-            }
+            // vim nav: j/k move, q closes (esc also closes)
+            if (e.key === Qt.Key_J) { dd.move(1); e.accepted = true }
+            else if (e.key === Qt.Key_K) { dd.move(-1); e.accepted = true }
+            else if (e.key === Qt.Key_Q) { dd.hide(); e.accepted = true }
         }
     }
 
@@ -87,8 +93,9 @@ Item {
         id: panel
         x: Math.round(dd.panelX)
         y: Math.round(dd.panelY)
-        width: Math.round(dd.panelWidth)
-        height: list.height
+        // widen to fit the chin so its hints never clip past the corners
+        width: Math.round(dd.showChin ? Math.max(dd.panelWidth, chinLeft.implicitWidth + chinRight.implicitWidth + 60) : dd.panelWidth)
+        height: list.height + (dd.showChin ? chin.height : 0)
         radius: 18
         color: Theme.bg
         border.color: dd.panelBorder; border.width: 1
@@ -102,9 +109,10 @@ Item {
         ListView {
             id: list
             width: parent.width
-            // picker: topMargin/bottomMargin 10 under the hairline
-            height: Math.round(Math.min(dd.maxVisible * dd.rowHeight, contentHeight) + 20)
-            topMargin: 10; bottomMargin: 10
+            // concentric with the panel: highlight sits 8px in on every side
+            // (list margin 5 + row inset 3), radius 10 = panel radius 18 − 8
+            height: Math.round(Math.min(dd.maxVisible * dd.rowHeight, contentHeight) + 10)
+            topMargin: 5; bottomMargin: 5
             clip: true
             model: dd.model
             currentIndex: dd.sel
@@ -121,11 +129,11 @@ Item {
                 readonly property int badge: row.modelData.badge || 0
                 width: list.width; height: dd.rowHeight
 
-                // inset highlight — never touches the panel's rounded corners
+                // inset highlight — concentric with the panel corners
                 Rectangle {
                     anchors.fill: parent
-                    anchors.leftMargin: 14; anchors.rightMargin: 14
-                    anchors.topMargin: 1; anchors.bottomMargin: 1; radius: 13
+                    anchors.leftMargin: 8; anchors.rightMargin: 8
+                    anchors.topMargin: 3; anchors.bottomMargin: 3; radius: 10
                     color: row.index === dd.sel ? Theme.selection
                          : hov.hovered ? Theme.hover : "transparent"
                     border.width: 1
@@ -183,6 +191,40 @@ Item {
                 }
                 HoverHandler { id: hov }
                 TapHandler { onTapped: { dd.sel = row.index; dd.accept() } }
+            }
+        }
+
+        // chin: keyboard hints (family KeyCap/CapLabel row), hairline-separated
+        Item {
+            id: chin
+            visible: dd.showChin
+            anchors.top: list.bottom
+            anchors.left: parent.left
+            anchors.right: parent.right
+            height: 34
+            Rectangle {
+                anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
+                anchors.leftMargin: 8; anchors.rightMargin: 8
+                height: 1; color: Theme.hairline
+            }
+            Row {
+                id: chinLeft
+                anchors.left: parent.left
+                anchors.leftMargin: 22
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 4
+                KeyCap { anchors.verticalCenter: parent.verticalCenter; small: true; text: "j" }
+                KeyCap { anchors.verticalCenter: parent.verticalCenter; small: true; text: "k" }
+                CapLabel { anchors.verticalCenter: parent.verticalCenter; text: "move" }
+            }
+            Row {
+                id: chinRight
+                anchors.right: parent.right
+                anchors.rightMargin: 22
+                anchors.verticalCenter: parent.verticalCenter
+                spacing: 4
+                KeyCap { anchors.verticalCenter: parent.verticalCenter; small: true; text: "↵" }
+                CapLabel { anchors.verticalCenter: parent.verticalCenter; text: "select" }
             }
         }
     }
