@@ -1261,6 +1261,20 @@ Item {
     // viewer (mpv especially) still takes a beat to appear. Hold the indicator for a
     // grace window after viewReady so it's visible on cached opens too.
     Timer { id: mediaGraceTimer; interval: 2500; onTriggered: backend.mediaLoading = false }
+    // S — save the message's media to ~/Downloads. Opening media streams or
+    // caches ephemerally; this is the deliberate keep-a-copy action.
+    function downloadMedia(msg) {
+        if (!msg) return
+        let imgs
+        try { imgs = JSON.parse(msg.imagesJson || "[]") } catch (e) { return }
+        imgs = imgs.filter(function (i) { return i.full && i.type !== "music" })
+        if (!imgs.length) { toast("nothing to download"); return }
+        const items = imgs.map(function (i) {
+            return { id: i.id, url: i.full, ext: i.ext || "", name: i.name || "" }
+        })
+        safeWrite(JSON.stringify({ type: "download", channel: currentChannelId, images: items }) + "\n")
+        toast("downloading…")
+    }
     function viewImage(msg) {
         if (!msg) return
         let imgs

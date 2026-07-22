@@ -1155,7 +1155,7 @@ func (d *daemon) readConn(c net.Conn) {
 		var cmd struct {
 			Type, Channel, Text, Before, Thread, Id, Url, Ext, Mediatype, Ts, Emoji, Workspace, Team, State, User, Path string
 			Remove, Broadcast                                                                                           bool
-			Images                                                                                                      []struct{ Id, Url, Ext string } // "view" can carry several photos
+			Images                                                                                                      []struct{ Id, Url, Ext, Name string } // "view"/"download" can carry several files
 		}
 		if json.Unmarshal(sc.Bytes(), &cmd) != nil {
 			continue
@@ -1282,6 +1282,44 @@ func (d *daemon) readConn(c net.Conn) {
 			continue
 		}
 		w := d.idIndex[cmd.Channel]
+		// "download" (S in the client) saves the message's media to ~/Downloads —
+		// the deliberate keep-a-copy action; opening media stays ephemeral.
+		if cmd.Type == "download" {
+			if w == nil || len(cmd.Images) == 0 {
+				continue
+			}
+			items := cmd.Images
+			go func(w *workspace) {
+				dir := os.Getenv("XDG_DOWNLOAD_DIR")
+				if dir == "" {
+					dir = filepath.Join(os.Getenv("HOME"), "Downloads")
+				}
+				os.MkdirAll(dir, 0755)
+				saved, last := 0, ""
+				for _, im := range items {
+					name := im.Name
+					if name == "" {
+						ext := im.Ext
+						if ext == "" {
+							ext = "bin"
+						}
+						name = im.Id + "." + ext
+					}
+					if d.downloadFile(filepath.Join(dir, name), im.Url, w.token, w.cookie) {
+						saved++
+						last = name
+					}
+				}
+				text := "Couldn't download"
+				if saved == 1 {
+					text = "Saved " + last + " to Downloads"
+				} else if saved > 1 {
+					text = fmt.Sprintf("Saved %d files to Downloads", saved)
+				}
+				d.broadcast(map[string]any{"type": "toast", "text": text})
+			}(w)
+			continue
+		}
 		// "view" acts on a file — download the full-res original (authed with
 		// the channel's workspace token) and report its local path.
 		if cmd.Type == "view" {
@@ -1290,7 +1328,7 @@ func (d *daemon) readConn(c net.Conn) {
 			}
 			items := cmd.Images
 			if len(items) == 0 && cmd.Url != "" { // single-item fallback (older shape)
-				items = append(items, struct{ Id, Url, Ext string }{cmd.Id, cmd.Url, cmd.Ext})
+				items = append(items, struct{ Id, Url, Ext, Name string }{cmd.Id, cmd.Url, cmd.Ext, ""})
 			}
 			mediatype := cmd.Mediatype
 			go func(w *workspace) {
