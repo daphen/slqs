@@ -1308,7 +1308,7 @@ Item {
         const arr = Array.isArray(paths) ? paths : [paths]
         // strip file://; newline-join so the script opens them all together.
         const raw = arr.map(function (p) { return p.indexOf("file://") === 0 ? p.slice(7) : p })
-        Quickshell.execDetached([(Quickshell.env("SLK_MEDIA_VIEWER") || (Quickshell.env("HOME") + "/.config/endcord/media-viewer.sh")), raw.join("\n"), mediatype || "img"])
+        Quickshell.execDetached([(Quickshell.env("SLK_MEDIA_VIEWER") || (Quickshell.env("HOME") + "/.config/qs-chat-clients/media-viewer.sh")), raw.join("\n"), mediatype || "img"])
     }
     // Enter on a message with exactly one obvious action performs it:
     // media → viewer, link/#channel → open. Both or neither → false, so the
