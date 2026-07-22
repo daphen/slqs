@@ -1310,13 +1310,19 @@ Item {
         if (msg && msg.link) openUrl(msg.link)
     }
     // `o` on a message: if it mentions a #channel you're in, open that channel;
-    // otherwise fall back to opening the first URL.
+    // else open the first URL; else — media-only message — open the media like
+    // `v` (pressing o on a photo is the natural reflex). Mixed messages keep
+    // the split: o = link, v = media.
     function openChannelRef(msg) {
         if (msg && msg.channelRef && _findChannel(msg.channelRef)) {
             openFromNotification(currentWorkspace, msg.channelRef, "")
             return
         }
-        openLink(msg)
+        if (msg && msg.link) {
+            openUrl(msg.link)
+            return
+        }
+        viewImage(msg)
     }
     // Authoritative unread from slkd (reflects reads made in slk too).
     function setChannelUnread(id, count, mention) { applyUnread(id, count, mention) }
