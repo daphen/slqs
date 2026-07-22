@@ -48,6 +48,11 @@ var palette = []string{"#FF570D", "#97B5A6", "#7DD3FC", "#8A92A7", "#ff8a31", "#
 // holding a concurrency slot (sendRecent fetches images in parallel).
 var fileHTTP = &http.Client{Timeout: 20 * time.Second, Transport: slackhttp.HardenedTransport()}
 
+// mediaHTTP downloads full-res originals (videos run to hundreds of MB —
+// a whole-transfer timeout kills them mid-body). No Client.Timeout; each
+// request carries a generous context deadline instead.
+var mediaHTTP = &http.Client{Transport: slackhttp.HardenedTransport()}
+
 // gitRev is the build's git commit, injected via -ldflags "-X main.gitRev=...".
 // Empty on a plain `go build` (dev), which disables the update check.
 var gitRev string
@@ -640,13 +645,19 @@ func (d *daemon) downloadFile(dst, url, token, cookie string) bool {
 	if _, err := os.Stat(dst); err == nil {
 		return true
 	}
-	req, err := http.NewRequest("GET", url, nil)
+	// Full-res originals can be huge (screen-recording .movs run to hundreds
+	// of MB): a whole-transfer timeout killed them mid-body, so give the
+	// request a generous deadline and stream to disk instead of buffering
+	// the entire body in memory.
+	ctx, cancel := context.WithTimeout(d.ctx, 10*time.Minute)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
 	if err != nil {
 		return false
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Cookie", "d="+cookie)
-	resp, err := fileHTTP.Do(req)
+	resp, err := mediaHTTP.Do(req)
 	if err != nil || resp.StatusCode != 200 {
 		status := 0
 		if resp != nil {
@@ -657,14 +668,19 @@ func (d *daemon) downloadFile(dst, url, token, cookie string) bool {
 		return false
 	}
 	defer resp.Body.Close()
-	b, err := io.ReadAll(resp.Body)
+	// tmp+rename so the UI never reads a half-written file.
+	tmp := dst + ".tmp"
+	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
 	if err != nil {
+		return false
+	}
+	if _, err := io.Copy(f, resp.Body); err != nil {
+		f.Close()
+		os.Remove(tmp)
 		log.Printf("download failed %s: %v", filepath.Base(dst), err)
 		return false
 	}
-	// tmp+rename so the UI never reads a half-written image.
-	tmp := dst + ".tmp"
-	if os.WriteFile(tmp, b, 0644) != nil {
+	if err := f.Close(); err != nil {
 		os.Remove(tmp)
 		return false
 	}
