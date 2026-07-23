@@ -46,7 +46,12 @@ Item {
     readonly property real headerH: headerBox.childrenRect.height
     readonly property real footerH: footerBox.childrenRect.height
     readonly property real gapT: headerH > 0 ? 16 : 0
-    readonly property real gapB: footerH > 0 ? 16 : 0
+    // Breathing room below the last row, baked into the scroll content height so
+    // it shows only when the list fits or is scrolled to the end — never as a
+    // strip over a mid-scroll cut (the scroll area itself reaches the panel edge).
+    readonly property real contentPad: padV
+    // fixed chrome below the scroll area: footer (+ gap + padding), or none.
+    readonly property real belowFlick: footerH > 0 ? 16 + footerH + padV : 0
 
     MouseArea { anchors.fill: parent; onClicked: modal.close() }
     Rectangle { anchors.fill: parent; color: Theme.ink; opacity: 0.5 }
@@ -71,8 +76,8 @@ Item {
             anchors.centerIn: parent
             width: Math.round(modal.panelWidth)
             height: Math.round(Math.min(modal.height * modal.maxHeightFrac,
-                     modal.padV * 2 + modal.headerH + modal.gapT
-                     + bodyCol.implicitHeight + modal.gapB + modal.footerH))
+                     modal.padV + modal.headerH + modal.gapT
+                     + bodyCol.implicitHeight + modal.contentPad + modal.belowFlick))
             Behavior on height {
                 NumberAnimation { duration: 200; easing.type: Easing.BezierSpline
                                   easing.bezierCurve: [0.165, 0.84, 0.44, 1.0, 1.0, 1.0] }
@@ -95,10 +100,12 @@ Item {
                 anchors { left: parent.left; right: parent.right }
                 anchors.leftMargin: modal.padH; anchors.rightMargin: modal.padH
                 anchors.top: headerBox.bottom; anchors.topMargin: modal.gapT
-                anchors.bottom: footerBox.top; anchors.bottomMargin: modal.gapB
+                // reaches the panel edge (footerless) or the footer — content is
+                // clipped straight at that edge like overflow:hidden, no strip.
+                anchors.bottom: footerBox.top; anchors.bottomMargin: modal.footerH > 0 ? 16 : 0
                 clip: true
                 contentWidth: width
-                contentHeight: bodyCol.implicitHeight
+                contentHeight: bodyCol.implicitHeight + modal.contentPad
                 flickableDirection: Flickable.VerticalFlick
                 boundsBehavior: Flickable.StopAtBounds
                 interactive: contentHeight > height
@@ -108,7 +115,8 @@ Item {
             Item {
                 id: footerBox
                 anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-                anchors.bottomMargin: modal.padV; anchors.leftMargin: modal.padH; anchors.rightMargin: modal.padH
+                anchors.bottomMargin: modal.footerH > 0 ? modal.padV : 0
+                anchors.leftMargin: modal.padH; anchors.rightMargin: modal.padH
                 height: childrenRect.height
             }
         }
