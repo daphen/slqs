@@ -48,7 +48,15 @@ Item {
     property bool   updateAvailable: false
     property string updateCurrent: ""
     property string updateLatest: ""
+    property var    updateChangelog: []   // commit subjects between current→latest (dsqrd)
     function dismissUpdate() { updateAvailable = false }
+
+    // Persisted UI prefs (dsqrd only — the Go daemon ignores savePrefs and sends
+    // no `prefs` event, so slqs stays in-memory). The daemon replays `prefs` on
+    // bootstrap; prefsLoaded() lets shell.qml apply sidebar/recents/last channel.
+    property var prefs: ({})
+    signal prefsLoaded()
+    function savePrefs(patch) { safeWrite(JSON.stringify({ type: "savePrefs", prefs: patch }) + "\n") }
     // `U` → run the host's apply command. Detect-only: the app never self-updates;
     // SLK_UPDATE_CMD is the host's "apply" step (e.g. bump the flake + rebuild +
     // restart). Runs via `sh -c` so the command can spawn its own terminal for sudo.
@@ -438,7 +446,27 @@ Item {
         // user's j/k dumps the cursor, so defer like the unread path does.
         if (sidebarNavigating && !firstLoad) _chanReflowPending = true
         else rebuildChannelModel()
-        if (firstLoad) selectFirstInWorkspace()
+        if (firstLoad && !restoreLastSession()) selectFirstInWorkspace()
+    }
+
+    // #6: reopen the channel we were last on (persisted via prefs) and prime
+    // ctrl+o's previous-channel target, so a restart lands where you left off.
+    // Returns false (→ fall back to the first channel) when there's nothing to
+    // restore or the channel no longer exists. dsqrd-only: slqs sends no prefs.
+    function restoreLastSession() {
+        const a = prefs && prefs.recentActive
+        if (!a || !a.id) return false
+        let found = null
+        for (let i = 0; i < _chanList.length; i++)
+            if (_chanList[i].id === a.id) { found = _chanList[i]; break }
+        if (!found) return false
+        if (found.workspace && found.workspace !== currentWorkspace) {
+            currentWorkspace = found.workspace
+            rebuildChannelModel()
+        }
+        if (prefs.recentPrev && prefs.recentPrev.id) lastChannel = prefs.recentPrev
+        selectChannel(found.id, found.name, found.topic)
+        return true
     }
 
     function selectFirstInWorkspace() {
@@ -576,6 +604,9 @@ Item {
         safeWrite(JSON.stringify({ type: "recent", channel: id }) + "\n")
         applyUnread(id, 0)   // clear locally (and re-flow sections)
         sendFocus()          // slkd suppresses notifications for the channel we're on
+        // persist for restart restore (#6): the ctrl+o target + the channel to reopen
+        savePrefs({ recentActive: { id: id, name: name, topic: topic, workspace: currentWorkspace },
+                    recentPrev: lastChannel })
     }
 
     // slkd streams a channel's history in small batches (reset on the first,
@@ -1045,7 +1076,8 @@ Item {
         if (e.type === "message") ingest(e.channel, e.msg, e.thread, e.mention)
         else if (e.type === "replyCountInc") bumpReplyCount(e.channel, e.ts)
         else if (e.type === "workspaces") setWorkspaces(e.workspaces, e.rail, e.threads)
-        else if (e.type === "updateAvailable") { updateCurrent = e.current || ""; updateLatest = e.latest || ""; updateAvailable = true }
+        else if (e.type === "updateAvailable") { updateCurrent = e.current || ""; updateLatest = e.latest || ""; updateChangelog = e.changelog || []; updateAvailable = true }
+        else if (e.type === "prefs") { prefs = e.prefs || ({}); prefsLoaded() }
         else if (e.type === "users") { _usersByWs = e.users || ({}) }
         else if (e.type === "reaction") applyReaction(e.channel, e.ts, e.reactionsJson)
         else if (e.type === "images") applyImages(e.channel, e.ts, e.imagesJson)
