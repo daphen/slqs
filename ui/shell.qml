@@ -757,25 +757,8 @@ FloatingWindow {
                     anchors.right: helpBadge.left; anchors.rightMargin: 12
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 6
-                    StatusCap { text: "⌃k" }
+                    StatusCap { text: "ctrl k" }
                     CapLabel { text: "jump" }
-                    Item { width: 8; height: 1 }
-                    StatusCap { text: "j" }
-                    StatusCap { text: "k" }
-                    CapLabel { text: "move" }
-                    Item { width: 8; height: 1 }
-                    StatusCap { text: "h" }
-                    StatusCap { text: "l" }
-                    CapLabel { text: "panel" }
-                    Item { width: 8; height: 1 }
-                    StatusCap { text: "↵" }
-                    CapLabel { text: "open" }
-                    Item { width: 8; height: 1 }
-                    StatusCap { text: "i" }
-                    CapLabel { text: "insert" }
-                    Item { width: 8; height: 1 }
-                    StatusCap { text: "esc" }
-                    CapLabel { text: "normal" }
                 }
                 Text { 
                     visible: Backend.updateAvailable
