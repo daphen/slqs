@@ -257,8 +257,9 @@ Rectangle {
                 readonly property bool cursor: list.currentIndex === index
                 // Mentions and DMs are "loud" unreads — a filled accent badge,
                 // not a quiet count. Section-agnostic, so starred and unstarred
-                // rows render identically.
-                readonly property bool loudUnread: unread > 0 && (mention || kind === "dm")
+                // rows render identically. A muted row is never loud on DM-ness
+                // alone — only a real @mention pierces the mute (Discord parity).
+                readonly property bool loudUnread: unread > 0 && (mention || (kind === "dm" && !muted))
                 // Not "open" while the Threads view covers the message pane — its
                 // indicator would read as a second highlight next to the threads cursor.
                 readonly property bool isOpen: id === Backend.currentChannelId && !Backend.threadsView
@@ -316,10 +317,10 @@ Rectangle {
 
                 Row {
                     anchors.fill: parent; anchors.leftMargin: sidebar.active ? 36 : 18
-                    // reserve the badge's footprint on the right so long names
-                    // elide before it instead of running underneath (unread pill,
-                    // or the bell-slash on a muted-but-unread-free row).
-                    anchors.rightMargin: 8 + (row.unread > 0 ? 38 : (row.muted ? 28 : 0))
+                    // reserve the right-edge footprint so long names elide before
+                    // it: muted+unread = grey count + bell-slash (widest); else the
+                    // unread pill; else the lone bell-slash on a muted idle row.
+                    anchors.rightMargin: 8 + (row.unread > 0 ? (row.muted ? 46 : 38) : (row.muted ? 28 : 0))
                     spacing: 7
                     Item {
                         id: chIcon
@@ -379,27 +380,27 @@ Rectangle {
                            font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                            font.pixelSize: 12; font.weight: 500; font.features: ({ "tnum": 1 }) }
                 }
-                // Quiet unread (plain channel): bare muted count, no chip — keeps
-                // the row's two-level hierarchy for low-priority activity.
-                // Suppressed on muted rows (the bell-slash takes its slot).
+                // Quiet unread (plain channel, or a muted row): bare grey count.
+                // On muted rows it sits left of the bell-slash so you still see how
+                // many are waiting, just without the loud accent pill.
                 Text {
-                    visible: row.unread > 0 && !row.loudUnread && !row.muted
-                    anchors.right: parent.right; anchors.rightMargin: 22
+                    visible: row.unread > 0 && !row.loudUnread
+                    anchors.right: parent.right; anchors.rightMargin: row.muted ? 38 : 22
                     anchors.verticalCenter: parent.verticalCenter
                     text: row.unread
                     color: row.primary ? Theme.bg : Theme.fg_muted
                     font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                     font.pixelSize: 13; font.weight: 400
                 }
-                // Muted marker: same bell-slash the bar's DND uses. Hidden when a
-                // loud mention pill is showing (mentions pierce the mute, D2).
+                // Muted marker: same bell-slash the bar's DND uses, in red. Shown
+                // on any muted row that isn't piercing with a loud mention pill.
                 Icon {
                     visible: row.muted && !row.loudUnread
                     anchors.right: parent.right; anchors.rightMargin: 18
                     anchors.verticalCenter: parent.verticalCenter
                     width: 14; height: 14
                     name: "bell-slash"
-                    color: row.primary ? Theme.bg : Theme.dimmedFg
+                    color: Theme.red
                 }
 
                 HoverHandler { id: hov }
