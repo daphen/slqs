@@ -394,10 +394,13 @@ FloatingWindow {
                 help.searching = true
             } else if (!help.searching && (e.key === Qt.Key_Q || e.text === "?")) {
                 help.close()
+            } else if (ctrl && (e.key === Qt.Key_D || e.key === Qt.Key_U)) {
+                help.scrollPage(e.key === Qt.Key_D ? 1 : -1)
             } else if (help.searching) {
                 if (e.key === Qt.Key_Backspace) help.query = help.query.slice(0, -1)
                 else if (e.text && e.text.length === 1 && e.text.charCodeAt(0) >= 0x20) help.query += e.text
-            }
+            } else if (e.key === Qt.Key_J) help.scrollBy(48)
+            else if (e.key === Qt.Key_K) help.scrollBy(-48)
             e.accepted = true; return
         }
         const id = keyId(e, ctrl)
