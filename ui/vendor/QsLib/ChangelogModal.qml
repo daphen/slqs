@@ -1,5 +1,4 @@
 import QtQuick
-import QsLib
 
 // "What's new" modal shown before applying an update — lists the commit
 // subjects between the running build and latest (Backend.updateChangelog).
@@ -23,6 +22,8 @@ Item {
     function scrollStep(d) {
         list.contentY = Math.max(0, Math.min(Math.max(0, list.contentHeight - list.height), list.contentY + d))
     }
+    // half-page jump for ⌃d/⌃u — keeps long changelogs navigable on small screens
+    function scrollPage(dir) { scrollStep(dir * Math.round(list.height * 0.85)) }
 
     MouseArea { anchors.fill: parent; onClicked: cl.close() }
     Rectangle { anchors.fill: parent; color: Theme.ink; opacity: 0.45 }

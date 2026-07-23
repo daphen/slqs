@@ -976,12 +976,67 @@ func (d *daemon) checkUpdate(ctx context.Context) {
 	latest := strings.TrimSpace(string(b))
 	if latest != "" && latest != gitRev {
 		ev := map[string]any{"type": "updateAvailable",
-			"current": shortRev(gitRev), "latest": shortRev(latest)}
+			"current": shortRev(gitRev), "latest": shortRev(latest),
+			"changelog": d.fetchChangelog(ctx, gitRev, latest)}
 		d.mu.Lock()
 		d.updateEvent = ev
 		d.mu.Unlock()
 		d.broadcast(ev)
 	}
+}
+
+// fetchChangelog returns the human "What's new" entries between two revs: the
+// `Changelog:` trailer lines of the commits in the compare range, newest-first,
+// capped at 30. Ranges predating the convention have no trailers, so we fall
+// back to commit subjects. Best-effort — any failure yields nil (the UI then
+// applies the update without a modal).
+func (d *daemon) fetchChangelog(ctx context.Context, cur, latest string) []string {
+	url := "https://api.github.com/repos/daphen/slqs/compare/" + cur + "..." + latest
+	req, err := http.NewRequestWithContext(ctx, "GET", url, nil)
+	if err != nil {
+		return nil
+	}
+	req.Header.Set("User-Agent", "slqs")
+	req.Header.Set("Accept", "application/vnd.github+json")
+	resp, err := fileHTTP.Do(req)
+	if err != nil {
+		return nil
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return nil
+	}
+	var data struct {
+		Commits []struct {
+			Commit struct {
+				Message string `json:"message"`
+			} `json:"commit"`
+		} `json:"commits"`
+	}
+	if json.NewDecoder(io.LimitReader(resp.Body, 1<<20)).Decode(&data) != nil {
+		return nil
+	}
+	var entries, subjects []string
+	for _, c := range data.Commits {
+		msg := c.Commit.Message
+		subjects = append(subjects, strings.SplitN(msg, "\n", 2)[0])
+		for _, line := range strings.Split(msg, "\n") {
+			line = strings.TrimSpace(line)
+			if e := strings.TrimSpace(strings.TrimPrefix(line, "Changelog:")); strings.HasPrefix(line, "Changelog:") && e != "" {
+				entries = append(entries, e)
+			}
+		}
+	}
+	if len(entries) == 0 {
+		entries = subjects // pre-convention range: fall back to subjects
+	}
+	for i, j := 0, len(entries)-1; i < j; i, j = i+1, j-1 { // newest-first
+		entries[i], entries[j] = entries[j], entries[i]
+	}
+	if len(entries) > 30 {
+		entries = entries[:30]
+	}
+	return entries
 }
 
 // pollCache watches slk's SQLite cache for new messages instead of opening a

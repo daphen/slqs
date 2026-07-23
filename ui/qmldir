@@ -18,4 +18,3 @@ PeoplePicker PeoplePicker.qml
 WorkspacePicker WorkspacePicker.qml
 ConfirmDialog ConfirmDialog.qml
 KeybindHelp KeybindHelp.qml
-ChangelogModal ChangelogModal.qml

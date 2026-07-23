@@ -380,6 +380,7 @@ FloatingWindow {
         if (changelog.open) {
             if (e.key === Qt.Key_Escape || e.key === Qt.Key_Q) changelog.close()
             else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) { changelog.close(); Backend.applyUpdate() }
+            else if (ctrl && (e.key === Qt.Key_D || e.key === Qt.Key_U)) changelog.scrollPage(e.key === Qt.Key_D ? 1 : -1)
             else if (e.key === Qt.Key_J) changelog.scrollStep(48)
             else if (e.key === Qt.Key_K) changelog.scrollStep(-48)
             e.accepted = true; return
