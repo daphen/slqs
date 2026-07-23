@@ -2,61 +2,47 @@ import QtQuick
 import "."
 import QsLib
 
-// Small modal confirmation. ask(preview) shows it; Enter/y confirms, Esc/n
-// cancels. Grabs key focus so the main router doesn't see the keys.
-Item {
+// Small modal confirmation on the QsLib Modal shell. ask(preview) shows it;
+// ↵/y confirms, esc/n/q cancels. A long preview scrolls (no line cap) since the
+// scaffold gives the body a Flickable.
+Modal {
     id: dlg
-    anchors.fill: parent
-    visible: opacity > 0
-    opacity: open ? 1 : 0
-    Behavior on opacity { NumberAnimation { duration: 90 } }
+    z: 104
+    panelWidth: Math.round(Math.min(440, dlg.width - 80))
+    maxHeightFrac: 0.6
 
-    property bool open: false
     property string title: "Delete this message?"
     property string preview: ""
     signal confirmed()
 
-    function ask(text) { preview = text; open = true; Qt.callLater(() => scope.forceActiveFocus()) }
-    function close() { open = false }
+    function ask(text) { preview = text; show() }
 
-    MouseArea { anchors.fill: parent; onClicked: dlg.close() }
-    Rectangle { anchors.fill: parent; color: Theme.ink; opacity: 0.5 }
+    onAccepted: { dlg.confirmed(); dlg.close() }
+    onKeyPressed: e => {
+        if (e.key === Qt.Key_Y) { dlg.confirmed(); dlg.close(); e.accepted = true }
+        else if (e.key === Qt.Key_N) { dlg.close(); e.accepted = true }
+    }
 
-    FocusScope {
-        id: scope
-        anchors.fill: parent
-        Keys.onPressed: e => {
-            if (e.key === Qt.Key_Y || e.key === Qt.Key_Return || e.key === Qt.Key_Enter) {
-                dlg.confirmed(); dlg.close(); e.accepted = true
-            } else if (e.key === Qt.Key_N || e.key === Qt.Key_Escape) {
-                dlg.close(); e.accepted = true
-            }
-        }
-        Rectangle {
-            anchors.centerIn: parent
-            width: Math.round(Math.min(440, parent.width - 80))
-            height: col.implicitHeight + 36
-            radius: Theme.radius; color: Theme.bg_alt
-            border.color: Theme.hairline; border.width: 1
-            MouseArea { anchors.fill: parent }   // swallow clicks
-            Column {
-                id: col
-                anchors.centerIn: parent; width: parent.width - 36; spacing: 12
-                Text { width: parent.width; wrapMode: Text.Wrap
-                       text: dlg.title; color: Theme.fg
-                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 16; font.weight: 500 }
-                Text { visible: dlg.preview.length > 0
-                       width: parent.width; wrapMode: Text.Wrap; maximumLineCount: 4; elide: Text.ElideRight
-                       text: dlg.preview; color: Theme.fg_muted
-                       font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14 }
-                Row {
-                    spacing: 16
-                    Text { text: "⏎ / y  delete"; color: Theme.fg
-                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 500 }
-                    Text { text: "esc / n  cancel"; color: Theme.fg_muted
-                           font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
-                }
-            }
-        }
+    header: Text {
+        width: parent.width
+        wrapMode: Text.Wrap
+        text: dlg.title; color: Theme.fg
+        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
+        font.pixelSize: 16; font.weight: 500
+    }
+
+    footer: Row {
+        spacing: 16
+        Text { text: "⏎ / y  delete"; color: Theme.fg
+               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13; font.weight: 500 }
+        Text { text: "esc / n  cancel"; color: Theme.fg_muted
+               font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13 }
+    }
+
+    Text {
+        visible: dlg.preview.length > 0
+        width: parent.width; wrapMode: Text.Wrap
+        text: dlg.preview; color: Theme.fg_muted
+        font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14
     }
 }

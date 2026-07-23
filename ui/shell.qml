@@ -376,33 +376,9 @@ FloatingWindow {
 
     function routeKey(e) {
         const ctrl = e.modifiers & Qt.ControlModifier
-        // Changelog modal (#5): ↵ applies the update, j/k scroll, esc/q close.
-        if (changelog.open) {
-            if (e.key === Qt.Key_Escape || e.key === Qt.Key_Q) changelog.close()
-            else if (e.key === Qt.Key_Return || e.key === Qt.Key_Enter) { changelog.close(); Backend.applyUpdate() }
-            else if (ctrl && (e.key === Qt.Key_D || e.key === Qt.Key_U)) changelog.scrollPage(e.key === Qt.Key_D ? 1 : -1)
-            else if (e.key === Qt.Key_J) changelog.scrollStep(48)
-            else if (e.key === Qt.Key_K) changelog.scrollStep(-48)
-            e.accepted = true; return
-        }
-        // Cheat sheet: driven from here (the shell keeps focus; handing it to the
-        // overlay proved unreliable). esc closes / clears; / filters; typing edits.
-        if (help.open) {
-            if (e.key === Qt.Key_Escape) {
-                if (help.searching || help.query) help.resetSearch(); else help.close()
-            } else if (e.key === Qt.Key_Slash && !help.searching) {
-                help.searching = true
-            } else if (!help.searching && (e.key === Qt.Key_Q || e.text === "?")) {
-                help.close()
-            } else if (ctrl && (e.key === Qt.Key_D || e.key === Qt.Key_U)) {
-                help.scrollPage(e.key === Qt.Key_D ? 1 : -1)
-            } else if (help.searching) {
-                if (e.key === Qt.Key_Backspace) help.query = help.query.slice(0, -1)
-                else if (e.text && e.text.length === 1 && e.text.charCodeAt(0) >= 0x20) help.query += e.text
-            } else if (e.key === Qt.Key_J) help.scrollBy(48)
-            else if (e.key === Qt.Key_K) help.scrollBy(-48)
-            e.accepted = true; return
-        }
+        // Modals (changelog, cheat sheet, confirmations) own their own focus and
+        // keys via the QsLib Modal scaffold — while one is open it has focus and
+        // the shell never sees the event.
         const id = keyId(e, ctrl)
         if (!id) return
         // a live voice recording claims enter (send) and esc (cancel) before anything else
@@ -850,7 +826,7 @@ FloatingWindow {
                 id: help
                 z: 103
                 keymaps: win.keymaps
-                onOpenChanged: if (!open) win.backToNormal()
+                onClosed: win.backToNormal()
             }
 
             // "What's new" before applying an update (#5). Shell-routed; opened
@@ -861,6 +837,7 @@ FloatingWindow {
                 entries: Backend.updateChangelog
                 fromRev: Backend.updateCurrent
                 toRev: Backend.updateLatest
+                onAccepted: { close(); Backend.applyUpdate() }
                 onOpenChanged: if (!open) win.backToNormal()
             }
 

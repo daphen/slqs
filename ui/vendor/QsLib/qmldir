@@ -9,4 +9,5 @@ FeedbackPill FeedbackPill.qml
 Card Card.qml
 Dropdown Dropdown.qml
 ScrollFeel ScrollFeel.qml
+Modal Modal.qml
 ChangelogModal ChangelogModal.qml
