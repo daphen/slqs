@@ -738,12 +738,14 @@ FloatingWindow {
                 }
                 // Persistent help affordance — stays pinned in the corner even
                 // when the rest of the hints collapse on a narrow window.
-                StatusCap {
+                Row {
                     id: helpBadge
                     visible: !Backend.updateAvailable
-                    text: "?"
                     anchors.right: parent.right; anchors.rightMargin: 14
                     anchors.verticalCenter: parent.verticalCenter
+                    spacing: 6
+                    StatusCap { text: "?" }
+                    CapLabel { text: "help" }
                     HoverHandler { cursorShape: Qt.PointingHandCursor }
                     TapHandler { onTapped: help.show() }
                 }
