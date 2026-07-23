@@ -436,6 +436,7 @@ Item {
         _chanList = (channels || []).map((c, i) => ({
             id: c.id, name: c.name, kind: c.kind, topic: c.topic, avatar: c.avatar || "",
             workspace: c.workspace, user: c.user || "",
+            muted: c.muted || false,
             unread: firstLoad ? (c.unread || 0)
                   : (prevUnread[c.id] !== undefined ? prevUnread[c.id] : (c.unread || 0)),
             mention: firstLoad ? (c.mention || false)
@@ -537,9 +538,33 @@ Item {
             const c = sorted[i]
             channelsModel.append({ id: c.id, name: c.name, kind: c.kind, topic: c.topic,
                                    unread: c.unread, mention: c.mention, avatar: c.avatar || "",
-                                   user: c.user || "",
+                                   user: c.user || "", muted: c.muted || false,
                                    workspace: c.workspace, section: sectionOf(c) })
         }
+    }
+
+    // Mute/unmute a Discord channel or DM. Optimistic (D1=B): flip locally now so
+    // the row dims instantly; the daemon PATCHes Discord and rebroadcasts the
+    // channel list, which confirms (success) or snaps it back (failure + toast).
+    // durationS: seconds for a timed mute, null/0 = indefinite. dsqrd-only —
+    // slqs's Go daemon ignores the command.
+    function muteChannel(id, mute, durationS) {
+        let nm = id, kind = "channel"
+        for (let i = 0; i < _chanList.length; i++)
+            if (_chanList[i].id === id) { _chanList[i].muted = mute; nm = _chanList[i].name; kind = _chanList[i].kind; break }
+        for (let i = 0; i < channelsModel.count; i++)
+            if (channelsModel.get(i).id === id) { channelsModel.setProperty(i, "muted", mute); break }
+        safeWrite(JSON.stringify({ type: "muteChannel", channel: id, mute: mute, durationS: durationS || null }) + "\n")
+        const label = (kind === "channel" ? "#" : "") + nm
+        if (mute) toast("muted " + label + (durationS ? " for " + _muteDurLabel(durationS) : ""))
+        else toast("unmuted " + label)
+    }
+    function _muteDurLabel(s) { return s < 3600 ? (s / 60) + " min" : (s / 3600) + " h" }
+    // Is a channel currently muted? (drives the m keybind's mute-vs-unmute branch)
+    function channelMuted(id) {
+        for (let i = 0; i < _chanList.length; i++)
+            if (_chanList[i].id === id) return !!_chanList[i].muted
+        return false
     }
     // While the user is NAVIGATING the sidebar, the list must not reorder
     // under their j/k — a section re-flow does clear()+rebuild, which also

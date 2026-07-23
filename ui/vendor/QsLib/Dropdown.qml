@@ -29,6 +29,7 @@ Item {
     // close). A modal caller that owns focus can turn this on.
     property bool grabsKeys: false
     property bool showChin: grabsKeys   // keyboard-hint footer; only when nav is on
+    property bool showChips: true       // per-row initials chip (off for e.g. duration menus)
     property real scrimOpacity: 0       // dim behind the panel so it reads clearly (0 = none)
     signal activated(var id)
     signal closed()             // fired on hide so a host can reclaim key focus
@@ -167,8 +168,10 @@ Item {
                     anchors.leftMargin: 22
                     anchors.rightMargin: badgePill.visible ? 44 : 28
                     spacing: 11
-                    // initials chip (picker's non-icon workspace look)
+                    // initials chip (picker's non-icon workspace look) — opt out
+                    // via showChips for menus where initials read wrong (durations)
                     Rectangle {
+                        visible: dd.showChips
                         anchors.verticalCenter: parent.verticalCenter
                         width: 28; height: 28; radius: 8; color: Theme.hover
                         Text {
