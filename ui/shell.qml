@@ -745,7 +745,7 @@ FloatingWindow {
                     anchors.verticalCenter: parent.verticalCenter
                     spacing: 6
                     StatusCap { text: "?" }
-                    CapLabel { text: "help" }
+                    CapLabel { text: "cheatsheet" }
                     HoverHandler { cursorShape: Qt.PointingHandCursor }
                     TapHandler { onTapped: help.show() }
                 }
