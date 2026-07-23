@@ -896,27 +896,17 @@ FloatingWindow {
                 onClosed: win.backToNormal()
             }
 
-            // Transient status toast (e.g. "Copied message"), fired by Backend.toast().
-            Rectangle {
+            // Transient status toast (e.g. "Copied message", "muted #chan"), fired
+            // by Backend.toast(). The family FeedbackPill (design system) — same
+            // component mlqs uses, so notifications match across the apps.
+            FeedbackPill {
                 id: toast
                 z: 200
-                property string message: ""
-                visible: opacity > 0
-                opacity: 0
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.bottom: parent.bottom; anchors.bottomMargin: 30
-                width: toastLbl.implicitWidth + 28; height: 32; radius: 8
-                color: Theme.surface; border.width: 1; border.color: Theme.hairline
-                Behavior on opacity { NumberAnimation { duration: 140 } }
-                Text {
-                    id: toastLbl; anchors.centerIn: parent
-                    text: toast.message; color: Theme.fg
-                    font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13
-                }
-                Timer { id: toastTimer; interval: 1400; onTriggered: toast.opacity = 0 }
                 Connections {
                     target: Backend
-                    function onToast(message) { toast.message = message; toast.opacity = 1; toastTimer.restart() }
+                    function onToast(message) { toast.show(message) }
                 }
             }
 

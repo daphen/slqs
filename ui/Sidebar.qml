@@ -317,8 +317,9 @@ Rectangle {
                 Row {
                     anchors.fill: parent; anchors.leftMargin: sidebar.active ? 36 : 18
                     // reserve the badge's footprint on the right so long names
-                    // elide before it instead of running underneath.
-                    anchors.rightMargin: 8 + (row.unread > 0 ? 38 : 0)
+                    // elide before it instead of running underneath (unread pill,
+                    // or the bell-slash on a muted-but-unread-free row).
+                    anchors.rightMargin: 8 + (row.unread > 0 ? 38 : (row.muted ? 28 : 0))
                     spacing: 7
                     Item {
                         id: chIcon
