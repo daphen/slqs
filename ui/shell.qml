@@ -126,6 +126,15 @@ FloatingWindow {
         muteMenu.muteTargetId = it.id
         muteMenu.show()
     }
+    // `v` on a sidebar voice channel: join it (or leave if already in it). The
+    // daemon hosts the call in a hidden Helium; VoiceBar shows the state.
+    function voiceSelected() {
+        if (!isDiscord) return
+        const it = sidebar.cursorItem
+        if (!it || !it.id || it.kind !== "voice") return
+        if (Backend.callInCall && Backend.callChannel === it.id) Backend.voiceLeave()
+        else Backend.voiceJoin(it.id, it.workspace)
+    }
 
     // When a staged attachment finishes uploading, drop into the composer so a
     // bare Enter sends it — the thread reply if a thread's open, else the channel.
@@ -278,7 +287,9 @@ FloatingWindow {
             "r":        { act: () => { if (focusedPanel === "messages") reactTo(msgs.currentMessage()) }, help: "React", cat: "msg" },
             "y":        { act: () => { if (focusedPanel === "messages") Backend.copyText(msgs.currentMessage()) }, help: "Copy text", cat: "msg" },
             "o":        { act: () => { if (focusedPanel === "messages") Backend.openChannelRef(msgs.currentMessage()) }, help: "Open link", cat: "msg" },
-            "v":        { act: () => { if (focusedPanel === "messages") Backend.viewImage(msgs.currentMessage()) }, help: "View image", cat: "msg" },
+            "v":        { act: () => { if (focusedPanel === "sidebar") win.voiceSelected()
+                                       else if (focusedPanel === "messages") Backend.viewImage(msgs.currentMessage()) },
+                          help: () => win.isDiscord ? "Join/leave voice (on a voice channel) · view image" : "View image", cat: "msg" },
             // voice notes are Discord-only (Slack's clips API is closed)
             "V":        { act: () => { if (win.isDiscord) Backend.voiceRecord() },
                           help: () => win.isDiscord ? "Record voice note" : "", cat: "msg" },
@@ -685,6 +696,14 @@ FloatingWindow {
                         z: 6
                     }
                 }
+            }
+
+            // Voice-call bar (dsqrd) — sits above the statusbar, self-hides when
+            // not in a call; the daemon hosts the call in a hidden Helium.
+            VoiceBar {
+                anchors.left: parent.left; anchors.right: parent.right
+                anchors.bottom: statusbar.top
+                z: 50
             }
 
             // ── statusbar (picker-footer style) ────────────────────────────

@@ -56,6 +56,11 @@ Item {
     // bootstrap; prefsLoaded() lets shell.qml apply sidebar/recents/last channel.
     property var prefs: ({})
     signal prefsLoaded()
+
+    // Voice call (dsqrd): a hidden Helium hosts the call; the daemon reports state.
+    property bool callInCall: false
+    property bool callMuted: false
+    property string callChannel: ""
     function savePrefs(patch) { safeWrite(JSON.stringify({ type: "savePrefs", prefs: patch }) + "\n") }
     // `U` → run the host's apply command. Detect-only: the app never self-updates;
     // SLK_UPDATE_CMD is the host's "apply" step (e.g. bump the flake + rebuild +
@@ -1185,6 +1190,9 @@ Item {
             voiceState = e.state || "idle"
             if (voiceState === "recording") voiceStartedAt = Date.now()
         }
+        else if (e.type === "voicecall") {   // hidden-Helium voice call state (dsqrd)
+            callInCall = !!e.in_call; callMuted = !!e.muted; callChannel = String(e.channel || "")
+        }
         else if (e.type === "gifs") gifsReady(e.gen || 0, e.items || [])
         else if (e.type === "gifPreview") gifPreviewReady(e.gen || 0, String(e.id || ""), e.path || "")
         else if (e.type === "playback") {
@@ -1708,6 +1716,13 @@ Item {
         toast("Checking for updates…")
         safeWrite(JSON.stringify({ type: "checkUpdate" }) + "\n")
     }
+
+    // Voice call verbs (dsqrd): the daemon drives a hidden Helium over CDP.
+    function voiceJoin(channel, workspace) {
+        safeWrite(JSON.stringify({ type: "voiceJoin", channel: channel, workspace: workspace }) + "\n")
+    }
+    function voiceLeave() { safeWrite(JSON.stringify({ type: "voiceLeave" }) + "\n") }
+    function voiceMute()  { safeWrite(JSON.stringify({ type: "voiceMute" }) + "\n") }
 
     // The daemon socket is created fresh on every re-dial: a Socket whose FIRST
     // connect failed (daemon still bootstrapping, socket file absent) is wedged —
