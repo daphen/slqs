@@ -2086,8 +2086,13 @@ func (d *daemon) watchNiriFocus(ctx context.Context) {
 	type niriWin struct {
 		ID        uint64 `json:"id"`
 		AppID     string `json:"app_id"`
+		Title     string `json:"title"`
 		IsFocused bool   `json:"is_focused"`
 	}
+	// Our client, dsqrd, and mlqs all share app-id org.quickshell — so match our
+	// OWN window by its title too, or focusing dsqrd/mlqs would flip appActive
+	// and wrongly suppress slqs notifications.
+	isOurs := func(w niriWin) bool { return w.AppID == "org.quickshell" && w.Title == "slqs" }
 	for ctx.Err() == nil {
 		cmd := exec.CommandContext(ctx, "niri", "msg", "--json", "event-stream")
 		out, err := cmd.StdoutPipe()
@@ -2120,7 +2125,7 @@ func (d *daemon) watchNiriFocus(ctx context.Context) {
 				if json.Unmarshal(raw, &p) == nil {
 					qsWins = map[uint64]bool{}
 					for _, w := range p.Windows {
-						qsWins[w.ID] = w.AppID == "org.quickshell"
+						qsWins[w.ID] = isOurs(w)
 						if w.IsFocused {
 							focused = w.ID
 						}
@@ -2132,7 +2137,7 @@ func (d *daemon) watchNiriFocus(ctx context.Context) {
 					Window niriWin `json:"window"`
 				}
 				if json.Unmarshal(raw, &p) == nil {
-					qsWins[p.Window.ID] = p.Window.AppID == "org.quickshell"
+					qsWins[p.Window.ID] = isOurs(p.Window)
 					if p.Window.IsFocused {
 						focused = p.Window.ID
 					}
