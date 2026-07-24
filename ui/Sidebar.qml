@@ -327,12 +327,18 @@ Rectangle {
                         anchors.verticalCenter: parent.verticalCenter
                         width: (row.kind === "dm" && row.avatar) ? 18 : 14
                         height: 18
-                        Text { 
+                        Text {
                             anchors.centerIn: parent
-                            visible: !(row.kind === "dm" && dmAv.status === Image.Ready)
+                            visible: row.kind !== "voice" && !(row.kind === "dm" && dmAv.status === Image.Ready)
                             text: row.kind === "dm" ? "●" : "#"
                             color: row.kind === "dm" ? Theme.green : (row.primary ? Theme.bg : Theme.fg_muted)
                             font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: row.kind === "dm" ? 10 : 14
+                        }
+                        Icon {
+                            anchors.centerIn: parent
+                            visible: row.kind === "voice"
+                            name: "volume-up"; width: 13; height: 13
+                            color: row.primary ? Theme.bg : Theme.fg_muted
                         }
                         ClippingRectangle {
                             anchors.centerIn: parent; width: 18; height: 18; radius: 9
