@@ -733,20 +733,7 @@ FloatingWindow {
                     HoverHandler { cursorShape: Qt.PointingHandCursor }
                     TapHandler { onTapped: help.show() }
                 }
-                Row {
-                    id: hintRow
-                    visible: !Backend.updateAvailable
-                    // hide when the left status text would collide — opacity
-                    // (not visible) keeps implicitWidth measurable, so the
-                    // check can't feed back on itself. The ? badge stays put.
-                    opacity: (statusbar.width - leftStatus.width - implicitWidth - helpBadge.width - 70) >= 0 ? 1 : 0
-                    anchors.right: helpBadge.left; anchors.rightMargin: 12
-                    anchors.verticalCenter: parent.verticalCenter
-                    spacing: 6
-                    StatusCap { text: "ctrl k" }
-                    CapLabel { text: "jump" }
-                }
-                Text { 
+                Text {
                     visible: Backend.updateAvailable
                     anchors.right: parent.right; anchors.rightMargin: 14
                     anchors.verticalCenter: parent.verticalCenter
