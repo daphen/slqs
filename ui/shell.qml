@@ -69,7 +69,15 @@ FloatingWindow {
     // (dsqrd only; slqs sends none, so it stays at the default).
     Connections {
         target: Backend
-        function onPrefsLoaded() { win.sidebarCollapsed = Backend.prefs.sidebarCollapsed === true }
+        function onPrefsLoaded() {
+            win.sidebarCollapsed = Backend.prefs.sidebarCollapsed === true
+            // A restored collapse is a preference, not a transient peek: drop the
+            // boot peek (Component.onCompleted focuses the sidebar) and get the
+            // keyboard off the now-hidden pane — same guard as toggleSidebar. Without
+            // this the sidebar stays visible on launch until the next focus change.
+            win.sidebarPeeking = false
+            if (win.sidebarHidden && win.focusedPanel === "sidebar") win.focusPanel("messages")
+        }
     }
 
     function focusPanel(name) {
