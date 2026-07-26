@@ -30,6 +30,9 @@
         runtimeInputs = [ daemon pkgs.quickshell pkgs.procps pkgs.coreutils pkgs.mpv pkgs.imv pkgs.ffmpeg-headless pkgs.jq pkgs.curl pkgs.xdg-utils pkgs.util-linux ];
         text = ''
           export QML2_IMPORT_PATH="$HOME/.local/share/qml:${daemon}/share/slqs/ui/vendor''${QML2_IMPORT_PATH:+:$QML2_IMPORT_PATH}"
+          # WEBP image-format plugin: quickshell's Qt ships without it, so webp
+          # avatars and unfurl thumbnails (formula1 etc. serve webp) render blank.
+          export QT_PLUGIN_PATH="${pkgs.qt6.qtimageformats}/lib/qt-6/plugins''${QT_PLUGIN_PATH:+:$QT_PLUGIN_PATH}"
           export SLK_MEDIA_VIEWER="${daemon}/share/slqs/media-viewer.sh"
           sock="$XDG_RUNTIME_DIR/slqs.sock"
 
