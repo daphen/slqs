@@ -381,7 +381,7 @@ func (d *daemon) cacheFile(id, url, ext, token, cookie string) string {
 	os.MkdirAll(dir, 0755)
 	dst := filepath.Join(dir, id+"."+ext)
 	path := "file://" + dst
-	if _, err := os.Stat(dst); err == nil {
+	if fi, err := os.Stat(dst); err == nil && fi.Size() > 0 {
 		return path
 	}
 	req, err := http.NewRequest("GET", url, nil)
@@ -399,11 +399,17 @@ func (d *daemon) cacheFile(id, url, ext, token, cookie string) string {
 	}
 	defer resp.Body.Close()
 	b, err := io.ReadAll(resp.Body)
+	if err != nil || len(b) == 0 {
+		return ""
+	}
+	tmpF, err := os.CreateTemp(dir, id+".*.tmp")
 	if err != nil {
 		return ""
 	}
-	tmpF := dst + ".tmp"
-	if os.WriteFile(tmpF, b, 0644) != nil || os.Rename(tmpF, dst) != nil {
+	tmp := tmpF.Name()
+	tmpF.Close()
+	if os.WriteFile(tmp, b, 0644) != nil || os.Rename(tmp, dst) != nil {
+		os.Remove(tmp)
 		return ""
 	}
 	return path
@@ -434,7 +440,7 @@ func (d *daemon) imagesJSON(w *workspace, channelID, ts string, files []slack.Fi
 		}
 		dst := filepath.Join(dir, id+"."+ext)
 		ready := false
-		if _, err := os.Stat(dst); err == nil {
+		if fi, err := os.Stat(dst); err == nil && fi.Size() > 0 {
 			ready = true
 		} else {
 			pending = append(pending, task{dst, src, false})
@@ -472,7 +478,7 @@ func (d *daemon) imagesJSON(w *workspace, channelID, ts string, files []slack.Fi
 			}
 			pdst := filepath.Join(dir, f.ID+"-poster.jpg")
 			ppath, ready := "file://"+pdst, true
-			if _, err := os.Stat(pdst); err != nil {
+			if fi, err := os.Stat(pdst); err != nil || fi.Size() == 0 {
 				ready = false
 				if poster != "" {
 					pending = append(pending, task{pdst, poster, false})
@@ -551,7 +557,7 @@ func (d *daemon) imagesJSON(w *workspace, channelID, ts string, files []slack.Fi
 			if art != "" {
 				dst := filepath.Join(dir, id+".jpg")
 				artPath = "file://" + dst
-				if _, err := os.Stat(dst); err != nil {
+				if fi, err := os.Stat(dst); err != nil || fi.Size() == 0 {
 					ready = false
 					pending = append(pending, task{dst, art, false})
 				}
@@ -642,7 +648,9 @@ func (d *daemon) imagesJSON(w *workspace, channelID, ts string, files []slack.Fi
 // Reports success so the caller can retry transient failures (a just-uploaded
 // video's thumbnail URL 404s until Slack finishes generating it).
 func (d *daemon) downloadFile(dst, url, token, cookie string) bool {
-	if _, err := os.Stat(dst); err == nil {
+	// Size, not mere existence: a prior empty write (see below) must not count
+	// as cached, or a broken thumbnail sticks forever.
+	if fi, err := os.Stat(dst); err == nil && fi.Size() > 0 {
 		return true
 	}
 	// Full-res originals can be huge (screen-recording .movs run to hundreds
@@ -668,13 +676,22 @@ func (d *daemon) downloadFile(dst, url, token, cookie string) bool {
 		return false
 	}
 	defer resp.Body.Close()
-	// tmp+rename so the UI never reads a half-written file.
-	tmp := dst + ".tmp"
-	f, err := os.OpenFile(tmp, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+	// An unfurl CDN that answers 200 with an HTML error/redirect page must not
+	// be cached as an image — it renders blank and never retries.
+	if ct := resp.Header.Get("Content-Type"); strings.HasPrefix(ct, "text/html") {
+		log.Printf("download skipped %s: html body (ct=%s)", filepath.Base(dst), ct)
+		return false
+	}
+	// Unique temp per fetch: two concurrent downloads of the same image (initial
+	// render + the unfurl edit + the rebroadcast all fire) previously shared one
+	// dst+".tmp" and truncated each other into a 0-byte file.
+	f, err := os.CreateTemp(filepath.Dir(dst), filepath.Base(dst)+".*.tmp")
 	if err != nil {
 		return false
 	}
-	if _, err := io.Copy(f, resp.Body); err != nil {
+	tmp := f.Name()
+	n, err := io.Copy(f, resp.Body)
+	if err != nil {
 		f.Close()
 		os.Remove(tmp)
 		log.Printf("download failed %s: %v", filepath.Base(dst), err)
@@ -682,6 +699,11 @@ func (d *daemon) downloadFile(dst, url, token, cookie string) bool {
 	}
 	if err := f.Close(); err != nil {
 		os.Remove(tmp)
+		return false
+	}
+	if n == 0 {
+		os.Remove(tmp)
+		log.Printf("download skipped %s: empty body", filepath.Base(dst))
 		return false
 	}
 	return os.Rename(tmp, dst) == nil
