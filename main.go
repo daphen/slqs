@@ -20,6 +20,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -374,6 +375,29 @@ type daemon struct {
 	presenceActive atomic.Bool // false while idle (swayidle) — gates the tickle heartbeat
 }
 
+// slackHosted reports whether a URL is served by Slack — the only hosts that
+// may receive the xoxc token + d cookie. Unfurl media lives on third-party CDNs
+// (formula1.com, ytimg, …) which must never see the Slack session.
+func slackHosted(rawURL string) bool {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	h := strings.ToLower(u.Hostname())
+	return h == "slack.com" || strings.HasSuffix(h, ".slack.com")
+}
+
+// applyFetchAuth attaches Slack credentials ONLY to Slack hosts; everyone else
+// gets a browser UA instead (Go's default UA is also rejected by some CDNs).
+func applyFetchAuth(req *http.Request, token, cookie string) {
+	if slackHosted(req.URL.String()) {
+		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Cookie", "d="+cookie)
+		return
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36")
+}
+
 // cacheFile downloads an authed Slack file (thumbnail) into the shared image
 // cache and returns its file:// path, skipping the fetch if already present.
 func (d *daemon) cacheFile(id, url, ext, token, cookie string) string {
@@ -388,8 +412,7 @@ func (d *daemon) cacheFile(id, url, ext, token, cookie string) string {
 	if err != nil {
 		return ""
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Cookie", "d="+cookie)
+	applyFetchAuth(req, token, cookie)
 	resp, err := fileHTTP.Do(req)
 	if err != nil || resp.StatusCode != 200 {
 		if resp != nil {
@@ -663,8 +686,7 @@ func (d *daemon) downloadFile(dst, url, token, cookie string) bool {
 	if err != nil {
 		return false
 	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Cookie", "d="+cookie)
+	applyFetchAuth(req, token, cookie)
 	resp, err := mediaHTTP.Do(req)
 	if err != nil || resp.StatusCode != 200 {
 		status := 0
@@ -716,14 +738,19 @@ func (d *daemon) extractPoster(dst, videoURL, token, cookie string) bool {
 	if _, err := os.Stat(dst); err == nil {
 		return true
 	}
-	hdr := fmt.Sprintf("Authorization: Bearer %s\r\nCookie: d=%s\r\n", token, cookie)
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	// Render to a tmp then rename: a timeout mid-write would otherwise leave a
 	// truncated poster whose existence blocks regeneration forever.
 	tmp := dst + ".tmp"
-	cmd := exec.CommandContext(ctx, "ffmpeg", "-nostdin", "-y",
-		"-headers", hdr, "-i", videoURL, "-frames:v", "1", "-q:v", "4", "-f", "image2", tmp)
+	args := []string{"-nostdin", "-y"}
+	// Slack creds only for Slack-hosted video; never leak them to a CDN.
+	if slackHosted(videoURL) {
+		args = append(args, "-headers",
+			fmt.Sprintf("Authorization: Bearer %s\r\nCookie: d=%s\r\n", token, cookie))
+	}
+	args = append(args, "-i", videoURL, "-frames:v", "1", "-q:v", "4", "-f", "image2", tmp)
+	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
 	err := cmd.Run()
 	if st, serr := os.Stat(tmp); err != nil || serr != nil || st.Size() == 0 {
 		os.Remove(tmp)
@@ -1433,11 +1460,17 @@ func (d *daemon) readConn(c net.Conn) {
 						// size like media-viewer.sh's mpv (75%x85% of the
 						// screen) — without it the window comes up at the
 						// video's native size, tiny for small recordings
-						mp := exec.Command("mpv", "--no-terminal", "--force-window=immediate",
-							"--autofit=75%x85%", "--loop",
-							"--http-header-fields-append=Authorization: Bearer "+w.token,
-							"--http-header-fields-append=Cookie: d="+w.cookie,
-							im.Url)
+						mpArgs := []string{"--no-terminal", "--force-window=immediate",
+							"--autofit=75%x85%", "--loop"}
+						// only hand Slack creds to Slack; an unfurl's media is on a
+						// third-party CDN and must not receive the session.
+						if slackHosted(im.Url) {
+							mpArgs = append(mpArgs,
+								"--http-header-fields-append=Authorization: Bearer "+w.token,
+								"--http-header-fields-append=Cookie: d="+w.cookie)
+						}
+						mpArgs = append(mpArgs, im.Url)
+						mp := exec.Command("mpv", mpArgs...)
 						mp.Stdout, mp.Stderr = nil, nil
 						if err := mp.Start(); err == nil {
 							go mp.Wait()
