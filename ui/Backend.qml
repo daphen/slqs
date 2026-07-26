@@ -336,6 +336,10 @@ Item {
             codeBlocks.push({ lang: (lang || "").toLowerCase(), code: code.replace(/^\n/, "").replace(/\n+$/, "") })
             return cb0 + (codeBlocks.length - 1) + cb1
         })
+        // [label](url) → labeled link (e.g. an unfurl's article title). Must run
+        // before the bare-URL rule so the url inside () isn't linkified on its own.
+        s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g,
+            '<a href="$2"><font color="' + cssHex(Theme.sky) + '"><u>$1</u></font></a>')
         // Bare URLs → styled, clickable links. Done before the emoji <img> tags
         // exist so their CDN src URLs aren't themselves linkified. Trailing
         // sentence punctuation is kept out of the link.

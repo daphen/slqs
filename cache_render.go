@@ -61,7 +61,9 @@ func unfurlBody(attachments []slack.Attachment) string {
 			link = a.FromURL
 		}
 		if link != "" {
-			return "<" + link + "|" + a.Title + ">"
+			// [label](url): the UI's richify renders this as a sky, underlined,
+			// clickable link — so the title reads (and behaves) as a link.
+			return "[" + a.Title + "](" + link + ")"
 		}
 		return a.Title
 	}
