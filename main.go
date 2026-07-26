@@ -942,6 +942,11 @@ func (d *daemon) formatMsg(w *workspace, channelID, userID, ts, text, username s
 		sec = ts[:i]
 	}
 	s, _ := strconv.ParseInt(sec, 10, 64)
+	imagesJSON := d.imagesJSON(w, channelID, ts, files, attachments)
+	body := text
+	if imagesJSON != "" && imagesJSON != "[]" && isLoneLink(body) {
+		body = unfurlBody(attachments)
+	}
 	return map[string]any{
 		"author":        author,
 		"uid":           userID,
@@ -949,10 +954,10 @@ func (d *daemon) formatMsg(w *workspace, channelID, userID, ts, text, username s
 		"color":         colorFor(userID),
 		"avatar":        d.avatarPath(userID),
 		"time":          time.Unix(s, 0).Format("15:04"), // local tz
-		"text":          d.render(w, text),
+		"text":          d.render(w, body),
 		"grouped":       false,
 		"reactionsJson": d.reactionsJSONFor(w, channelID, ts),
-		"imagesJson":    d.imagesJSON(w, channelID, ts, files, attachments),
+		"imagesJson":    imagesJSON,
 		"link":          firstLink(text),
 		"channelRef":    firstChanRef(text),
 		"ts":            ts,

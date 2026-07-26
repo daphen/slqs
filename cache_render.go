@@ -47,6 +47,27 @@ func (d *daemon) persistMessage(w *workspace, channelID string, m slack.Message)
 	}
 }
 
+// unfurlBody rewrites a message whose whole text is a link that unfurled into
+// inline media: rather than blanking it (a mystery image) or showing the raw
+// URL, surface the unfurl's title AS a link so it reads as the article it is.
+// Empty (old blank behavior) when the unfurl carries no title.
+func unfurlBody(attachments []slack.Attachment) string {
+	for _, a := range attachments {
+		if a.Title == "" {
+			continue
+		}
+		link := a.TitleLink
+		if link == "" {
+			link = a.FromURL
+		}
+		if link != "" {
+			return "<" + link + "|" + a.Title + ">"
+		}
+		return a.Title
+	}
+	return ""
+}
+
 // imagesFromBlocks pulls image_url out of Block Kit "image" blocks — /giphy posts
 // (and other app messages) carry the gif/image there, not in files/attachments.
 // Returned as synthetic attachments so imagesJSON's existing gif-detection +
@@ -206,7 +227,7 @@ func (d *daemon) msgFromRaw(w *workspace, channelID, userID, ts, text string, re
 	// doesn't also need its raw URL as text — show just the card. `link` still
 	// holds the URL so `o` opens it.
 	if imagesJSON != "" && imagesJSON != "[]" && isLoneLink(body) {
-		body = ""
+		body = unfurlBody(rj.Attachments)
 	}
 	return map[string]any{
 		"author":        author,
