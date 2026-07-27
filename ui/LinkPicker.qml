@@ -77,9 +77,12 @@ Modal {
                     anchors.leftMargin: 4; anchors.rightMargin: 4
                     anchors.topMargin: 1; anchors.bottomMargin: 1
                     radius: 13
-                    color: row.index === lp.sel ? Theme.selection : hov.hovered ? Theme.hover : "transparent"
-                    border.width: 1
-                    border.color: row.index === lp.sel ? Theme.hairline : "transparent"
+                    // A foreground-overlay tint, not Theme.selection: on the Modal's
+                    // bg_alt panel selection ≈ the panel in light mode (invisible),
+                    // leaving only a border. This reads as a solid fill on any panel,
+                    // light or dark — no border, matching the other pickers.
+                    color: row.index === lp.sel ? Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.10)
+                         : hov.hovered ? Theme.hover : "transparent"
                 }
                 Row {
                     anchors.fill: parent; anchors.leftMargin: 18; anchors.rightMargin: 18
