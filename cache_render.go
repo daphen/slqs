@@ -510,6 +510,7 @@ func textFromBlocks(raw string) string {
 			if els, ok := b["elements"].([]any); ok {
 				var seg []string
 				hasAction := false
+				hasAck := false
 				for _, e := range els {
 					m, ok := e.(map[string]any)
 					if !ok {
@@ -524,11 +525,16 @@ func textFromBlocks(raw string) string {
 					} else {
 						seg = append(seg, "["+label+"]")
 						hasAction = true
+						if aid, _ := m["action_id"].(string); aid == "ack" {
+							hasAck = true
+						}
 					}
 				}
 				if len(seg) > 0 {
 					s := strings.Join(seg, "   ")
-					if hasAction {
+					if hasAck {
+						s += "   (press A to acknowledge)"
+					} else if hasAction {
 						s += "   (buttons — respond in the Slack app)"
 					}
 					parts = append(parts, s)
