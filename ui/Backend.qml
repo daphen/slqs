@@ -111,18 +111,27 @@ Item {
     property int _emojiSeq: 0
 
     // --- reactions ---
-    function react(channelId, ts, name, remove) {
-        safeWrite(JSON.stringify({ type: "react", channel: channelId, ts: ts, emoji: name, remove: !!remove }) + "\n")
+    function react(channelId, ts, name, remove, eid) {
+        const cmd = { type: "react", channel: channelId, ts: ts, emoji: name, remove: !!remove }
+        if (eid) cmd.emojiId = eid   // custom-emoji id: lets the daemon send name:id without indexing it
+        safeWrite(JSON.stringify(cmd) + "\n")
     }
     // Reacting with an emoji you already used removes it (toggle), else adds.
+    // Carry the reaction's own eid (custom-emoji id) so re-reacting to an
+    // external/nitro emoji already on the message resolves — the daemon can't
+    // look those up by name (they're not in your guilds → Unknown Emoji).
     function toggleReaction(msg, name) {
         if (!msg || !name) return
-        let mine = false
+        let mine = false, eid = ""
         try {
             const rx = JSON.parse(msg.reactionsJson || "[]")
-            for (let i = 0; i < rx.length; i++) if (rx[i].name === name && rx[i].mine) { mine = true; break }
+            for (let i = 0; i < rx.length; i++) if (rx[i].name === name) {
+                if (rx[i].mine) mine = true
+                if (rx[i].eid) eid = rx[i].eid
+                break
+            }
         } catch (e) {}
-        react(currentChannelId, msg.ts, name, mine)
+        react(currentChannelId, msg.ts, name, mine, eid)
     }
     // Replay an app's Block Kit button (e.g. incident.io's page "Acknowledge").
     // Daemon reconstructs the blocks.actions payload from the cached message and
