@@ -61,40 +61,48 @@ Modal {
 
     Column {
         width: parent.width
-        spacing: 2
+        spacing: 1
         Repeater {
             model: lp.links
-            delegate: Rectangle {
+            delegate: Item {
+                id: row
                 required property int index
                 required property var modelData
                 width: parent.width
-                height: url.implicitHeight + 14
-                radius: Theme.radius
-                color: index === lp.sel ? Theme.tintFill : "transparent"
+                height: 40
+                // Same inset, rounded selection highlight the other pickers use:
+                // Theme.selection + hairline border when current, Theme.hover on hover.
+                Rectangle {
+                    anchors.fill: parent
+                    anchors.leftMargin: 4; anchors.rightMargin: 4
+                    anchors.topMargin: 1; anchors.bottomMargin: 1
+                    radius: 13
+                    color: row.index === lp.sel ? Theme.selection : hov.hovered ? Theme.hover : "transparent"
+                    border.width: 1
+                    border.color: row.index === lp.sel ? Theme.hairline : "transparent"
+                }
                 Row {
-                    anchors.left: parent.left; anchors.leftMargin: 8
-                    anchors.right: parent.right; anchors.rightMargin: 8
-                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.fill: parent; anchors.leftMargin: 18; anchors.rightMargin: 18
                     spacing: 10
                     Text {
-                        width: 16
                         anchors.verticalCenter: parent.verticalCenter
-                        text: (index + 1)
-                        color: index === lp.sel ? Theme.fg : Theme.fg_muted
+                        width: 16
+                        text: (row.index + 1)
+                        color: row.index === lp.sel ? Theme.fg : Theme.fg_muted
                         font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                         font.pixelSize: 13; font.weight: 600
                     }
                     Text {
-                        id: url
-                        width: parent.width - 26
                         anchors.verticalCenter: parent.verticalCenter
-                        text: modelData
-                        color: index === lp.sel ? Theme.sky : Theme.fg
+                        width: parent.width - 26
+                        text: row.modelData
+                        color: row.index === lp.sel ? Theme.sky : Theme.fg
                         font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting
                         font.pixelSize: 13; elide: Text.ElideMiddle
                     }
                 }
-                TapHandler { onTapped: { lp.chosen(modelData); lp.close() } }
+                HoverHandler { id: hov }
+                TapHandler { onTapped: { lp.sel = row.index; lp.chosen(row.modelData); lp.close() } }
             }
         }
     }
