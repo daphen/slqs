@@ -116,6 +116,16 @@ FloatingWindow {
     }
     function backToNormal() { appRoot.forceActiveFocus() }
 
+    // o / O link opening. o: open the one link (or #channel / image) directly,
+    // but a message with ≥2 links opens the picker to choose. O: open them all.
+    function openMsgLinks(msg, all) {
+        if (!msg) return
+        const links = Backend.allLinks(msg)
+        if (all) { Backend.openLinks(links); return }
+        if (links.length >= 2 && !msg.channelRef) { linkPicker.openFor(links); return }
+        Backend.openChannelRef(msg)
+    }
+
     // `m`: mute/unmute the channel under the sidebar cursor (Discord only). Already
     // muted → unmute directly (D5); else open the duration menu anchored to the row.
     function muteSelected() {
@@ -286,7 +296,8 @@ FloatingWindow {
             "S":        { act: () => { if (focusedPanel === "messages") Backend.downloadMedia(msgs.currentMessage()) }, help: "Save media", cat: "msg" },
             "r":        { act: () => { if (focusedPanel === "messages") reactTo(msgs.currentMessage()) }, help: "React", cat: "msg" },
             "y":        { act: () => { if (focusedPanel === "messages") Backend.copyText(msgs.currentMessage()) }, help: "Copy text", cat: "msg" },
-            "o":        { act: () => { if (focusedPanel === "messages") Backend.openChannelRef(msgs.currentMessage()) }, help: "Open link", cat: "msg" },
+            "o":        { act: () => { if (focusedPanel === "messages") win.openMsgLinks(msgs.currentMessage(), false) }, help: "Open link", cat: "msg" },
+            "O":        { act: () => { if (focusedPanel === "messages") win.openMsgLinks(msgs.currentMessage(), true) }, help: "Open all links", cat: "msg" },
             "v":        { act: () => { if (focusedPanel === "sidebar") win.voiceSelected()
                                        else if (focusedPanel === "messages") Backend.viewImage(msgs.currentMessage()) },
                           help: () => win.isDiscord ? "Join/leave voice (on a voice channel) · view image" : "View image", cat: "msg" },
@@ -325,7 +336,8 @@ FloatingWindow {
                         help: () => Backend.railHidden ? "" : "DM author", cat: "msg" },
             "P":      { act: () => { const m = thread.currentMessage(); if (m && m.uid) Backend.openProfile(m.uid) },
                         help: () => "View profile", cat: "msg" },
-            "o":      { act: () => Backend.openChannelRef(thread.currentMessage()), help: "Open link", cat: "msg" },
+            "o":      { act: () => win.openMsgLinks(thread.currentMessage(), false), help: "Open link", cat: "msg" },
+            "O":      { act: () => win.openMsgLinks(thread.currentMessage(), true), help: "Open all links", cat: "msg" },
             "r":      { act: () => reactTo(thread.currentMessage()), help: "React", cat: "msg" },
             "y":      { act: () => Backend.copyText(thread.currentMessage()), help: "Copy text", cat: "msg" },
             "Y":      { act: () => Backend.copyLink(thread.currentMessage()), help: "Copy message link", cat: "msg" },
@@ -852,6 +864,14 @@ FloatingWindow {
                 fromRev: Backend.updateCurrent
                 toRev: Backend.updateLatest
                 onAccepted: { close(); Backend.applyUpdate() }
+                onOpenChanged: if (!open) win.backToNormal()
+            }
+
+            LinkPicker {
+                id: linkPicker
+                z: 105
+                onChosen: url => Backend.openUrl(url)
+                onChosenAll: Backend.openLinks(links)
                 onOpenChanged: if (!open) win.backToNormal()
             }
 

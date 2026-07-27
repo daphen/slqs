@@ -1409,6 +1409,19 @@ Item {
     function openLink(msg) {
         if (msg && msg.link) openUrl(msg.link)
     }
+    // Every URL in a message, in order, deduped. Mirrors richify's linkifier:
+    // labeled [text](url) links first, then bare URLs (matching punctuation
+    // trimming). Used by the o/O link-open flow for multi-link messages.
+    function allLinks(msg) {
+        if (!msg || !msg.text) return []
+        var out = [], seen = ({}), m
+        var re1 = /\[[^\]]+\]\((https?:\/\/[^\s)]+)\)/g
+        while ((m = re1.exec(msg.text)) !== null) { if (!seen[m[1]]) { seen[m[1]] = 1; out.push(m[1]) } }
+        var re2 = /(https?:\/\/[^\s<]+?)([.,;:!?)]*)(?=\s|$)/g
+        while ((m = re2.exec(msg.text)) !== null) { if (!seen[m[1]]) { seen[m[1]] = 1; out.push(m[1]) } }
+        return out
+    }
+    function openLinks(urls) { for (var i = 0; i < urls.length; i++) openUrl(urls[i]) }
     // `o` on a message: if it mentions a #channel you're in, open that channel;
     // else open the first URL; else — media-only message — open the media like
     // `v` (pressing o on a photo is the natural reflex). Mixed messages keep

@@ -19,3 +19,4 @@ WorkspacePicker WorkspacePicker.qml
 ConfirmDialog ConfirmDialog.qml
 KeybindHelp KeybindHelp.qml
 VoiceBar VoiceBar.qml
+LinkPicker LinkPicker.qml
