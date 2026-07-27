@@ -79,6 +79,7 @@ Item {
     // Default on for Discord (many servers, mostly-DMs usage); the rail stays for
     // anything that still wants it.
     property bool   railHidden: Quickshell.env("SLK_SOCK") === "dsqrd"
+    readonly property bool isSlack: Quickshell.env("SLK_SOCK") !== "dsqrd"
     property bool   hasThreads: true        // Slack has threads; Discord doesn't
     property string currentWorkspace: ""    // teamID being viewed
     readonly property string currentWorkspaceName: {
@@ -123,6 +124,14 @@ Item {
         } catch (e) {}
         react(currentChannelId, msg.ts, name, mine)
     }
+    // Replay an app's Block Kit button (e.g. incident.io's page "Acknowledge").
+    // Daemon reconstructs the blocks.actions payload from the cached message and
+    // no-ops with a toast if this message carries no such button.
+    function ackIncident(msg) {
+        if (!msg) return
+        safeWrite(JSON.stringify({ type: "blockAction", channel: currentChannelId, ts: msg.ts, actionId: "ack" }) + "\n")
+    }
+
     // file:// path for a custom emoji by name (empty for standard/unknown) —
     // used to render reaction-row icons in the react picker.
     function emojiPath(name) { return (_emoji && _emoji[name]) || "" }

@@ -295,6 +295,7 @@ FloatingWindow {
             "D":        { act: () => { if (focusedPanel === "messages") askDelete(msgs.currentMessage()) }, help: "Delete your message", cat: "msg" },
             "S":        { act: () => { if (focusedPanel === "messages") Backend.downloadMedia(msgs.currentMessage()) }, help: "Save media", cat: "msg" },
             "r":        { act: () => { if (focusedPanel === "messages") reactTo(msgs.currentMessage()) }, help: "React", cat: "msg" },
+            "A":        { act: () => { if (Backend.isSlack && focusedPanel === "messages") Backend.ackIncident(msgs.currentMessage()) }, help: () => Backend.isSlack ? "Acknowledge (incident.io)" : "", cat: "msg" },
             "y":        { act: () => { if (focusedPanel === "messages") Backend.copyText(msgs.currentMessage()) }, help: "Copy text", cat: "msg" },
             "o":        { act: () => { if (focusedPanel === "messages") win.openMsgLinks(msgs.currentMessage(), false) }, help: "Open link", cat: "msg" },
             "O":        { act: () => { if (focusedPanel === "messages") win.openMsgLinks(msgs.currentMessage(), true) }, help: "Open all links", cat: "msg" },
