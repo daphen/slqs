@@ -30,6 +30,9 @@ Item {
     default property alias content: bodyCol.data
     property real panelWidth: 460
     property real maxHeightFrac: 0.7
+    // Panel fill. Defaults to bg_alt (dialogs); pickers override to Theme.bg so
+    // Theme.selection row highlights read (selection ≈ bg_alt in light mode).
+    property color panelColor: Theme.bg_alt
     signal accepted()
     signal closed()
     signal keyPressed(var event)
@@ -83,7 +86,7 @@ Item {
                                   easing.bezierCurve: [0.165, 0.84, 0.44, 1.0, 1.0, 1.0] }
             }
             radius: Theme.radius
-            color: Theme.bg_alt
+            color: modal.panelColor
             border.color: Theme.hairline; border.width: 1
             clip: true
             MouseArea { anchors.fill: parent }   // swallow clicks over the panel
