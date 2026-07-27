@@ -1262,8 +1262,8 @@ func (d *daemon) readConn(c net.Conn) {
 		// Channel carries a globally-unique Slack channel ID (the wire key),
 		// so it resolves the owning workspace without a separate field.
 		var cmd struct {
-			Type, Channel, Text, Before, Thread, Id, Url, Ext, Mediatype, Ts, Emoji, Workspace, Team, State, User, Path string
-			Remove, Broadcast                                                                                           bool
+			Type, Channel, Text, Before, Thread, Id, Url, Ext, Mediatype, Ts, Emoji, Workspace, Team, State, User, Path, ActionID string
+			Remove, Broadcast                                                                                                     bool
 			Images                                                                                                      []struct{ Id, Url, Ext, Name string } // "view"/"download" can carry several files
 		}
 		if json.Unmarshal(sc.Bytes(), &cmd) != nil {
@@ -1729,6 +1729,32 @@ func (d *daemon) readConn(c net.Conn) {
 						"channel": channelID, "ts": ts, "reactionsJson": d.reactionsJSONFor(w, channelID, ts)})
 				}
 			}(w, id, cmd.Ts)
+		case "blockAction":
+			// Replay a Block Kit button click (e.g. incident.io's page
+			// "Acknowledge") by rebuilding the blocks.actions payload from the
+			// cached message and firing it. Scoped in the UI to messages that
+			// actually carry the target button. incident.io then edits the
+			// message (ack -> Reassign/Create), which flows back through the
+			// normal message-edit pipeline, so no manual re-broadcast is needed.
+			go func(w *workspace, channelID, ts, actionID string) {
+				m, gErr := d.writeDB.GetMessage(channelID, ts)
+				if gErr != nil {
+					log.Printf("blockAction: no cached message %s/%s: %v", channelID, ts, gErr)
+					return
+				}
+				appID, serviceID, action, xErr := extractBlockAction(m.RawJSON, actionID)
+				if xErr != nil {
+					log.Printf("blockAction: %v", xErr)
+					d.broadcast(map[string]any{"type": "toast", "text": "Nothing to action on this message"})
+					return
+				}
+				if err := w.client.DispatchBlockAction(d.ctx, channelID, ts, appID, serviceID, action); err != nil {
+					log.Printf("blockAction: %v", err)
+					d.broadcast(map[string]any{"type": "toast", "text": "Action failed: " + err.Error()})
+					return
+				}
+				d.broadcast(map[string]any{"type": "toast", "text": "Acknowledged"})
+			}(w, id, cmd.Ts, cmd.ActionID)
 		case "uploadClipboard":
 			// Paste an image from the Wayland clipboard (e.g. a grim screenshot)
 			// into the channel/thread. No-op if the clipboard holds no image.
@@ -2629,4 +2655,65 @@ func main() {
 	<-ctx.Done()
 	ln.Close()
 	log.Println("shutdown")
+}
+
+// extractBlockAction reconstructs a blocks.actions payload from a cached
+// message's raw JSON: the owning app (app_id + bot_id as service_id) and the
+// target interactive button (the actions-block element whose action_id matches
+// actionID — the first button if actionID is ""), with its parent block_id
+// folded in the way Slack's blocks.actions endpoint expects. Used to replay an
+// app button click (e.g. incident.io's page "Acknowledge") that has no public API.
+func extractBlockAction(rawJSON, actionID string) (appID, serviceID string, action json.RawMessage, err error) {
+	if rawJSON == "" {
+		return "", "", nil, fmt.Errorf("message has no raw JSON")
+	}
+	var msg struct {
+		BotID      string `json:"bot_id"`
+		AppID      string `json:"app_id"`
+		BotProfile struct {
+			AppID string `json:"app_id"`
+		} `json:"bot_profile"`
+		Blocks []struct {
+			Type     string            `json:"type"`
+			BlockID  string            `json:"block_id"`
+			Elements []json.RawMessage `json:"elements"`
+		} `json:"blocks"`
+	}
+	if uErr := json.Unmarshal([]byte(rawJSON), &msg); uErr != nil {
+		return "", "", nil, fmt.Errorf("parse message json: %w", uErr)
+	}
+	appID = msg.AppID
+	if appID == "" {
+		appID = msg.BotProfile.AppID
+	}
+	serviceID = msg.BotID
+	if appID == "" || serviceID == "" {
+		return "", "", nil, fmt.Errorf("not an app/bot message (no app_id/bot_id)")
+	}
+	for _, b := range msg.Blocks {
+		if b.Type != "actions" {
+			continue
+		}
+		for _, el := range b.Elements {
+			var btn map[string]any
+			if json.Unmarshal(el, &btn) != nil {
+				continue
+			}
+			if btn["type"] != "button" {
+				continue
+			}
+			if actionID != "" {
+				if aid, _ := btn["action_id"].(string); aid != actionID {
+					continue
+				}
+			}
+			btn["block_id"] = b.BlockID
+			out, mErr := json.Marshal(btn)
+			if mErr != nil {
+				return "", "", nil, mErr
+			}
+			return appID, serviceID, out, nil
+		}
+	}
+	return "", "", nil, fmt.Errorf("no matching action button (action_id=%q)", actionID)
 }

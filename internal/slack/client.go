@@ -1325,6 +1325,66 @@ func (c *Client) markChannel(ctx context.Context, channelID, ts string) error {
 	return nil
 }
 
+// DispatchBlockAction replays a Block Kit button click via Slack's internal
+// blocks.actions endpoint — the same call the web client makes when you click
+// an interactive button (e.g. incident.io's "Acknowledge" page button). Slack
+// forwards a block_actions payload to the owning app exactly as a real click
+// would, so this drives app-side effects (acking a page) that have no public
+// API. Auth is the xoxc token + d cookie we already hold.
+//
+// action is the raw JSON of ONE element of the message's `actions` array
+// (the button), appID/serviceID identify the owning app (from the message's
+// bot profile), and channelID/ts locate the message. All reconstructable from
+// a message slqs already stores.
+func (c *Client) DispatchBlockAction(ctx context.Context, channelID, ts, appID, serviceID string, action json.RawMessage) error {
+	container, err := json.Marshal(map[string]any{
+		"type": "message", "message_ts": ts, "channel_id": channelID,
+		"is_ephemeral": false,
+	})
+	if err != nil {
+		return fmt.Errorf("marshal container: %w", err)
+	}
+	data := url.Values{
+		"token":           {c.token},
+		"service_id":      {serviceID},
+		"app_id":          {appID},
+		"service_team_id": {c.teamID},
+		"actions":         {"[" + string(action) + "]"},
+		"container":       {string(container)},
+		"state":           {`{"values":{}}`},
+		"_x_reason":       {"dispatch_action_to_developer"},
+		"_x_mode":         {"online"},
+		"_x_app_name":     {"client"},
+	}
+	// blocks.actions lives on the workspace subdomain host, not slack.com/api.
+	base := c.teamURL
+	if base == "" {
+		base = c.apiBaseURL
+	}
+	reqURL := strings.TrimSuffix(base, "/") + "/api/blocks.actions"
+
+	req, err := http.NewRequestWithContext(ctx, "POST", reqURL, strings.NewReader(data.Encode()))
+	if err != nil {
+		return fmt.Errorf("creating blocks.actions request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return fmt.Errorf("blocks.actions: %w", err)
+	}
+	defer resp.Body.Close()
+	var out struct {
+		OK    bool   `json:"ok"`
+		Error string `json:"error"`
+	}
+	body, _ := io.ReadAll(resp.Body)
+	if json.Unmarshal(body, &out); !out.OK {
+		return fmt.Errorf("blocks.actions rejected: %s", out.Error)
+	}
+	return nil
+}
+
 // markThread posts to subscriptions.thread.mark with the given args.
 // Used by both MarkThread (read=true => "1") and MarkThreadUnread
 // (read=false => "0"). channelID/threadTS empty is a no-op. ts defaults
