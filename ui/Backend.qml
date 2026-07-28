@@ -1136,6 +1136,8 @@ Item {
         else if (e.type === "delete") applyDelete(e.channel, e.ts)
         else if (e.type === "browse") { browseResults = e.channels || []; browseLoaded() }
         else if (e.type === "toast") { if (e.text) toast(e.text) }
+        else if (e.type === "summary") { summaryText = e.text || ""; summaryLoading = false; summaryTimeout.stop(); summaryReady() }
+        else if (e.type === "summaryError") { summaryLoading = false; summaryTimeout.stop(); if (e.text) toast(e.text) }
         else if (e.type === "resync") {
             // daemon woke from suspend or its gateway re-identified: events
             // from the gap were never delivered — refetch what's on screen
@@ -1758,6 +1760,27 @@ Item {
     }
     function voiceLeave() { safeWrite(JSON.stringify({ type: "voiceLeave" }) + "\n") }
     function voiceMute()  { safeWrite(JSON.stringify({ type: "voiceMute" }) + "\n") }
+
+    // Summarize-while-away (dsqrd): ask the daemon to gather the channel's
+    // in-scope messages and run them through the user-configured provider. The
+    // result arrives async as a "summary" event (or an error toast).
+    property string summaryText: ""
+    property bool   summaryLoading: false   // drives the catch-up button spinner
+    signal summaryReady()
+    // Safety net: if the daemon never replies (hung provider), stop the spinner.
+    Timer {
+        id: summaryTimeout; interval: 210000; repeat: false
+        onTriggered: { if (backend.summaryLoading) { backend.summaryLoading = false; backend.toast("Summarize timed out") } }
+    }
+    function summarize(scope, user) {
+        if (!currentChannelId || summaryLoading) return
+        summaryLoading = true
+        summaryTimeout.restart()
+        toast("Summarizing…")
+        safeWrite(JSON.stringify({ type: "summarize", channel: currentChannelId, scope: scope, user: user || "" }) + "\n")
+    }
+    // Copy arbitrary text to the clipboard (summary yank).
+    function copyRaw(t) { if (t && t.length) Quickshell.execDetached(["wl-copy", "--", t]) }
 
     // The daemon socket is created fresh on every re-dial: a Socket whose FIRST
     // connect failed (daemon still bootstrapping, socket file absent) is wedged —

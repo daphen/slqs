@@ -31,6 +31,7 @@ Rectangle {
     // of snapping back to normal mode just because you switched apps.
     property alias inputHasFocus: input.focus
     signal gifCommand(string q)     // `/gif [query]` typed + entered (Discord only)
+    signal openSummarize()          // summarize button (Discord only) → scope picker
     property string editingTs: ""   // non-empty while editing an existing message
     property string replyTs: ""     // non-empty while replying to a message
     property string replyAuthor: ""
@@ -123,7 +124,7 @@ Rectangle {
     Flickable {
         id: flick
         anchors { left: parent.left; right: parent.right; top: parent.top; bottom: parent.bottom
-                  leftMargin: 14; rightMargin: 50; topMargin: 12 + (((root.attaching && !Backend.threadOpen) || root.replying) ? 24 : 0); bottomMargin: 12 }
+                  leftMargin: 14; rightMargin: Backend.railHidden ? 90 : 50; topMargin: 12 + (((root.attaching && !Backend.threadOpen) || root.replying) ? 24 : 0); bottomMargin: 12 }
         contentHeight: input.implicitHeight; clip: true
         // keep the cursor in view once the text grows past the visible cap
         function ensureVisible(r) {
@@ -201,6 +202,7 @@ Rectangle {
 
     // send button
     Rectangle {
+        id: sendBtn
         anchors.right: parent.right; anchors.rightMargin: 8
         anchors.bottom: parent.bottom; anchors.bottomMargin: 8
         width: 32; height: 32; radius: Theme.radiusSm
@@ -210,5 +212,27 @@ Rectangle {
         Icon { name: "paper-plane-2"; width: 15; height: 15; anchors.centerIn: parent
                color: parent.on ? Theme.ink : root.inkMuted }
         TapHandler { onTapped: root.send() }
+    }
+
+    // summarize-while-away button, left of send — Discord only (the daemon verb
+    // exists only in dsqrd). Opens the scope picker; spins while summarizing.
+    Rectangle {
+        id: sumBtn
+        visible: Backend.railHidden
+        anchors.right: sendBtn.left; anchors.rightMargin: 6
+        anchors.bottom: parent.bottom; anchors.bottomMargin: 8
+        width: 32; height: 32; radius: Theme.radiusSm
+        color: (Backend.summaryLoading || hovSum.hovered) ? Theme.hover : Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.06)
+        Behavior on color { ColorAnimation { duration: 120 } }
+        Icon { name: "sparkle-3"; width: 15; height: 15; anchors.centerIn: parent
+               color: root.inkMuted; visible: !Backend.summaryLoading }
+        Spinner {
+            anchors.centerIn: parent
+            visible: Backend.summaryLoading
+            running: Backend.summaryLoading
+            color: root.inkFg
+        }
+        HoverHandler { id: hovSum }
+        TapHandler { enabled: !Backend.summaryLoading; onTapped: root.openSummarize() }
     }
 }

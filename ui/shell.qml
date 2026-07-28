@@ -276,6 +276,7 @@ FloatingWindow {
             "b":        { act: () => { if (win.isDiscord) win.toggleSidebar(); else browse.show() },
                           help: () => win.isDiscord ? "Toggle sidebar" : "Browse channels", cat: "chats" },
             "s":        { act: () => sidebar.toggleStarCurrent(), help: "Star / unstar channel", cat: "chats" },
+            "c":        { act: () => { if (win.isDiscord) summarizePicker.start() }, help: () => win.isDiscord ? "Catch up — AI summary" : "", cat: "chats" },
             "u":        { act: () => win.openUpload(), help: "Attach a file", cat: "chats" },
             // slqs only (Discord has no equivalent): d = DM anyone, I = invite to channel.
             "d":        { act: () => { if (!Backend.railHidden) peoplePicker.showDM() }, help: () => Backend.railHidden ? "" : "Message someone", cat: "chats" },
@@ -571,6 +572,7 @@ FloatingWindow {
                             onExitInsert: win.backToNormal()
                             onOpenPalette: palette.show()
                             onGifCommand: (q) => gifPicker.show(q)
+                            onOpenSummarize: summarizePicker.start()
                             onPageScroll: (d) => win.halfPage(d)
                             onPanelMove: (d) => win.focusPanel(d < 0 ? "sidebar" : "messages")
                             // Clicking into the composer makes the messages panel the
@@ -874,6 +876,25 @@ FloatingWindow {
                 onChosen: url => Backend.openUrl(url)
                 onChosenAll: Backend.openLinks(links)
                 onOpenChanged: if (!open) win.backToNormal()
+            }
+
+            // Summarize-while-away (Discord): the composer button opens this scope
+            // picker; the daemon returns a summary that SummaryModal shows.
+            SummarizePicker {
+                id: summarizePicker
+                z: 105
+                onChosen: (scope, user) => Backend.summarize(scope, user)
+                onOpenChanged: if (!open) win.backToNormal()
+            }
+
+            SummaryModal {
+                id: summaryModal
+                z: 106
+                onOpenChanged: if (!open) win.backToNormal()
+                Connections {
+                    target: Backend
+                    function onSummaryReady() { summaryModal.showWith(Backend.summaryText, Backend.currentChannel) }
+                }
             }
 
             // Mute-duration menu (Discord). `m` opens it anchored to the sidebar

@@ -14,6 +14,7 @@ Modal {
     panelWidth: Math.round(Math.min(680, lp.width - 80))
     maxHeightFrac: 0.6
     panelColor: Theme.bg   // like the other pickers, so Theme.selection reads
+    chinBar: true
 
     function openFor(urls) { links = urls; sel = 0; show() }
 
@@ -35,17 +36,25 @@ Modal {
         }
     }
 
-    footer: Row {
-        anchors.horizontalCenter: parent.horizontalCenter
-        spacing: 5
-        KeyCap { anchors.verticalCenter: parent.verticalCenter; small: true; text: "↵" }
-        CapLabel { anchors.verticalCenter: parent.verticalCenter; text: "open" }
-        Item { width: 10; height: 1 }
-        KeyCap { anchors.verticalCenter: parent.verticalCenter; small: true; text: "a" }
-        CapLabel { anchors.verticalCenter: parent.verticalCenter; text: "all" }
-        Item { width: 10; height: 1 }
-        KeyCap { anchors.verticalCenter: parent.verticalCenter; small: true; text: "esc" }
-        CapLabel { anchors.verticalCenter: parent.verticalCenter; text: "close" }
+    footer: Item {
+        width: parent.width; height: 42
+        Row {
+            anchors.left: parent.left; anchors.leftMargin: 16; anchors.verticalCenter: parent.verticalCenter; spacing: 5
+            KeyCap { anchors.verticalCenter: parent.verticalCenter; small: true; text: "j" }
+            KeyCap { anchors.verticalCenter: parent.verticalCenter; small: true; text: "k" }
+            CapLabel { anchors.verticalCenter: parent.verticalCenter; text: "move" }
+            Item { width: 10; height: 1 }
+            KeyCap { anchors.verticalCenter: parent.verticalCenter; small: true; text: "↵" }
+            CapLabel { anchors.verticalCenter: parent.verticalCenter; text: "open" }
+            Item { width: 10; height: 1 }
+            KeyCap { anchors.verticalCenter: parent.verticalCenter; small: true; text: "a" }
+            CapLabel { anchors.verticalCenter: parent.verticalCenter; text: "all" }
+        }
+        Row {
+            anchors.right: parent.right; anchors.rightMargin: 16; anchors.verticalCenter: parent.verticalCenter; spacing: 5
+            KeyCap { anchors.verticalCenter: parent.verticalCenter; small: true; text: "esc" }
+            CapLabel { anchors.verticalCenter: parent.verticalCenter; text: "close" }
+        }
     }
 
     onKeyPressed: e => {

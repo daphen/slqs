@@ -33,6 +33,10 @@ Item {
     // Panel fill. Defaults to bg_alt (dialogs); pickers override to Theme.bg so
     // Theme.selection row highlights read (selection ≈ bg_alt in light mode).
     property color panelColor: Theme.bg_alt
+    // Opt-in full-bleed bottom "chin" bar behind the footer content (picker hint
+    // bars, à la the quickshell pickers). Off by default so dialogs/sheets keep
+    // their centered hint row with normal padding.
+    property bool chinBar: false
     signal accepted()
     signal closed()
     signal keyPressed(var event)
@@ -54,7 +58,7 @@ Item {
     // strip over a mid-scroll cut (the scroll area itself reaches the panel edge).
     readonly property real contentPad: padV
     // fixed chrome below the scroll area: footer (+ gap + padding), or none.
-    readonly property real belowFlick: footerH > 0 ? 16 + footerH + padV : 0
+    readonly property real belowFlick: footerH > 0 ? (chinBar ? footerH : 16 + footerH + padV) : 0
 
     MouseArea { anchors.fill: parent; onClicked: modal.close() }
     Rectangle { anchors.fill: parent; color: Theme.ink; opacity: 0.5 }
@@ -105,7 +109,7 @@ Item {
                 anchors.top: headerBox.bottom; anchors.topMargin: modal.gapT
                 // reaches the panel edge (footerless) or the footer — content is
                 // clipped straight at that edge like overflow:hidden, no strip.
-                anchors.bottom: footerBox.top; anchors.bottomMargin: modal.footerH > 0 ? 16 : 0
+                anchors.bottom: footerBox.top; anchors.bottomMargin: modal.footerH > 0 ? (modal.chinBar ? 0 : 16) : 0
                 clip: true
                 contentWidth: width
                 contentHeight: bodyCol.implicitHeight + modal.contentPad
@@ -115,11 +119,28 @@ Item {
                 Column { id: bodyCol; width: flick.width }
             }
 
+            // Opt-in chin bar: full-bleed surface flush under the scroll area,
+            // spanning exactly the footer content, with a top hairline and rounded
+            // bottom corners matching the panel.
+            Rectangle {
+                id: chin
+                visible: modal.chinBar && modal.footerH > 0
+                anchors.left: panel.left; anchors.right: panel.right
+                anchors.leftMargin: 1; anchors.rightMargin: 1
+                anchors.bottom: panel.bottom; anchors.bottomMargin: 1
+                anchors.top: footerBox.top
+                color: Theme.surface0
+                bottomLeftRadius: panel.radius - 1; bottomRightRadius: panel.radius - 1
+                Rectangle { anchors { top: parent.top; left: parent.left; right: parent.right }
+                            height: 1; color: Theme.hairline }
+            }
+
             Item {
                 id: footerBox
                 anchors { bottom: parent.bottom; left: parent.left; right: parent.right }
-                anchors.bottomMargin: modal.footerH > 0 ? modal.padV : 0
-                anchors.leftMargin: modal.padH; anchors.rightMargin: modal.padH
+                anchors.bottomMargin: modal.footerH > 0 ? (modal.chinBar ? 0 : modal.padV) : 0
+                anchors.leftMargin: modal.chinBar ? 0 : modal.padH
+                anchors.rightMargin: modal.chinBar ? 0 : modal.padH
                 height: childrenRect.height
             }
         }
