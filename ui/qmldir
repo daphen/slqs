@@ -22,3 +22,4 @@ VoiceBar VoiceBar.qml
 LinkPicker LinkPicker.qml
 SummarizePicker SummarizePicker.qml
 SummaryModal SummaryModal.qml
+SummarizeSetup SummarizeSetup.qml

@@ -109,13 +109,13 @@ Modal {
             anchors.left: parent.left; anchors.bottom: parent.bottom; anchors.bottomMargin: -2
             text: "Summary"; color: Theme.fg
             font.family: sm.serif; font.pixelSize: 34; font.weight: 400
-            font.letterSpacing: -0.3; renderType: Text.QtRendering
+            font.letterSpacing: -0.3
         }
         Text {
             anchors.left: hTitle.right; anchors.leftMargin: 12; anchors.baseline: hTitle.baseline
             text: sm.meta; color: Theme.fg_muted
             font.family: Theme.fontFamily; font.pixelSize: 11; font.weight: 500
-            font.letterSpacing: 0.6; renderType: Text.QtRendering
+            font.letterSpacing: 0.6
         }
         Rectangle {
             anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.bottom
@@ -187,7 +187,7 @@ Modal {
                                 sourceComponent: Text {
                                     width: row.width; bottomPadding: 8
                                     text: row.modelData.html; textFormat: Text.RichText; color: Theme.fg
-                                    wrapMode: Text.Wrap; renderType: Text.QtRendering
+                                    wrapMode: Text.Wrap
                                     font.family: Theme.fontFamily; font.pixelSize: 15; font.weight: 500; lineHeight: 1.5
                                 }
                             }
@@ -198,7 +198,7 @@ Modal {
                                     topPadding: 6; bottomPadding: 2; spacing: 8
                                     Text {
                                         anchors.verticalCenter: parent.verticalCenter
-                                        text: row.modelData.text; color: Theme.fg_muted; renderType: Text.QtRendering
+                                        text: row.modelData.text; color: Theme.fg_muted
                                         font.family: Theme.fontFamily; font.pixelSize: 11; font.weight: 600
                                         font.letterSpacing: 1.5
                                     }
@@ -209,7 +209,7 @@ Modal {
                                         color: "transparent"; border.width: 1; border.color: Theme.hairline
                                         Text {
                                             id: chipT; anchors.centerIn: parent
-                                            text: row.modelData.count || 0; color: Theme.fg_muted; renderType: Text.QtRendering
+                                            text: row.modelData.count || 0; color: Theme.fg_muted
                                             font.family: Theme.fontFamily; font.pixelSize: 10
                                         }
                                     }
@@ -227,7 +227,7 @@ Modal {
                                     Text {
                                         width: row.width - 20
                                         text: row.modelData.html; textFormat: Text.RichText; color: Theme.fg_secondary
-                                        wrapMode: Text.Wrap; renderType: Text.QtRendering
+                                        wrapMode: Text.Wrap
                                         onLinkActivated: (url) => Backend.openUrl(url)
                                         font.family: Theme.fontFamily; font.pixelSize: 14; lineHeight: 1.45
                                     }
@@ -239,7 +239,7 @@ Modal {
                                 sourceComponent: Text {
                                     width: row.width
                                     text: row.modelData.html; textFormat: Text.RichText; color: Theme.fg_secondary
-                                    wrapMode: Text.Wrap; renderType: Text.QtRendering
+                                    wrapMode: Text.Wrap
                                     onLinkActivated: (url) => Backend.openUrl(url)
                                     font.family: Theme.fontFamily; font.pixelSize: 14; lineHeight: 1.45
                                 }

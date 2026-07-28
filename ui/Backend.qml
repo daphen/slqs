@@ -1138,6 +1138,7 @@ Item {
         else if (e.type === "toast") { if (e.text) toast(e.text) }
         else if (e.type === "summary") { summaryText = e.text || ""; summaryLoading = false; summaryTimeout.stop(); summaryReady() }
         else if (e.type === "summaryError") { summaryLoading = false; summaryTimeout.stop(); if (e.text) toast(e.text) }
+        else if (e.type === "summarizeSetup") { summaryLoading = false; summaryTimeout.stop(); summarizeClis = e.clis || []; summarizeSetupNeeded() }
         else if (e.type === "resync") {
             // daemon woke from suspend or its gateway re-identified: events
             // from the gap were never delivered — refetch what's on screen
@@ -1767,6 +1768,11 @@ Item {
     property string summaryText: ""
     property bool   summaryLoading: false   // drives the catch-up button spinner
     signal summaryReady()
+    signal summarizeSetupNeeded()           // no provider configured → show setup guide
+    property var summarizeClis: []          // keyless CLIs found on this machine: [{id,label}]
+    // Ask the daemon to write the summarize block to profiles.json.
+    function summarizeEnableCli(id) { safeWrite(JSON.stringify({ type: "summarizeEnable", provider: id }) + "\n") }
+    function summarizeEnableKey(provider, key) { safeWrite(JSON.stringify({ type: "summarizeEnable", provider: provider, api_key: key || "" }) + "\n") }
     // Safety net: if the daemon never replies (hung provider), stop the spinner.
     Timer {
         id: summaryTimeout; interval: 210000; repeat: false
@@ -1774,9 +1780,8 @@ Item {
     }
     function summarize(scope, user) {
         if (!currentChannelId || summaryLoading) return
-        summaryLoading = true
+        summaryLoading = true   // drives the button spinner + the "Summarizing…" badge above the composer
         summaryTimeout.restart()
-        toast("Summarizing…")
         safeWrite(JSON.stringify({ type: "summarize", channel: currentChannelId, scope: scope, user: user || "" }) + "\n")
     }
     // Copy arbitrary text to the clipboard (summary yank).
