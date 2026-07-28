@@ -162,7 +162,8 @@ Item {
                                color: row.modelData.mine ? Theme.sky : Theme.fg
                                font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 14; font.weight: 500 }
                         Text { id: usersText; visible: row.isReaction
-                               width: row.width - 90
+                               // fit inside the row: 18 left inset + 22 emoji + 10 + 26 count + 10 + 16 right inset
+                               width: row.width - 102
                                height: row.expanded ? implicitHeight : 22
                                verticalAlignment: Text.AlignVCenter
                                wrapMode: row.expanded ? Text.WordWrap : Text.NoWrap
