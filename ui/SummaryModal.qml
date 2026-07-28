@@ -1,7 +1,7 @@
 import QtQuick
 import QsLib
 
-// While-away summary, styled after the newtab "Today" card: serif hero title,
+// While-away summary, styled after the newtab "Today" card: display hero title,
 // mono uppercase section headers with count chips, orange accent on the lead +
 // bullet markers. claude returns sectioned markdown (TL;DR, ## HEADERS, - bullets),
 // parsed into selectable CATEGORIES: j/k moves the selection, y yanks the
@@ -15,8 +15,8 @@ Modal {
     maxHeightFrac: 0.72
     panelColor: Theme.bg
 
-    // serif is the hero TITLE only — everything else is mono, like the today view
-    readonly property string serif: "Instrument Serif"
+    // the hero TITLE face only — everything else is mono, like the today view
+    readonly property string titleFont: "Instrument Serif"
     readonly property string fgHex: "" + Theme.fg
     readonly property var cats: sm._cats(sm.text)
 
@@ -108,7 +108,7 @@ Modal {
             id: hTitle
             anchors.left: parent.left; anchors.bottom: parent.bottom; anchors.bottomMargin: -2
             text: "Summary"; color: Theme.fg
-            font.family: sm.serif; font.pixelSize: 34; font.weight: 400
+            font.family: sm.titleFont; font.pixelSize: 34; font.weight: 400
             font.letterSpacing: -0.3
         }
         Text {
@@ -185,7 +185,7 @@ Modal {
                                 id: tldrL
                                 active: row.modelData.kind === "tldr"; width: parent.width
                                 sourceComponent: Text {
-                                    width: row.width; bottomPadding: 8
+                                    width: row.width
                                     text: row.modelData.html; textFormat: Text.RichText; color: Theme.fg
                                     wrapMode: Text.Wrap
                                     font.family: Theme.fontFamily; font.pixelSize: 15; font.weight: 500; lineHeight: 1.5
