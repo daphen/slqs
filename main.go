@@ -195,12 +195,6 @@ func (d *daemon) cacheAvatar(u slack.User) {
 	if id == "" {
 		return
 	}
-	d.avMu.RLock()
-	have := d.avatars[id] != ""
-	d.avMu.RUnlock()
-	if have {
-		return
-	}
 	url := u.Profile.Image512
 	if url == "" {
 		url = u.Profile.ImageOriginal
@@ -215,6 +209,21 @@ func (d *daemon) cacheAvatar(u slack.User) {
 	if i := strings.LastIndexByte(url, '.'); i >= 0 && len(url)-i <= 5 {
 		ext = strings.ToLower(url[i+1:])
 	}
+	// Version the cached filename by Slack's avatar_hash so a NEW pfp yields a
+	// new path. The client caches images by URL, so a same-named overwrite would
+	// never reload; a new path shows on the next render. No hash → legacy name.
+	dir := filepath.Join(os.Getenv("HOME"), ".cache", "slqs", "images")
+	fname := "avatar-" + id + "-hi." + ext
+	if h := avatarHashClean(u.Profile.AvatarHash); h != "" {
+		fname = "avatar-" + id + "-" + h + "-hi." + ext
+	}
+	path := filepath.Join(dir, fname)
+	d.avMu.RLock()
+	cur := d.avatars[id]
+	d.avMu.RUnlock()
+	if cur == "file://"+path {
+		return // already the current pfp
+	}
 	resp, err := http.Get(url)
 	if err != nil {
 		return
@@ -227,8 +236,6 @@ func (d *daemon) cacheAvatar(u slack.User) {
 	if err != nil {
 		return
 	}
-	dir := filepath.Join(os.Getenv("HOME"), ".cache", "slqs", "images")
-	path := filepath.Join(dir, "avatar-"+id+"-hi."+ext)
 	// tmp+rename: a reader mid-write sees the old file or none, never a torso
 	tmpA := path + ".tmp"
 	if os.WriteFile(tmpA, b, 0644) != nil || os.Rename(tmpA, path) != nil {
@@ -237,6 +244,22 @@ func (d *daemon) cacheAvatar(u slack.User) {
 	d.avMu.Lock()
 	d.avatars[id] = "file://" + path
 	d.avMu.Unlock()
+}
+
+// avatarHashClean keeps only filename-safe chars from Slack's avatar_hash so it
+// can go straight into the cached avatar's filename (avatar-<id>-<hash>-hi.ext).
+func avatarHashClean(h string) string {
+	var b strings.Builder
+	for _, r := range h {
+		if r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' {
+			b.WriteRune(r)
+		}
+	}
+	s := b.String()
+	if len(s) > 16 {
+		s = s[:16]
+	}
+	return s
 }
 
 // nameFor resolves a user's name per the workspace's preference: "display"
@@ -772,19 +795,44 @@ func (d *daemon) scanAvatars() {
 	if err != nil {
 		return
 	}
-	m := map[string]string{}
+	// Filenames are avatar-<id>[-<hash>]-hi.<ext> (id has no '-'). Prefer hi-res,
+	// and among files for the same id prefer the newest — that's the latest pfp,
+	// so a stale earlier-hash file doesn't win after a profile change.
+	type cand struct {
+		path string
+		hi   bool
+		mod  int64
+	}
+	best := map[string]cand{}
 	for _, e := range ents {
 		n := e.Name()
 		if !strings.HasPrefix(n, "avatar-") {
 			continue
 		}
 		stem := strings.SplitN(n[len("avatar-"):], ".", 2)[0]
-		path := "file://" + filepath.Join(dir, n)
-		if strings.HasSuffix(stem, "-hi") {
-			m[strings.TrimSuffix(stem, "-hi")] = path // hi-res wins
-		} else if _, ok := m[stem]; !ok {
-			m[stem] = path
+		if stem == "" {
+			continue
 		}
+		hi := strings.HasSuffix(stem, "-hi")
+		id := stem
+		if i := strings.IndexByte(stem, '-'); i >= 0 {
+			id = stem[:i]
+		}
+		if id == "" {
+			continue
+		}
+		var mod int64
+		if info, ierr := e.Info(); ierr == nil {
+			mod = info.ModTime().UnixNano()
+		}
+		c, ok := best[id]
+		if !ok || (hi && !c.hi) || (hi == c.hi && mod > c.mod) {
+			best[id] = cand{path: "file://" + filepath.Join(dir, n), hi: hi, mod: mod}
+		}
+	}
+	m := make(map[string]string, len(best))
+	for id, c := range best {
+		m[id] = c.path
 	}
 	d.avMu.Lock()
 	d.avatars = m

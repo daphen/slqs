@@ -29,9 +29,10 @@ type EventHandler interface {
 	OnDisconnect()
 	OnSelfPresenceChange(presence string)
 	OnDNDChange(enabled bool, endUnix int64)
-	// OnUserStatusChanged is delivered for user_status_changed / user_change
-	// WS events; statusEmoji is the raw shortcode (":palm_tree:", "" cleared).
-	OnUserStatusChanged(userID, statusEmoji string)
+	// OnUserChange is delivered for user_status_changed / user_change WS events
+	// with the full updated user (status emoji, profile images/avatar_hash, etc.)
+	// so the handler can refresh both the status glyph and the cached avatar.
+	OnUserChange(u slack.User)
 
 	// OnChannelMarked is delivered when Slack pushes a channel_marked /
 	// im_marked / group_marked / mpim_marked event (read state changed
@@ -149,12 +150,7 @@ type wsReactionEvent struct {
 // coalesces presence updates into a `users` array rather than a single
 // `user`, so both forms must be handled.
 type wsUserChangeEvent struct {
-	User struct {
-		ID      string `json:"id"`
-		Profile struct {
-			StatusEmoji string `json:"status_emoji"`
-		} `json:"profile"`
-	} `json:"user"`
+	User slack.User `json:"user"`
 }
 
 type wsPresenceEvent struct {
@@ -364,7 +360,7 @@ func dispatchWebSocketEvent(data []byte, handler EventHandler) {
 			return
 		}
 		if evt.User.ID != "" {
-			handler.OnUserStatusChanged(evt.User.ID, evt.User.Profile.StatusEmoji)
+			handler.OnUserChange(evt.User)
 		}
 
 	case "manual_presence_change":

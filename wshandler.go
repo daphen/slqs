@@ -158,24 +158,27 @@ func (h *wsHandler) OnUserTyping(channelID, threadTS, userID string) {
 		"channel": channelID, "thread": threadTS, "user": h.w.users[userID]})
 }
 
-func (h *wsHandler) OnUserStatusChanged(userID, statusEmoji string) {
+func (h *wsHandler) OnUserChange(u slack.User) {
 	glyph := ""
-	if e := strings.Trim(statusEmoji, ":"); e != "" {
+	if e := strings.Trim(u.Profile.StatusEmoji, ":"); e != "" {
 		glyph = emojiGlyph(e)
 	}
 	h.w.presMu.Lock()
-	old := h.w.status[userID]
+	old := h.w.status[u.ID]
 	if glyph == "" {
-		delete(h.w.status, userID)
+		delete(h.w.status, u.ID)
 	} else {
-		h.w.status[userID] = glyph
+		h.w.status[u.ID] = glyph
 	}
 	h.w.presMu.Unlock()
-	if old == glyph {
-		return
+	if old != glyph {
+		h.d.broadcast(map[string]any{"type": "status", "workspace": h.w.teamID,
+			"user": u.ID, "emoji": glyph})
 	}
-	h.d.broadcast(map[string]any{"type": "status", "workspace": h.w.teamID,
-		"user": userID, "emoji": glyph})
+	// Re-cache the avatar if the pfp changed (cacheAvatar is a no-op when the
+	// avatar_hash is unchanged). Scope A: the new image shows on the next render
+	// (channel reopen / their next message) — no live swap of on-screen rows.
+	go h.d.cacheAvatar(u)
 }
 
 func (h *wsHandler) OnPresenceChange(userID, presence string) {
