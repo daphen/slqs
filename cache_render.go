@@ -1076,9 +1076,13 @@ func (d *daemon) buildSubThreads(w *workspace) []map[string]any {
 			continue
 		}
 		var unread int
+		// Exclude Slackbot's ephemeral notices ("you mentioned X, but they're not
+		// in this channel") — they post a bot_message reply 1µs after your own,
+		// but Slack never counts them in read state, so last_read can never reach
+		// them and the thread would show unread forever.
 		d.cacheDB.QueryRowContext(d.ctx, `SELECT count(*) FROM messages
 			WHERE channel_id=? AND thread_ts=? AND ts>? AND ts<>thread_ts
-			      AND is_deleted=0 AND text<>''`, s.cid, s.tts, s.lr).Scan(&unread)
+			      AND is_deleted=0 AND text<>'' AND user_id<>'USLACKBOT'`, s.cid, s.tts, s.lr).Scan(&unread)
 		if unread > 99 {
 			unread = 99
 		}
