@@ -35,7 +35,7 @@ INSERT INTO thread_subscriptions
     (workspace_id, channel_id, thread_ts, last_read, active, updated_at)
 VALUES (?, ?, ?, ?, ?, ?)
 ON CONFLICT(workspace_id, channel_id, thread_ts) DO UPDATE SET
-    last_read  = excluded.last_read,
+    last_read  = CASE WHEN excluded.last_read > last_read THEN excluded.last_read ELSE last_read END,
     active     = excluded.active,
     updated_at = excluded.updated_at
 `
@@ -154,7 +154,7 @@ INSERT INTO thread_subscriptions
     (workspace_id, channel_id, thread_ts, last_read, active, updated_at)
 VALUES (?, ?, ?, ?, 1, ?)
 ON CONFLICT(workspace_id, channel_id, thread_ts) DO UPDATE SET
-    last_read  = excluded.last_read,
+    last_read  = CASE WHEN excluded.last_read > last_read THEN excluded.last_read ELSE last_read END,
     active     = 1,
     updated_at = excluded.updated_at
 `
