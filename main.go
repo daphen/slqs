@@ -75,6 +75,8 @@ var (
 	reStrike    = regexp.MustCompile(`~([^~\n]+)~`)
 	reMpdmN     = regexp.MustCompile(`-\d+$`)
 	reLink      = regexp.MustCompile(`<(https?://[^|>\s]+)`)
+	reMdLink    = regexp.MustCompile(`\]\((https?://[^)\s]+)\)`) // [label](url) — richify's clickable link form
+
 	reAngleTok  = regexp.MustCompile(`<[^>]*>`)
 	reBareURL   = regexp.MustCompile(`https?://\S+`)
 	reChanRef   = regexp.MustCompile(`<#([A-Z0-9]+)`) // first channel mention id, for `o` to open
@@ -84,10 +86,14 @@ var (
 // firstLink returns the primary URL in a message (kept so the client's `o`
 // can open it — render() drops the URL when keeping a link's label).
 func firstLink(text string) string {
-	if m := reLink.FindStringSubmatch(text); m != nil {
-		return html.UnescapeString(m[1])
+	best, url := -1, ""
+	if m := reLink.FindStringSubmatchIndex(text); m != nil {
+		best, url = m[0], text[m[2]:m[3]]
 	}
-	return ""
+	if m := reMdLink.FindStringSubmatchIndex(text); m != nil && (best < 0 || m[0] < best) {
+		url = text[m[2]:m[3]]
+	}
+	return html.UnescapeString(url)
 }
 
 // isLoneLink reports whether text is nothing but link(s) — Slack <url|label>

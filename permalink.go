@@ -15,7 +15,7 @@ import (
 // The p<digits> encodes the ts — p1785441758131699 -> 1785441758.131699 (a decimal
 // point 6 from the end). thread_ts, when the link is a thread message, is a query arg.
 var (
-	rePermalink = regexp.MustCompile(`https?://([a-z0-9-]+)\.slack\.com/archives/([A-Z0-9]+)/p(\d+)(?:\?[^\s>|]*)?`)
+	rePermalink = regexp.MustCompile(`https?://([a-z0-9-]+)\.slack\.com/archives/([A-Z0-9]+)/p(\d+)(?:\?[^\s>|)]*)?`)
 	reThreadTS  = regexp.MustCompile(`thread_ts=(\d+\.\d+)`)
 )
 
@@ -239,7 +239,7 @@ func (d *daemon) renderPreview(tw *workspace, url string, m slack.Message, repli
 	var full strings.Builder
 	full.WriteString("> ↰ *" + previewAuthor(tw, m) + "*")
 	if url != "" {
-		full.WriteString(" · <" + url + "|↗>")
+		full.WriteString(" · [↗](" + url + ")")
 	}
 	for _, l := range parentLines {
 		full.WriteString("\n> " + l)

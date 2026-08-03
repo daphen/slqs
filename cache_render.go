@@ -282,10 +282,10 @@ func shareQuotes(atts []slack.Attachment) string {
 		}
 		head := "> ↰ *" + a.AuthorName + "*"
 		if a.FromURL != "" {
-			// link to the original message as a compact ↗ label (not the raw URL,
-			// which is long and noisy). `<url|label>` still feeds the `o` keybind:
-			// firstLink matches <https://… up to the `|`, render shows the label.
-			head += " · <" + a.FromURL + "|↗>"
+			// link to the original message as a compact, clickable ↗ (not the raw
+			// URL, which is long and noisy). `[label](url)` is what richify turns
+			// into an <a href> anchor; firstLink also matches it for the `o` keybind.
+			head += " · [↗](" + a.FromURL + ")"
 		}
 		if t != "" {
 			lines := strings.Split(t, "\n")

@@ -60,6 +60,20 @@ func TestOneLine(t *testing.T) {
 	}
 }
 
+func TestFirstLinkFindsMarkdownAndAngle(t *testing.T) {
+	// a [↗](url) preview link must feed the `o` keybind (msg.link)
+	if got := firstLink("hi > ↰ *D* · [↗](https://x.slack.com/archives/C/p1?thread_ts=1.2)"); got != "https://x.slack.com/archives/C/p1?thread_ts=1.2" {
+		t.Errorf("markdown link: got %q", got)
+	}
+	// an earlier angle link still wins over a later markdown link
+	if got := firstLink("see <https://a.example/x> and [y](https://b.example/z)"); got != "https://a.example/x" {
+		t.Errorf("angle-first: got %q", got)
+	}
+	if got := firstLink("no links"); got != "" {
+		t.Errorf("none: got %q", got)
+	}
+}
+
 func msg(user, text string, replyCount int) slack.Message {
 	return slack.Message{Msg: slack.Msg{User: user, Text: text, ReplyCount: replyCount}}
 }
@@ -71,7 +85,7 @@ func TestRenderPreviewParentAndReplies(t *testing.T) {
 	replies := []slack.Message{msg("U2", "#team-everywhere?", 0), msg("U1", "Might be?", 0)}
 	e := d.renderPreview(w, "https://x.slack.com/archives/C/p1", parent, replies)
 
-	for _, want := range []string{"> ↰ *Daniel*", "· <https://x.slack.com/archives/C/p1|↗>", "> Issue: project details show Location", "> ↳ *Roman* #team-everywhere?", "> ↳ *Daniel* Might be?"} {
+	for _, want := range []string{"> ↰ *Daniel*", "· [↗](https://x.slack.com/archives/C/p1)", "> Issue: project details show Location", "> ↳ *Roman* #team-everywhere?", "> ↳ *Daniel* Might be?"} {
 		if !strings.Contains(e.full, want) {
 			t.Errorf("full missing %q in:\n%s", want, e.full)
 		}
