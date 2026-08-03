@@ -370,12 +370,17 @@ func richTextSection(v any) string {
 			}
 		case "attachment_mention":
 			// An app chip embedded in the text (a Linear issue, GitHub PR, …).
-			// Render the title as a clickable link; without this the whole chip
-			// was dropped, so a message ending in one looked truncated.
+			// Render the title as a clickable link, prefixed with the product
+			// name so it's clear where it lives; without this the whole chip was
+			// dropped, so a message ending in one looked truncated.
 			u, _ := em["url"].(string)
 			txt, _ := em["text"].(string)
 			if u != "" && txt != "" {
-				sb.WriteString("[" + strings.ReplaceAll(txt, "]", ")") + "](" + u + ")")
+				label := strings.ReplaceAll(txt, "]", ")")
+				if prod, _ := em["product_name"].(string); prod != "" {
+					label = prod + ": " + label
+				}
+				sb.WriteString("[" + label + "](" + u + ")")
 			} else if u != "" {
 				sb.WriteString("<" + u + ">")
 			}

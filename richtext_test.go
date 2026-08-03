@@ -31,11 +31,12 @@ func TestRichTextSectionAttachmentMention(t *testing.T) {
 	els := []any{
 		map[string]any{"type": "text", "text": "Hi Team, can I get an update on:  "},
 		map[string]any{"type": "attachment_mention",
-			"url":  "https://linear.app/lovable/issue/EVERY-2620/x",
-			"text": "Claude Design import rejects workspace Editors"},
+			"url":          "https://linear.app/lovable/issue/EVERY-2620/x",
+			"text":         "Claude Design import rejects workspace Editors",
+			"product_name": "Linear"},
 	}
 	got := richTextSection(els)
-	want := "Hi Team, can I get an update on:  [Claude Design import rejects workspace Editors](https://linear.app/lovable/issue/EVERY-2620/x)"
+	want := "Hi Team, can I get an update on:  [Linear: Claude Design import rejects workspace Editors](https://linear.app/lovable/issue/EVERY-2620/x)"
 	if got != want {
 		t.Errorf("attachment_mention render:\n got=%q\nwant=%q", got, want)
 	}
