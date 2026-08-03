@@ -210,6 +210,7 @@ func (d *daemon) msgFromRaw(w *workspace, channelID, userID, ts, text string, re
 	} else if body == "" {
 		body = attachmentText(rj.Attachments)
 	}
+	permaSrc := body // scan for archive permalinks before any lone-link unfurl collapse
 	author := w.users[userID]
 	if author == "" {
 		if rj.Username != "" {
@@ -230,6 +231,12 @@ func (d *daemon) msgFromRaw(w *workspace, channelID, userID, ts, text string, re
 	// holds the URL so `o` opens it.
 	if imagesJSON != "" && imagesJSON != "[]" && isLoneLink(body) {
 		body = unfurlBody(rj.Attachments)
+	}
+	if pv := d.permalinkPreviews(w, channelID, ts, permaSrc); pv != "" {
+		if body != "" {
+			body += "\n"
+		}
+		body += pv
 	}
 	return map[string]any{
 		"author":        author,

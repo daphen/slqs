@@ -390,6 +390,11 @@ type daemon struct {
 	userMiss map[string]bool // author IDs users.info couldn't resolve — don't refetch (guarded by mu)
 	forceDM  map[string]bool // DM ids opened this session — shown even without a watermark/messages (guarded by mu)
 
+	prevMu   sync.Mutex                    // guards the permalink-preview cache
+	prevDone map[string]string             // target "chan|ts" -> rendered preview ("" = resolved, nothing to show)
+	prevInfl map[string]bool               // target -> a fetch is in flight
+	prevWait map[string]map[[2]string]bool // target -> host {channel,ts} set awaiting re-broadcast
+
 	updateEvent map[string]any // latest updateAvailable event, replayed to new clients
 	updMu       sync.Mutex
 	updEtag     string    // GitHub ETag — conditional requests are free
@@ -1021,6 +1026,12 @@ func (d *daemon) formatMsg(w *workspace, channelID, userID, ts, text, username s
 	body := text
 	if imagesJSON != "" && imagesJSON != "[]" && isLoneLink(body) {
 		body = unfurlBody(attachments)
+	}
+	if pv := d.permalinkPreviews(w, channelID, ts, text); pv != "" {
+		if body != "" {
+			body += "\n"
+		}
+		body += pv
 	}
 	return map[string]any{
 		"author":        author,
@@ -2508,6 +2519,9 @@ func main() {
 		conns:               map[net.Conn]struct{}{},
 		userMiss:            map[string]bool{},
 		forceDM:             map[string]bool{},
+		prevDone:            map[string]string{},
+		prevInfl:            map[string]bool{},
+		prevWait:            map[string]map[[2]string]bool{},
 	}
 	cachePath := filepath.Join(xdgData(), "cache.db")
 	dsn := "file:" + cachePath + "?mode=ro&_pragma=busy_timeout(5000)&_pragma=journal_mode(WAL)"
