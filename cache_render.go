@@ -480,11 +480,32 @@ func textFromBlocks(raw string) string {
 		return rt
 	}
 	var p struct {
-		Blocks []map[string]any `json:"blocks"`
+		Blocks      []map[string]any `json:"blocks"`
+		Attachments []struct {
+			Blocks []map[string]any `json:"blocks"`
+		} `json:"attachments"`
 	}
 	if json.Unmarshal([]byte(raw), &p) != nil {
 		return ""
 	}
+	var parts []string
+	if t := blocksToText(p.Blocks); t != "" {
+		parts = append(parts, t)
+	}
+	// App messages (Linear, GitHub, …) carry their real content in Block Kit
+	// blocks INSIDE an attachment, not at the top level; render those too, or
+	// only the terse one-line fallback would show.
+	for _, a := range p.Attachments {
+		if t := blocksToText(a.Blocks); t != "" {
+			parts = append(parts, t)
+		}
+	}
+	return strings.Join(parts, "\n")
+}
+
+// blocksToText renders a Block Kit block list (section / header / context /
+// actions) to Slack mrkdwn. Shared by top-level blocks and attachment.blocks.
+func blocksToText(blocks []map[string]any) string {
 	txt := func(v any) string {
 		if m, ok := v.(map[string]any); ok {
 			if s, ok := m["text"].(string); ok {
@@ -494,7 +515,7 @@ func textFromBlocks(raw string) string {
 		return ""
 	}
 	var parts []string
-	for _, b := range p.Blocks {
+	for _, b := range blocks {
 		switch b["type"] {
 		case "section", "header":
 			if t := txt(b["text"]); t != "" {
