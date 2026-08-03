@@ -368,6 +368,17 @@ func richTextSection(v any) string {
 			if u, _ := em["url"].(string); u != "" {
 				sb.WriteString("<" + u + ">")
 			}
+		case "attachment_mention":
+			// An app chip embedded in the text (a Linear issue, GitHub PR, …).
+			// Render the title as a clickable link; without this the whole chip
+			// was dropped, so a message ending in one looked truncated.
+			u, _ := em["url"].(string)
+			txt, _ := em["text"].(string)
+			if u != "" && txt != "" {
+				sb.WriteString("[" + strings.ReplaceAll(txt, "]", ")") + "](" + u + ")")
+			} else if u != "" {
+				sb.WriteString("<" + u + ">")
+			}
 		case "user":
 			if u, _ := em["user_id"].(string); u != "" {
 				sb.WriteString("<@" + u + ">")
