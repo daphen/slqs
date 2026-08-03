@@ -69,15 +69,25 @@ func TestRenderPreviewParentAndReplies(t *testing.T) {
 	w := &workspace{users: map[string]string{"U1": "Daniel", "U2": "Roman"}}
 	parent := msg("U1", "Issue: project details show Location", 2)
 	replies := []slack.Message{msg("U2", "#team-everywhere?", 0), msg("U1", "Might be?", 0)}
-	got := d.renderPreview(w, "https://x.slack.com/archives/C/p1", parent, replies)
+	e := d.renderPreview(w, "https://x.slack.com/archives/C/p1", parent, replies)
 
-	for _, want := range []string{"> ↰ *Daniel*", "· <https://x.slack.com/archives/C/p1>", "> Issue: project details show Location", "> ↳ *Roman* #team-everywhere?", "> ↳ *Daniel* Might be?"} {
-		if !strings.Contains(got, want) {
-			t.Errorf("preview missing %q in:\n%s", want, got)
+	for _, want := range []string{"> ↰ *Daniel*", "· <https://x.slack.com/archives/C/p1|↗>", "> Issue: project details show Location", "> ↳ *Roman* #team-everywhere?", "> ↳ *Daniel* Might be?"} {
+		if !strings.Contains(e.full, want) {
+			t.Errorf("full missing %q in:\n%s", want, e.full)
 		}
 	}
-	if strings.Contains(got, "more") {
-		t.Errorf("no +K more expected for 2 replies:\n%s", got)
+	if strings.Contains(e.full, "more") {
+		t.Errorf("no +K more expected for 2 replies:\n%s", e.full)
+	}
+	// repliesOnly must carry the replies but NOT the head/parent (dedup case).
+	if strings.Contains(e.repliesOnly, "↰") || strings.Contains(e.repliesOnly, "Issue:") {
+		t.Errorf("repliesOnly should exclude head/parent:\n%s", e.repliesOnly)
+	}
+	if !strings.Contains(e.repliesOnly, "> ↳ *Roman* #team-everywhere?") {
+		t.Errorf("repliesOnly missing reply line:\n%s", e.repliesOnly)
+	}
+	if !strings.HasPrefix("Issue: project details show Location", e.parentKey) || e.parentKey == "" {
+		t.Errorf("parentKey should be a prefix of the parent body, got %q", e.parentKey)
 	}
 }
 
@@ -89,14 +99,14 @@ func TestRenderPreviewCapsReplies(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		replies = append(replies, msg("U1", "reply", 0))
 	}
-	got := d.renderPreview(w, "", parent, replies)
-	if strings.Count(got, "> ↳ *Daniel* reply") != maxInlineReplies {
-		t.Errorf("expected %d reply lines, got:\n%s", maxInlineReplies, got)
+	e := d.renderPreview(w, "", parent, replies)
+	if strings.Count(e.full, "> ↳ *Daniel* reply") != maxInlineReplies {
+		t.Errorf("expected %d reply lines, got:\n%s", maxInlineReplies, e.full)
 	}
-	if !strings.Contains(got, "+2 more") {
-		t.Errorf("expected '+2 more' tail, got:\n%s", got)
+	if !strings.Contains(e.full, "+2 more") {
+		t.Errorf("expected '+2 more' tail, got:\n%s", e.full)
 	}
-	if strings.Contains(got, " · <") {
-		t.Errorf("empty url should omit the ' · <…>' head, got:\n%s", got)
+	if strings.Contains(e.full, " · <") {
+		t.Errorf("empty url should omit the ' · <…>' head, got:\n%s", e.full)
 	}
 }

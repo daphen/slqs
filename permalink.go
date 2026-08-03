@@ -33,6 +33,16 @@ type permalink struct {
 	url       string // the exact matched URL, kept intact so `o`/click still works
 }
 
+// previewEntry is one cached resolution. `full` (head + parent + replies) is used
+// for a bare link; `repliesOnly` (just the ↳ lines) is used when the host already
+// shows the parent — a shared-message card — so the parent isn't rendered twice.
+// `parentKey` is a stable prefix of the parent body used to detect that case.
+type previewEntry struct {
+	full        string
+	repliesOnly string
+	parentKey   string
+}
+
 func decodeTS(digits string) string {
 	if len(digits) <= 6 {
 		return digits
@@ -80,7 +90,11 @@ func (d *daemon) permalinkPreviews(host *workspace, hostChannel, hostTS, src str
 			continue
 		}
 		seen[key] = true
-		if block, ok := d.previewLookup(key); ok {
+		if e, ok := d.previewLookup(key); ok {
+			block := e.full
+			if e.parentKey != "" && strings.Contains(src, e.parentKey) {
+				block = e.repliesOnly // parent already shown by shareQuotes — add only the replies
+			}
 			if block != "" {
 				blocks = append(blocks, block)
 			}
@@ -105,11 +119,11 @@ func (d *daemon) workspaceForPermalink(pl permalink) *workspace {
 	return nil
 }
 
-func (d *daemon) previewLookup(key string) (string, bool) {
+func (d *daemon) previewLookup(key string) (previewEntry, bool) {
 	d.prevMu.Lock()
 	defer d.prevMu.Unlock()
-	block, ok := d.prevDone[key]
-	return block, ok
+	e, ok := d.prevDone[key]
+	return e, ok
 }
 
 func (d *daemon) previewFetchAsync(tw *workspace, pl permalink, hostChannel, hostTS string) {
@@ -128,9 +142,9 @@ func (d *daemon) previewFetchAsync(tw *workspace, pl permalink, hostChannel, hos
 	d.prevMu.Unlock()
 
 	go func() {
-		block := d.buildPreview(tw, pl) // "" on failure — cached so we don't refetch
+		e := d.buildPreview(tw, pl) // zero entry on failure — cached so we don't refetch
 		d.prevMu.Lock()
-		d.prevDone[key] = block
+		d.prevDone[key] = e
 		delete(d.prevInfl, key)
 		waiters := d.prevWait[key]
 		delete(d.prevWait, key)
@@ -143,13 +157,13 @@ func (d *daemon) previewFetchAsync(tw *workspace, pl permalink, hostChannel, hos
 
 // buildPreview fetches the linked message (cache-first, then live) plus, when it's
 // a thread root, its replies, and renders the quote block. Runs off the render path.
-func (d *daemon) buildPreview(tw *workspace, pl permalink) string {
+func (d *daemon) buildPreview(tw *workspace, pl permalink) previewEntry {
 	ctx, cancel := context.WithTimeout(d.ctx, permalinkFetchTimeout)
 	defer cancel()
 
 	target, ok := d.fetchOne(ctx, tw, pl.channelID, pl.ts)
 	if !ok {
-		return ""
+		return previewEntry{}
 	}
 	var replies []slack.Message
 	isRoot := pl.threadTS == "" || pl.threadTS == pl.ts
@@ -193,11 +207,13 @@ func messageFromRaw(raw string) (slack.Message, bool) {
 	return m, true
 }
 
-// renderPreview builds the shareQuotes-shaped block: a `> ↰ *Author* · <url>` head,
-// the parent body as `> ` lines, then up to maxInlineReplies `> ↳` reply lines with
-// a `+K more` tail when the thread runs longer. Author ids resolve via the target
-// workspace (resolveUnknownUsers pulls in externals), so names read correctly.
-func (d *daemon) renderPreview(tw *workspace, url string, m slack.Message, replies []slack.Message) string {
+// renderPreview builds the shareQuotes-shaped quote block. It returns both a `full`
+// form (head + parent body + up to maxInlineReplies `> ↳` reply lines, `+K more`
+// tail beyond) for a bare link, and a `repliesOnly` form (just the reply lines) for
+// when the host is a shared-message card that already shows the parent. Author ids
+// resolve via the target workspace (resolveUnknownUsers pulls in externals). The
+// permalink is rendered as a compact `↗` label so the raw URL isn't dumped as text.
+func (d *daemon) renderPreview(tw *workspace, url string, m slack.Message, replies []slack.Message) previewEntry {
 	ids := []string{authorOf(m)}
 	shown := replies
 	extra := 0
@@ -210,21 +226,43 @@ func (d *daemon) renderPreview(tw *workspace, url string, m slack.Message, repli
 	}
 	d.resolveUnknownUsers(tw, ids)
 
-	var b strings.Builder
-	b.WriteString("> ↰ *" + previewAuthor(tw, m) + "*")
-	if url != "" {
-		b.WriteString(" · <" + url + ">")
-	}
-	for _, l := range strings.Split(displayText(m), "\n") {
-		b.WriteString("\n> " + l)
-	}
+	var reply strings.Builder
 	for _, r := range shown {
-		b.WriteString("\n> ↳ *" + previewAuthor(tw, r) + "* " + oneLine(displayText(r)))
+		reply.WriteString("> ↳ *" + previewAuthor(tw, r) + "* " + oneLine(displayText(r)) + "\n")
 	}
 	if extra > 0 {
-		b.WriteString(fmt.Sprintf("\n> ↳ +%d more", extra))
+		reply.WriteString(fmt.Sprintf("> ↳ +%d more\n", extra))
 	}
-	return b.String()
+	repliesOnly := strings.TrimRight(reply.String(), "\n")
+
+	parentLines := strings.Split(displayText(m), "\n")
+	var full strings.Builder
+	full.WriteString("> ↰ *" + previewAuthor(tw, m) + "*")
+	if url != "" {
+		full.WriteString(" · <" + url + "|↗>")
+	}
+	for _, l := range parentLines {
+		full.WriteString("\n> " + l)
+	}
+	if repliesOnly != "" {
+		full.WriteString("\n" + repliesOnly)
+	}
+
+	return previewEntry{full: full.String(), repliesOnly: repliesOnly, parentKey: parentKey(parentLines)}
+}
+
+// parentKey is a stable ~60-char prefix of the parent's first real line, used to
+// detect that the host already renders the parent (a shared-message card).
+func parentKey(lines []string) string {
+	for _, l := range lines {
+		if s := strings.TrimSpace(l); s != "" {
+			if len(s) > 60 {
+				s = s[:60]
+			}
+			return s
+		}
+	}
+	return ""
 }
 
 func previewAuthor(tw *workspace, m slack.Message) string {

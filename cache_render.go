@@ -282,10 +282,10 @@ func shareQuotes(atts []slack.Attachment) string {
 		}
 		head := "> ↰ *" + a.AuthorName + "*"
 		if a.FromURL != "" {
-			// link to the original message — the share carries only its text,
-			// context (links, unfurls, thread) lives at the source. Angle form:
-			// firstLink (feeds the `o` keybind) only matches <https://…>.
-			head += " · <" + a.FromURL + ">"
+			// link to the original message as a compact ↗ label (not the raw URL,
+			// which is long and noisy). `<url|label>` still feeds the `o` keybind:
+			// firstLink matches <https://… up to the `|`, render shows the label.
+			head += " · <" + a.FromURL + "|↗>"
 		}
 		if t != "" {
 			lines := strings.Split(t, "\n")

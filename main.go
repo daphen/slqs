@@ -391,7 +391,7 @@ type daemon struct {
 	forceDM  map[string]bool // DM ids opened this session — shown even without a watermark/messages (guarded by mu)
 
 	prevMu   sync.Mutex                    // guards the permalink-preview cache
-	prevDone map[string]string             // target "chan|ts" -> rendered preview ("" = resolved, nothing to show)
+	prevDone map[string]previewEntry       // target "chan|ts" -> resolved preview (zero entry = resolved, nothing to show)
 	prevInfl map[string]bool               // target -> a fetch is in flight
 	prevWait map[string]map[[2]string]bool // target -> host {channel,ts} set awaiting re-broadcast
 
@@ -2519,7 +2519,7 @@ func main() {
 		conns:               map[net.Conn]struct{}{},
 		userMiss:            map[string]bool{},
 		forceDM:             map[string]bool{},
-		prevDone:            map[string]string{},
+		prevDone:            map[string]previewEntry{},
 		prevInfl:            map[string]bool{},
 		prevWait:            map[string]map[[2]string]bool{},
 	}
