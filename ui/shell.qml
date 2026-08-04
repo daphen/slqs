@@ -202,6 +202,7 @@ FloatingWindow {
     function closeProfileAction() { Backend.closeProfile(); backToNormal() }
 
     function currentMode() {
+        if (sidebar.visualMode) return "sidebarVisual"
         if (Backend.profileOpen) return "profile"
         if (Backend.threadOpen) return "thread"
         if (Backend.threadsView && focusedPanel === "messages") return "threadsPage"
@@ -295,14 +296,20 @@ FloatingWindow {
             "e":        { act: () => { if (focusedPanel === "messages") { const m = msgs.currentMessage(); if (m && m.mine) composer.startEdit(m) } }, help: "Edit your message", cat: "msg" },
             "D":        { act: () => { if (focusedPanel === "messages") askDelete(msgs.currentMessage()) }, help: "Delete your message", cat: "msg" },
             "S":        { act: () => { if (focusedPanel === "messages") Backend.downloadMedia(msgs.currentMessage()) }, help: "Save media", cat: "msg" },
-            "r":        { act: () => { if (focusedPanel === "messages") reactTo(msgs.currentMessage()) }, help: "React", cat: "msg" },
+            "r":        { act: () => { if (focusedPanel === "messages") reactTo(msgs.currentMessage())
+                                       else if (focusedPanel === "sidebar") sidebar.markCurrentRead() },
+                          help: () => focusedPanel === "sidebar" ? "Mark channel read" : "React", cat: "chats" },
             "A":        { act: () => { if (Backend.isSlack && focusedPanel === "messages") Backend.ackIncident(msgs.currentMessage()) }, help: () => Backend.isSlack ? "Acknowledge (incident.io)" : "", cat: "msg" },
             "y":        { act: () => { if (focusedPanel === "messages") Backend.copyText(msgs.currentMessage()) }, help: "Copy text", cat: "msg" },
             "o":        { act: () => { if (focusedPanel === "messages") win.openMsgLinks(msgs.currentMessage(), false) }, help: "Open link", cat: "msg" },
             "O":        { act: () => { if (focusedPanel === "messages") win.openMsgLinks(msgs.currentMessage(), true) }, help: "Open all links", cat: "msg" },
-            "v":        { act: () => { if (focusedPanel === "sidebar") win.voiceSelected()
-                                       else if (focusedPanel === "messages") Backend.viewImage(msgs.currentMessage()) },
-                          help: () => win.isDiscord ? "Join/leave voice (on a voice channel) · view image" : "View image", cat: "msg" },
+            "v":        { act: () => { if (focusedPanel === "sidebar") {
+                                           const it = sidebar.cursorItem
+                                           if (win.isDiscord && it && it.kind === "voice") win.voiceSelected()
+                                           else sidebar.visualStart()
+                                       } else if (focusedPanel === "messages") Backend.viewImage(msgs.currentMessage()) },
+                          help: () => focusedPanel === "sidebar" ? "Select channels (visual) · voice on a voice channel"
+                                    : "View image", cat: "chats" },
             // voice notes are Discord-only (Slack's clips API is closed)
             "V":        { act: () => { if (win.isDiscord) Backend.voiceRecord() },
                           help: () => win.isDiscord ? "Record voice note" : "", cat: "msg" },
@@ -321,6 +328,21 @@ FloatingWindow {
                               else win.uploadClipboardPath()
                           }, help: "Upload file path from clipboard", cat: "chats" },
             "esc":      { act: () => backToNormal(), help: "Back to normal", cat: "view" },
+        },
+        // Sidebar visual-select: v enters (from "channel"), j/k extend the range,
+        // r marks the selected channels read, esc/v/q exit. Only the keys defined
+        // here fire while active — the mode owns the keyboard.
+        "sidebarVisual": {
+            "j":        { act: () => sidebar.visualMove(consumeCount()),  help: "Extend down", cat: "nav" },
+            "k":        { act: () => sidebar.visualMove(-consumeCount()), help: "Extend up", cat: "nav" },
+            "ctrl+d":   { act: () => sidebar.visualMove(8),  help: "Extend half-page down", cat: "nav" },
+            "ctrl+u":   { act: () => sidebar.visualMove(-8), help: "Extend half-page up", cat: "nav" },
+            "g":        { act: () => sidebar.visualMove(-9999), help: "Extend to top", cat: "nav" },
+            "G":        { act: () => sidebar.visualMove(9999),  help: "Extend to bottom", cat: "nav" },
+            "r":        { act: () => sidebar.markSelectedRead(), help: "Mark selected read", cat: "chats" },
+            "v":        { act: () => sidebar.visualEnd(), help: "Exit select", cat: "nav" },
+            "q":        { act: () => sidebar.visualEnd(), help: "Exit select", cat: "nav" },
+            "esc":      { act: () => sidebar.visualEnd(), help: "Exit select", cat: "view" },
         },
         "thread": {
             "j":      { act: () => thread.move(1),  help: "Move down", cat: "nav" },

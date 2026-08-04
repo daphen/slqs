@@ -22,6 +22,36 @@ Rectangle {
     // Counts walk through them like list rows (13k from row 5 included).
     property bool threadsSelected: false
     property bool mentionsSelected: false
+
+    // Visual-select: v anchors, j/k extend a contiguous range, r marks it read.
+    property bool visualMode: false
+    property int  anchorIndex: -1
+    function visualStart() {
+        if (threadsSelected || mentionsSelected || list.count === 0) return
+        threadsSelected = false; mentionsSelected = false
+        anchorIndex = list.currentIndex
+        visualMode = true
+    }
+    function visualEnd() { visualMode = false; anchorIndex = -1 }
+    // move within the channel list only — never into the Threads/Mentions rows
+    function visualMove(d) {
+        list.currentIndex = Math.max(0, Math.min(list.count - 1, list.currentIndex + d))
+    }
+    function selIds() {
+        if (!visualMode || anchorIndex < 0) return []
+        const lo = Math.min(anchorIndex, list.currentIndex)
+        const hi = Math.max(anchorIndex, list.currentIndex)
+        const ids = []
+        for (let i = lo; i <= hi; i++) { const c = Backend.channels.get(i); if (c) ids.push(c.id) }
+        return ids
+    }
+    function markSelectedRead() { const ids = selIds(); visualEnd(); Backend.markChannelsRead(ids) }
+    // single-channel mark-read (normal nav) — the batch's building block
+    function markCurrentRead() {
+        if (threadsSelected || mentionsSelected) return
+        const it = Backend.channels.get(list.currentIndex)
+        if (it) Backend.markChannelRead(it.id)
+    }
     function move(d) {
         if (threadsSelected) {
             if (d > 0) {
@@ -268,6 +298,11 @@ Rectangle {
                 // faint isOpen indicator (below), so it doesn't read as a live
                 // cursor while you're navigating messages/threads.
                 readonly property bool primary: sidebar.active && !sidebar.threadsSelected && !sidebar.mentionsSelected && cursor
+                // in the visual-select range (v + j/k). The cursor row keeps its
+                // opaque ink pill; the rest of the range shows a tint behind it.
+                readonly property bool inRange: sidebar.visualMode && !sidebar.threadsSelected && !sidebar.mentionsSelected
+                    && index >= Math.min(sidebar.anchorIndex, list.currentIndex)
+                    && index <= Math.max(sidebar.anchorIndex, list.currentIndex)
                 // Focus highlight matches the chat: subtle overlay + accent bar
                 // (90ms / 120ms). Open channel stays faintly findable when the
                 // cursor is elsewhere, but isn't a second "active" marker.
@@ -279,6 +314,14 @@ Rectangle {
                 // hairpin). Idle open channel keeps the faint tint. Inner
                 // rect: rows are full-bleed in the ListView, and a filled
                 // pill needs the same inset the search field has.
+                Rectangle {   // visual-select range tint (behind the cursor pill)
+                    anchors.fill: parent
+                    anchors.leftMargin: 6
+                    anchors.rightMargin: 6
+                    radius: height / 2
+                    visible: row.inRange
+                    color: Qt.rgba(Theme.fg.r, Theme.fg.g, Theme.fg.b, 0.13)
+                }
                 Rectangle {
                     anchors.fill: parent
                     anchors.leftMargin: 6

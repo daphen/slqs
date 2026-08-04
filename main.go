@@ -1970,13 +1970,20 @@ func (d *daemon) readConn(c net.Conn) {
 		case "markread":
 			// Opening a channel marks it read on the server (Before carries the
 			// latest message ts), so it doesn't resurface as unread elsewhere.
-			if cmd.Before != "" {
+			// The sidebar mark-read sends no Before — mark to the channel's newest
+			// cached message instead.
+			before := cmd.Before
+			if before == "" {
+				d.cacheDB.QueryRowContext(d.ctx,
+					`SELECT COALESCE(MAX(ts),'') FROM messages WHERE channel_id=?`, id).Scan(&before)
+			}
+			if before != "" {
 				// Update local read-state immediately. Slack's im_marked/
 				// channel_marked echo is unreliable (esp. for DMs), so relying on
 				// it alone left read DMs stuck unread after every recompute/restart.
-				d.writeDB.UpdateChannelReadState(id, cmd.Before, false)
+				d.writeDB.UpdateChannelReadState(id, before, false)
 				go func(w *workspace) {
-					if err := w.client.MarkChannel(d.ctx, id, cmd.Before); err != nil {
+					if err := w.client.MarkChannel(d.ctx, id, before); err != nil {
 						log.Printf("markread: %v", err)
 					}
 				}(w)

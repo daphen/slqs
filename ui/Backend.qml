@@ -1460,6 +1460,17 @@ Item {
     }
     // Authoritative unread from slkd (reflects reads made in slk too).
     function setChannelUnread(id, count, mention) { applyUnread(id, count, mention) }
+
+    // Mark a channel read without opening it (sidebar). No ts: the daemon marks
+    // to the channel's newest message. Clear unread locally for instant feedback.
+    function markChannelRead(id) {
+        if (!id) return
+        safeWrite(JSON.stringify({ type: "markread", channel: id }) + "\n")
+        setChannelUnread(id, 0, false)
+    }
+    function markChannelsRead(ids) {
+        for (let i = 0; i < (ids ? ids.length : 0); i++) markChannelRead(ids[i])
+    }
     // A live thread reply bumps the parent's "N replies" count in the channel view
     // (the reply itself lands in the thread panel, not the timeline).
     function bumpReplyCount(channelId, parentTs) {
