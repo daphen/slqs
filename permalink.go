@@ -23,7 +23,11 @@ const (
 	permalinkFetchTimeout = 8 * time.Second
 	maxInlineReplies      = 3
 	previewLineCap        = 160
+	permaConcurrency      = 2 // max concurrent permalink resolutions (rate-limit guard)
 )
+
+// permaSem bounds how many permalink fetches hit the Slack API at once.
+var permaSem = make(chan struct{}, permaConcurrency)
 
 type permalink struct {
 	subdomain string
@@ -142,7 +146,13 @@ func (d *daemon) previewFetchAsync(tw *workspace, pl permalink, hostChannel, hos
 	d.prevMu.Unlock()
 
 	go func() {
+		// Cap concurrent permalink fetches: a channel full of shared-message
+		// links must not fan out one history+replies burst per link at once —
+		// an un-throttled storm can get the whole Slack session rate-limited
+		// (and its websocket dropped). At most permaConcurrency run in flight.
+		permaSem <- struct{}{}
 		e := d.buildPreview(tw, pl) // zero entry on failure — cached so we don't refetch
+		<-permaSem
 		d.prevMu.Lock()
 		d.prevDone[key] = e
 		delete(d.prevInfl, key)

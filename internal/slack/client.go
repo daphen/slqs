@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/http/cookiejar"
 	"net/url"
@@ -303,10 +304,15 @@ func (c *Client) StartWebSocket(handler EventHandler) error {
 		for {
 			_, message, err := conn.ReadMessage()
 			if err != nil {
-				if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-					return
+				// Log WHY the connection dropped so a flapping workspace is
+				// diagnosable: a Slack close frame carries a code+reason
+				// (policy/replaced/going-away); anything else is a network/read
+				// error (timeout, reset).
+				if ce, ok := err.(*websocket.CloseError); ok {
+					log.Printf("[%s] ws closed by server: code=%d reason=%q", c.teamID, ce.Code, ce.Text)
+				} else if !websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
+					log.Printf("[%s] ws read error: %v", c.teamID, err)
 				}
-				// Read error (timeout, connection closed, etc.) — exit loop
 				return
 			}
 			// Reset deadline on every successful read
@@ -625,8 +631,30 @@ func (c *Client) GetOlderHistory(ctx context.Context, channelID string, limit in
 // newest-first, matching Slack's conversations.history ordering. Used
 // by jump-to-message navigation (search results, permalinks) when the
 // target is outside the loaded buffer.
+// historyWithBackoff wraps conversations.history so a 429 waits + retries the
+// same page instead of hammering (the permalink resolver + jump path fan these
+// out, and an un-throttled burst can get the whole session rate-limited).
+func (c *Client) historyWithBackoff(ctx context.Context, p *slack.GetConversationHistoryParameters) (*slack.GetConversationHistoryResponse, error) {
+	for {
+		resp, err := c.api.GetConversationHistory(p)
+		if rlErr, ok := err.(*slack.RateLimitedError); ok {
+			wait := rlErr.RetryAfter
+			if wait == 0 {
+				wait = 30 * time.Second
+			}
+			select {
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			case <-time.After(wait):
+			}
+			continue
+		}
+		return resp, err
+	}
+}
+
 func (c *Client) GetHistoryAround(ctx context.Context, channelID, ts string, limit int) ([]slack.Message, error) {
-	older, err := c.api.GetConversationHistory(&slack.GetConversationHistoryParameters{
+	older, err := c.historyWithBackoff(ctx, &slack.GetConversationHistoryParameters{
 		ChannelID: channelID,
 		Latest:    ts,
 		Inclusive: true,
@@ -638,7 +666,7 @@ func (c *Client) GetHistoryAround(ctx context.Context, channelID, ts string, lim
 	if err := ctx.Err(); err != nil {
 		return nil, fmt.Errorf("getting history around %s: %w", ts, err)
 	}
-	newer, err := c.api.GetConversationHistory(&slack.GetConversationHistoryParameters{
+	newer, err := c.historyWithBackoff(ctx, &slack.GetConversationHistoryParameters{
 		ChannelID: channelID,
 		Oldest:    ts,
 		Inclusive: false,
@@ -1163,6 +1191,18 @@ func (c *Client) GetReplies(ctx context.Context, channelID, threadTS string) ([]
 			Cursor:    cursor,
 		})
 		if err != nil {
+			if rlErr, ok := err.(*slack.RateLimitedError); ok {
+				wait := rlErr.RetryAfter
+				if wait == 0 {
+					wait = 30 * time.Second
+				}
+				select {
+				case <-ctx.Done():
+					return nil, ctx.Err()
+				case <-time.After(wait):
+				}
+				continue // retry same page instead of hammering
+			}
 			return nil, fmt.Errorf("getting thread replies: %w", err)
 		}
 		allMessages = append(allMessages, msgs...)
