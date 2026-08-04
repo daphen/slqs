@@ -27,6 +27,10 @@ func (h *wsHandler) OnConnect() {
 	go h.d.backfill(h.w)
 }
 func (h *wsHandler) OnDisconnect() { log.Printf("[%s] websocket disconnected", h.w.teamName) }
+func (h *wsHandler) OnReconnectURL(u string) {
+	log.Printf("[%s] reconnect_url received — next reconnect will migrate", h.w.teamName)
+	h.w.client.SetReconnectURL(u)
+}
 
 func (h *wsHandler) OnMessage(channelID, userID, ts, text, threadTS, subtype string, edited, changed bool, files []slack.File, blocks slack.Blocks, attachments []slack.Attachment, botID, username string) {
 	authorID := userID

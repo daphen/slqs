@@ -78,6 +78,13 @@ type Client struct {
 	token  string
 	cookie string
 
+	// reconnectURL is the gateway URL Slack hands out via reconnect_url events.
+	// On a grid workspace Slack migrates you between gateways and abruptly cuts
+	// (1006/EOF) connections that don't follow — so the NEXT reconnect dials this
+	// instead of the fixed default. Guarded by rcMu.
+	rcMu         sync.Mutex
+	reconnectURL string
+
 	// apiBaseURL is the workspace-specific Web API root, e.g.
 	// "https://slack.com/api/" for non-grid workspaces or
 	// "https://hackclub.enterprise.slack.com/api/" for enterprise grids.
@@ -264,18 +271,43 @@ func wsUpgradeHeaders() http.Header {
 // and d cookie, matching the protocol used by the browser client.
 // Events are dispatched to the provided handler in a goroutine.
 // Call this after Connect.
+// SetReconnectURL stores the gateway URL from a reconnect_url event; the next
+// StartWebSocket dials it instead of the fixed default.
+func (c *Client) SetReconnectURL(u string) {
+	c.rcMu.Lock()
+	c.reconnectURL = u
+	c.rcMu.Unlock()
+}
+
 func (c *Client) StartWebSocket(handler EventHandler) error {
-	wsURL := fmt.Sprintf(
-		"wss://wss-primary.slack.com/?token=%s&sync_desync=1&slack_client=desktop&start_args=%%3Fagent%%3Dclient%%26connect_only%%3Dtrue%%26ms_latest%%3Dtrue&no_query_on_subscribe=1&flannel=3&lazy_channels=1&gateway_server=%s-1&batch_presence_aware=1",
-		url.QueryEscape(c.token),
-		c.teamID,
-	)
+	// Prefer the migration URL Slack last handed us (reconnect_url); fall back to
+	// the fixed default on first connect or if none is pending.
+	c.rcMu.Lock()
+	wsURL := c.reconnectURL
+	c.rcMu.Unlock()
+	usedReconnectURL := wsURL != ""
+	if !usedReconnectURL {
+		wsURL = fmt.Sprintf(
+			"wss://wss-primary.slack.com/?token=%s&sync_desync=1&slack_client=desktop&start_args=%%3Fagent%%3Dclient%%26connect_only%%3Dtrue%%26ms_latest%%3Dtrue&no_query_on_subscribe=1&flannel=3&lazy_channels=1&gateway_server=%s-1&batch_presence_aware=1",
+			url.QueryEscape(c.token),
+			c.teamID,
+		)
+	}
 
 	jar := newCookieJar(c.cookie)
 	dialer := &websocket.Dialer{Jar: jar}
 
 	conn, _, err := dialer.Dial(wsURL, wsUpgradeHeaders())
 	if err != nil {
+		// A stale migration URL must not wedge us — drop it so the next retry
+		// dials the fixed default.
+		if usedReconnectURL {
+			c.rcMu.Lock()
+			if c.reconnectURL == wsURL {
+				c.reconnectURL = ""
+			}
+			c.rcMu.Unlock()
+		}
 		return fmt.Errorf("websocket connect failed: %w", err)
 	}
 	c.wsConn = conn

@@ -22,6 +22,7 @@ type mockEventHandler struct {
 	reactions           []string
 	presenceChanges     []string
 	typingEvents        []string
+	reconnectURL        string
 	selfPresenceChanges []string
 	dndChanges          []dndChangeRecord
 	lastBlocks          slack.Blocks
@@ -102,6 +103,7 @@ func (m *mockEventHandler) OnUserTyping(channelID, threadTS, userID string) {
 }
 func (m *mockEventHandler) OnConnect()    {}
 func (m *mockEventHandler) OnDisconnect() {}
+func (m *mockEventHandler) OnReconnectURL(u string) { m.reconnectURL = u }
 func (m *mockEventHandler) OnUserChange(u slack.User) {}
 
 func (m *mockEventHandler) OnSelfPresenceChange(presence string) {
@@ -290,6 +292,20 @@ func TestDispatchWebSocketUserTypingEvent(t *testing.T) {
 	}
 	if handler.typingEvents[0] != "C1:U1" {
 		t.Errorf("expected 'C1:U1', got %q", handler.typingEvents[0])
+	}
+}
+
+func TestDispatchWebSocketReconnectURLEvent(t *testing.T) {
+	handler := &mockEventHandler{}
+	dispatchWebSocketEvent([]byte(`{"type":"reconnect_url","url":"wss://wss-primary.slack.com/?token=x"}`), handler)
+	if handler.reconnectURL != "wss://wss-primary.slack.com/?token=x" {
+		t.Errorf("reconnect_url not captured, got %q", handler.reconnectURL)
+	}
+	// a malformed / urn-less event must not set it
+	handler.reconnectURL = ""
+	dispatchWebSocketEvent([]byte(`{"type":"reconnect_url"}`), handler)
+	if handler.reconnectURL != "" {
+		t.Errorf("empty url should be ignored, got %q", handler.reconnectURL)
 	}
 }
 

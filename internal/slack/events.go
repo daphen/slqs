@@ -27,6 +27,9 @@ type EventHandler interface {
 	OnUserTyping(channelID, threadTS, userID string)
 	OnConnect()
 	OnDisconnect()
+	// OnReconnectURL carries the gateway URL Slack hands out via reconnect_url
+	// events — the next reconnect should dial it (grid migration).
+	OnReconnectURL(url string)
 	OnSelfPresenceChange(presence string)
 	OnDNDChange(enabled bool, endUnix int64)
 	// OnUserChange is delivered for user_status_changed / user_change WS events
@@ -492,7 +495,16 @@ func dispatchWebSocketEvent(data []byte, handler EventHandler) {
 		handler.OnConnect()
 
 	case "reconnect_url":
-		// Could store for reconnection; ignoring for now
+		// Slack hands out a gateway URL to migrate to; store it so the next
+		// reconnect dials it. Ignoring these got the connection abruptly cut
+		// (1006/EOF) on grid workspaces.
+		var evt struct {
+			URL string `json:"url"`
+		}
+		if err := json.Unmarshal(data, &evt); err != nil || evt.URL == "" {
+			return
+		}
+		handler.OnReconnectURL(evt.URL)
 
 	default:
 		// Ignore other event types. When debug logging is on, dump them
