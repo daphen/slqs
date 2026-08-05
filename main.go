@@ -1329,7 +1329,7 @@ func (d *daemon) readConn(c net.Conn) {
 		var cmd struct {
 			Type, Channel, Text, Before, Thread, Id, Url, Ext, Mediatype, Ts, Emoji, Workspace, Team, State, User, Path, ActionID string
 			Remove, Broadcast                                                                                                     bool
-			Images                                                                                                      []struct{ Id, Url, Ext, Name string } // "view"/"download" can carry several files
+			Images                                                                                                      []struct{ Id, Url, Ext, Name, Savepath string } // "view"/"download" can carry several files
 		}
 		if json.Unmarshal(sc.Bytes(), &cmd) != nil {
 			continue
@@ -1479,7 +1479,13 @@ func (d *daemon) readConn(c net.Conn) {
 						}
 						name = im.Id + "." + ext
 					}
-					if d.downloadFile(filepath.Join(dir, name), im.Url, w.token, w.cookie) {
+					target := filepath.Join(dir, name)
+					if im.Savepath != "" {
+						target = im.Savepath
+						os.MkdirAll(filepath.Dir(target), 0755)
+						name = filepath.Base(target)
+					}
+					if d.downloadFile(target, im.Url, w.token, w.cookie) {
 						saved++
 						last = name
 					}
@@ -1502,7 +1508,7 @@ func (d *daemon) readConn(c net.Conn) {
 			}
 			items := cmd.Images
 			if len(items) == 0 && cmd.Url != "" { // single-item fallback (older shape)
-				items = append(items, struct{ Id, Url, Ext, Name string }{cmd.Id, cmd.Url, cmd.Ext, ""})
+				items = append(items, struct{ Id, Url, Ext, Name, Savepath string }{cmd.Id, cmd.Url, cmd.Ext, "", ""})
 			}
 			mediatype := cmd.Mediatype
 			go func(w *workspace) {

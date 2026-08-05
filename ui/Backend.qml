@@ -1376,13 +1376,26 @@ Item {
         safeWrite(JSON.stringify({ type: "download", channel: currentChannelId, images: items }) + "\n")
         toast("downloading…")
     }
-    // Download a single attachment (the file pill: click or ⇧S). Uses `link`,
-    // the CDN url the file pill carries (images carry `full` instead).
+    signal downloadPickRequested(var img)
+    // File pill (click or ⇧S): pop the portal Save dialog first so the user
+    // picks where it lands. Files carry `link` (images carry `full`).
     function downloadFile(img) {
         if (!img || !img.link) { toast("nothing to download"); return }
+        downloadPickRequested(img)
+    }
+    // Called back once a save path is chosen; runs the actual download.
+    function sendDownloadToPath(img, path) {
+        if (!img || !img.link || !path) return
         safeWrite(JSON.stringify({ type: "download", channel: currentChannelId,
-            images: [{ id: img.id, url: img.link, ext: img.ext || "", name: img.name || "" }] }) + "\n")
+            images: [{ id: img.id, url: img.link, ext: img.ext || "", name: img.name || "", savepath: path }] }) + "\n")
         toast("downloading…")
+    }
+    // First file attachment in a message (for the ⇧S path).
+    function fileAttachment(msg) {
+        if (!msg) return null
+        let a; try { a = JSON.parse(msg.imagesJson || "[]") } catch (e) { return null }
+        for (let i = 0; i < a.length; i++) if (a[i] && a[i].type === "file") return a[i]
+        return null
     }
     function viewImage(msg) {
         if (!msg) return

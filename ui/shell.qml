@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Window
+import QtQuick.Dialogs
 import Quickshell
 import Quickshell.Io
 import "."
@@ -197,6 +198,31 @@ FloatingWindow {
         }
     }
 
+    // Saving a file attachment: the daemon downloads, but WHERE is the user's
+    // call — pop the portal Save dialog (their default file browser; yazi for us).
+    property var _saveImg: null
+    Connections {
+        target: Backend
+        function onDownloadPickRequested(img) {
+            win._saveImg = img
+            const home = Quickshell.env("HOME")
+            saveDialog.currentFolder = "file://" + home + "/Downloads"
+            saveDialog.selectedFile = "file://" + home + "/Downloads/" + (img && img.name ? img.name : "download")
+            saveDialog.open()
+        }
+    }
+    FileDialog {
+        id: saveDialog
+        fileMode: FileDialog.SaveFile
+        onAccepted: {
+            let p = saveDialog.selectedFile.toString()
+            if (p.startsWith("file://")) p = decodeURIComponent(p.slice(7))
+            if (win._saveImg) Backend.sendDownloadToPath(win._saveImg, p)
+            win._saveImg = null
+        }
+        onRejected: win._saveImg = null
+    }
+
     // ── key handling as a small state machine ────────────────────────────
     // Each mode is a {keyId → action} table. routeKey normalizes the event to
     // a keyId, picks the table for the current mode, and dispatches. Adding a
@@ -298,7 +324,7 @@ FloatingWindow {
             "R":        { act: () => { if (focusedPanel === "messages") { composer.startReply(msgs.currentMessage()); focusPanel("messages") } }, help: () => Backend.hasThreads ? "Reply in thread" : "Reply to message", cat: "msg" },
             "e":        { act: () => { if (focusedPanel === "messages") { const m = msgs.currentMessage(); if (m && m.mine) composer.startEdit(m) } }, help: "Edit your message", cat: "msg" },
             "D":        { act: () => { if (focusedPanel === "messages") askDelete(msgs.currentMessage()) }, help: "Delete your message", cat: "msg" },
-            "S":        { act: () => { if (focusedPanel === "messages") Backend.downloadMedia(msgs.currentMessage()) }, help: "Save media", cat: "msg" },
+            "S":        { act: () => { if (focusedPanel !== "messages") return; const m = msgs.currentMessage(); const f = Backend.fileAttachment(m); if (f) Backend.downloadFile(f); else Backend.downloadMedia(m) }, help: "Save media", cat: "msg" },
             "r":        { act: () => { if (focusedPanel === "messages") reactTo(msgs.currentMessage())
                                        else if (focusedPanel === "sidebar") sidebar.markCurrentRead() },
                           help: () => focusedPanel === "sidebar" ? "Mark channel read" : "React", cat: "chats" },
@@ -370,7 +396,7 @@ FloatingWindow {
             "Y":      { act: () => Backend.copyLink(thread.currentMessage()), help: "Copy message link", cat: "msg" },
             "e":      { act: () => { const m = thread.currentMessage(); if (m && m.mine) thread.startEdit(m) }, help: "Edit your message", cat: "msg" },
             "D":      { act: () => askDelete(thread.currentMessage()), help: "Delete your message", cat: "msg" },
-            "S":      { act: () => Backend.downloadMedia(thread.currentMessage()), help: "Save media", cat: "msg" },
+            "S":      { act: () => { const m = thread.currentMessage(); const f = Backend.fileAttachment(m); if (f) Backend.downloadFile(f); else Backend.downloadMedia(m) }, help: "Save media", cat: "msg" },
             "ctrl+k": { act: () => palette.show(), help: "Jump palette", cat: "chats" },
             "ctrl+o": { act: () => Backend.toggleLastChannel(), help: "Last channel", cat: "chats" },
             "ctrl+i": { act: () => Backend.gotoFirstUnread(), help: "Go to first unread", cat: "chats" },
