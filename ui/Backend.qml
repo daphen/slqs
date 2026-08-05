@@ -1368,12 +1368,20 @@ Item {
         if (!msg) return
         let imgs
         try { imgs = JSON.parse(msg.imagesJson || "[]") } catch (e) { return }
-        imgs = imgs.filter(function (i) { return i.full && i.type !== "music" })
+        imgs = imgs.filter(function (i) { return (i.full || i.link) && i.type !== "music" })
         if (!imgs.length) { toast("nothing to download"); return }
         const items = imgs.map(function (i) {
-            return { id: i.id, url: i.full, ext: i.ext || "", name: i.name || "" }
+            return { id: i.id, url: i.full || i.link, ext: i.ext || "", name: i.name || "" }
         })
         safeWrite(JSON.stringify({ type: "download", channel: currentChannelId, images: items }) + "\n")
+        toast("downloading…")
+    }
+    // Download a single attachment (the file pill: click or ⇧S). Uses `link`,
+    // the CDN url the file pill carries (images carry `full` instead).
+    function downloadFile(img) {
+        if (!img || !img.link) { toast("nothing to download"); return }
+        safeWrite(JSON.stringify({ type: "download", channel: currentChannelId,
+            images: [{ id: img.id, url: img.link, ext: img.ext || "", name: img.name || "" }] }) + "\n")
         toast("downloading…")
     }
     function viewImage(msg) {

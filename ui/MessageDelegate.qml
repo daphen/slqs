@@ -344,11 +344,15 @@ Item {
                             color: Theme.fg_muted
                             font.family: Theme.fontFamily; font.pixelSize: 11
                         }
+                        // download affordance — shown only while the row is the cursor
+                        Item { width: 3; height: 1; visible: del.cursor }
+                        KeyCap { anchors.verticalCenter: parent.verticalCenter; small: true; text: "⇧S"; visible: del.cursor }
+                        CapLabel { anchors.verticalCenter: parent.verticalCenter; text: "download"; visible: del.cursor }
                     }
                     HoverHandler { enabled: pillRect.isFile; cursorShape: Qt.PointingHandCursor }
                     TapHandler {
                         enabled: pillRect.isFile
-                        onTapped: if (img.link) Qt.openUrlExternally(img.link)
+                        onTapped: Backend.downloadFile(pillRect.img)
                     }
                     Row {
                         id: audioRow
