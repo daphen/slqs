@@ -13,7 +13,8 @@ Modal {
     panelColor: Theme.bg
     chinBar: true
 
-    readonly property string titleFont: "Sigurd"
+    // Sigurd when installed (David); bundled Instrument Serif otherwise (friends).
+    readonly property string titleFont: Qt.fontFamilies().indexOf("Sigurd") >= 0 ? "Sigurd" : "Instrument Serif"
     property var clis: Backend.summarizeClis
     property string vendor: "anthropic"     // key-path vendor selection
 

@@ -16,7 +16,10 @@ Modal {
     panelColor: Theme.bg
 
     // the hero TITLE face only — everything else is mono, like the today view
-    readonly property string titleFont: "Sigurd"
+    // Sigurd when it's installed (David's licensed desktop copy); the bundled
+    // Instrument Serif otherwise (friends). quickshell has no font-family list,
+    // so pick the family at runtime instead of a CSS-style fallback stack.
+    readonly property string titleFont: Qt.fontFamilies().indexOf("Sigurd") >= 0 ? "Sigurd" : "Instrument Serif"
     readonly property string fgHex: "" + Theme.fg
     readonly property var cats: sm._cats(sm.text)
 

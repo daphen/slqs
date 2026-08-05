@@ -8,6 +8,9 @@ import QsLib as Lib
 
 FloatingWindow {
     id: win
+    // Bundled OFL serif — the display-title fallback on machines without Sigurd
+    // installed (friends). We ship the file so the family always resolves.
+    FontLoader { source: Qt.resolvedUrl("InstrumentSerif-Regular.ttf") }
     implicitWidth: 1180
     implicitHeight: 760
 
