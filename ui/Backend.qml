@@ -1136,7 +1136,7 @@ Item {
         else if (e.type === "delete") applyDelete(e.channel, e.ts)
         else if (e.type === "browse") { browseResults = e.channels || []; browseLoaded() }
         else if (e.type === "toast") { if (e.text) toast(e.text) }
-        else if (e.type === "summary") { summaryText = e.text || ""; summaryLoading = false; summaryTimeout.stop(); summaryReady() }
+        else if (e.type === "summary") { summaryText = e.text || ""; lastSummaryText = summaryText; lastSummaryChannel = currentChannel; summaryLoading = false; summaryTimeout.stop(); summaryReady() }
         else if (e.type === "answer") { summaryText = e.text || ""; summaryLoading = false; summaryTimeout.stop(); answerReady(e.question || "") }
         else if (e.type === "summaryError") { summaryLoading = false; summaryTimeout.stop(); if (e.text) toast(e.text) }
         else if (e.type === "summarizeSetup") { summaryLoading = false; summaryTimeout.stop(); summarizeClis = e.clis || []; summarizeSetupNeeded() }
@@ -1799,6 +1799,8 @@ Item {
     // in-scope messages and run them through the user-configured provider. The
     // result arrives async as a "summary" event (or an error toast).
     property string summaryText: ""
+    property string lastSummaryText: ""      // most recent summary this session — ⇧C reopens it
+    property string lastSummaryChannel: ""   // its channel name, for the modal subtitle
     property bool   summaryLoading: false   // drives the catch-up button spinner
     signal summaryReady()
     signal answerReady(string question)     // ask (Q&A) result — carries the asked question
