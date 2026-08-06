@@ -192,23 +192,23 @@ func prefetchAvatars(users []slack.User) {
 	log.Printf("avatar prefetch done (%d fetched)", n)
 }
 
-// cacheAvatar downloads one resolved user's avatar into the same cache
-// prefetchAvatars uses and registers it in d.avatars, so users missing from the
-// startup prefetch (external / Slack-Connect) show a photo instead of initials.
-// Best-effort; the on-disk file also survives a later scanAvatars re-scan.
-func (d *daemon) cacheAvatar(u slack.User) {
-	id := u.ID
-	if id == "" {
-		return
+// bestAvatarURL picks the crispest usable avatar URL from a user's profile.
+func bestAvatarURL(u slack.User) string {
+	for _, url := range []string{u.Profile.Image512, u.Profile.ImageOriginal, u.Profile.Image192} {
+		if strings.HasPrefix(url, "http") {
+			return url
+		}
 	}
-	url := u.Profile.Image512
-	if url == "" {
-		url = u.Profile.ImageOriginal
-	}
-	if url == "" {
-		url = u.Profile.Image192
-	}
-	if url == "" || !strings.HasPrefix(url, "http") {
+	return ""
+}
+
+// cacheAvatar downloads one user's avatar into the image cache and registers it
+// in d.avatars. Called ON DEMAND as a user's message renders (see avatarFor)
+// rather than in a startup bulk prefetch, so we don't flood the CDN on connect
+// with the whole org's avatars — that burst reads as scraping to Slack's abuse
+// heuristics. Deduped per user via avInflight so scrolling can't re-burst.
+func (d *daemon) cacheAvatar(id, url, hash string) {
+	if id == "" || url == "" || !strings.HasPrefix(url, "http") {
 		return
 	}
 	ext := "png"
@@ -220,7 +220,7 @@ func (d *daemon) cacheAvatar(u slack.User) {
 	// never reload; a new path shows on the next render. No hash → legacy name.
 	dir := filepath.Join(os.Getenv("HOME"), ".cache", "slqs", "images")
 	fname := "avatar-" + id + "-hi." + ext
-	if h := avatarHashClean(u.Profile.AvatarHash); h != "" {
+	if h := avatarHashClean(hash); h != "" {
 		fname = "avatar-" + id + "-" + h + "-hi." + ext
 	}
 	path := filepath.Join(dir, fname)
@@ -230,6 +230,11 @@ func (d *daemon) cacheAvatar(u slack.User) {
 	if cur == "file://"+path {
 		return // already the current pfp
 	}
+	if _, busy := d.avInflight.LoadOrStore(id, true); busy {
+		return // a fetch for this user is already running
+	}
+	defer d.avInflight.Delete(id)
+	os.MkdirAll(dir, 0700)
 	resp, err := http.Get(url)
 	if err != nil {
 		return
@@ -250,6 +255,18 @@ func (d *daemon) cacheAvatar(u slack.User) {
 	d.avMu.Lock()
 	d.avatars[id] = "file://" + path
 	d.avMu.Unlock()
+}
+
+// avatarFor returns the cached avatar path for a user, kicking off a lazy
+// on-demand fetch (shown on the next render) when it's not cached yet.
+func (d *daemon) avatarFor(w *workspace, uid string) string {
+	p := d.avatarPath(uid)
+	if p == "" && w != nil {
+		if url := w.avatarURL[uid]; url != "" {
+			go d.cacheAvatar(uid, url, w.avatarHash[uid])
+		}
+	}
+	return p
 }
 
 // avatarHashClean keeps only filename-safe chars from Slack's avatar_hash so it
@@ -344,7 +361,9 @@ type workspace struct {
 	cookie   string
 	selfID   string
 	client   *slackclient.Client
-	users    map[string]string // user id -> display name
+	users      map[string]string // user id -> display name
+	avatarURL  map[string]string // user id -> best avatar image URL (lazy fetch source)
+	avatarHash map[string]string // user id -> avatar_hash (versioned cache filename)
 	chans    map[string]string // channel id -> display name
 	chanKind map[string]string // channel id -> "channel"|"dm"
 	topics   map[string]string // channel id -> topic
@@ -380,6 +399,7 @@ type daemon struct {
 
 	avMu    sync.RWMutex
 	avatars map[string]string // userID -> file:// path
+	avInflight sync.Map        // userID -> in-flight on-demand avatar fetch (dedup)
 
 	backfillMu   sync.Mutex
 	lastBackfill map[string]time.Time // teamID -> last reconnect-backfill start
@@ -1044,7 +1064,7 @@ func (d *daemon) formatMsg(w *workspace, channelID, userID, ts, text, username s
 		"uid":           userID,
 		"initials":      initials(author),
 		"color":         colorFor(userID),
-		"avatar":        d.avatarPath(userID),
+		"avatar":        d.avatarFor(w, userID),
 		"time":          time.Unix(s, 0).Format("15:04"), // local tz
 		"text":          d.render(w, body),
 		"grouped":       false,
@@ -2212,7 +2232,7 @@ func (d *daemon) maybeNotify(w *workspace, chID, uID, text, threadTS string) {
 		body = "sent an attachment"
 	}
 	log.Printf("notify: [%s] ch=%s kind=%s from=%s", w.teamName, chName, kind, uID)
-	d.notifier.Notify(notify.RouteKey(w.teamID, chID, threadTS), title, body, d.avatarPath(uID))
+	d.notifier.Notify(notify.RouteKey(w.teamID, chID, threadTS), title, body, d.avatarFor(w, uID))
 }
 
 // onNotifActivate fires when a notification is clicked: open that channel
@@ -2352,6 +2372,8 @@ func (d *daemon) addWorkspace(ctx context.Context, tok slackclient.Token) (*work
 		selfID:   client.UserID(),
 		client:   client,
 		users:    map[string]string{},
+		avatarURL:  map[string]string{},
+		avatarHash: map[string]string{},
 		chans:    map[string]string{},
 		chanKind: map[string]string{},
 		topics:   map[string]string{},
@@ -2372,6 +2394,10 @@ func (d *daemon) addWorkspace(ctx context.Context, tok slackclient.Token) (*work
 		users = us
 		for _, u := range us {
 			w.users[u.ID] = nameFor(u, w.namePref)
+			if url := bestAvatarURL(u); url != "" {
+				w.avatarURL[u.ID] = url
+				w.avatarHash[u.ID] = u.Profile.AvatarHash
+			}
 			if e := strings.Trim(u.Profile.StatusEmoji, ":"); e != "" {
 				w.status[u.ID] = emojiGlyph(e)
 			}
@@ -2565,7 +2591,7 @@ func main() {
 	var emojiMu sync.Mutex
 
 	for _, tok := range tokens {
-		w, users, err := d.addWorkspace(ctx, tok)
+		w, _, err := d.addWorkspace(ctx, tok)
 		if err != nil {
 			log.Printf("skip workspace %s (%s): %v", tok.TeamName, tok.TeamID, err)
 			continue
@@ -2579,11 +2605,13 @@ func main() {
 		// slqs's OWN Slack websocket — persists live events to cache.db so the
 		// poll loop broadcasts them. This is what lets slk be retired entirely.
 		go slackclient.NewConnectionManager(w.client, &wsHandler{d: d, w: w}).Run(ctx)
-		go func(w *workspace, users []slack.User) {
-			prefetchAvatars(users)
+		go func(w *workspace) {
+			// No bulk avatar prefetch — avatars now load on demand as messages
+			// render (avatarFor), so we don't flood the CDN on connect. scanAvatars
+			// still loads any already-cached faces from disk immediately.
 			d.scanAvatars()
 			d.cacheCustomEmoji(ctx, w, customEmoji, &emojiMu)
-		}(w, users)
+		}(w)
 	}
 	if len(d.wsList) == 0 {
 		log.Fatal("no usable workspaces")

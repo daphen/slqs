@@ -182,7 +182,7 @@ func (h *wsHandler) OnUserChange(u slack.User) {
 	// Re-cache the avatar if the pfp changed (cacheAvatar is a no-op when the
 	// avatar_hash is unchanged). Scope A: the new image shows on the next render
 	// (channel reopen / their next message) — no live swap of on-screen rows.
-	go h.d.cacheAvatar(u)
+	go h.d.cacheAvatar(u.ID, bestAvatarURL(u), u.Profile.AvatarHash)
 }
 
 func (h *wsHandler) OnPresenceChange(userID, presence string) {
