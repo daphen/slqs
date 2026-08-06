@@ -35,6 +35,7 @@ Modal {
     function start() {
         mode = 0; sel = 0; people = []
         asking = false; pendingScope = ""; pendingUser = ""; pendingUserName = ""
+        questionInput.focus = false; questionInput.text = ""   // list nav owns the keyboard
         show()
     }
 
@@ -45,6 +46,7 @@ Modal {
     }
     function _toAsk() { mode = 2; questionInput.text = ""; Qt.callLater(() => questionInput.forceActiveFocus()) }
     function _submitAsk() {
+        if (sp.mode !== 2) return
         const q = questionInput.text.trim()
         if (!q.length) return
         sp.asked(pendingScope, pendingUser, q); sp.close()
@@ -182,6 +184,7 @@ Modal {
                 TextInput {
                     id: questionInput
                     anchors.fill: parent; anchors.leftMargin: 16; anchors.rightMargin: 16
+                    enabled: sp.mode === 2   // can't capture keys while the list is up
                     verticalAlignment: TextInput.AlignVCenter
                     color: Theme.fg; clip: true; selectByMouse: true
                     font.family: Theme.fontFamily; font.pixelSize: 14

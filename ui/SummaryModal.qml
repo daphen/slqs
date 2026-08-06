@@ -29,6 +29,7 @@ Modal {
         title = "Summary"
         meta = (ch && ch.length) ? ("" + ch).toUpperCase() : "WHILE AWAY"
         sel = 0
+        askInput.focus = false; askInput.text = ""   // nav owns the keyboard until `i`
         show()
     }
     // Q&A result: title becomes "Answer", the asked question rides as the subtitle.
@@ -37,6 +38,7 @@ Modal {
         title = "Answer"
         meta = (q && q.length) ? ("" + q).slice(0, 90) : ""
         sel = 0
+        askInput.focus = false; askInput.text = ""
         show()
     }
 
