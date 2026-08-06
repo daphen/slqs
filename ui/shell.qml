@@ -307,7 +307,7 @@ FloatingWindow {
                           help: () => win.isDiscord ? "Toggle sidebar" : "Browse channels", cat: "chats" },
             "s":        { act: () => sidebar.toggleStarCurrent(), help: "Star / unstar channel", cat: "chats" },
             "c":        { act: () => { if (win.isDiscord) summarizePicker.start() }, help: () => win.isDiscord ? "Agent — summarize or ask" : "", cat: "chats" },
-            "C":        { act: () => { if (win.isDiscord && Backend.lastSummaryText.length) summaryModal.showWith(Backend.lastSummaryText, Backend.lastSummaryChannel) },
+            "C":        { act: () => { if (win.isDiscord && Backend.lastSummaryText.length) { Backend.aiScope = Backend.lastSummaryScope; Backend.aiUser = Backend.lastSummaryUser; summaryModal.showWith(Backend.lastSummaryText, Backend.lastSummaryChannel) } },
                           help: () => (win.isDiscord && Backend.lastSummaryText.length) ? "Open last summary" : "", cat: "chats" },
             "u":        { act: () => win.openUpload(), help: "Attach a file", cat: "chats" },
             // slqs only (Discord has no equivalent): d = DM anyone, I = invite to channel.

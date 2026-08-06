@@ -101,8 +101,18 @@ Modal {
         else if (bot + pad > flick.contentY + flick.height) flick.contentY = Math.min(maxY, bot + pad - flick.height)
     }
 
+    // Ask a follow-up about this summary, reusing the conversation range it came from.
+    function _ask() {
+        const q = askInput.text.trim()
+        if (!q.length || Backend.summaryLoading) return
+        Backend.ask(Backend.aiScope, Backend.aiUser, q)
+        askInput.text = ""
+    }
+
     onKeyPressed: e => {
-        if (e.key === Qt.Key_J || e.key === Qt.Key_Down) { sm.sel = Math.min(sm.sel + 1, sm.cats.length - 1); e.accepted = true }
+        if (askInput.activeFocus) return   // the follow-up field owns the keyboard
+        if (e.key === Qt.Key_I) { askInput.forceActiveFocus(); e.accepted = true }
+        else if (e.key === Qt.Key_J || e.key === Qt.Key_Down) { sm.sel = Math.min(sm.sel + 1, sm.cats.length - 1); e.accepted = true }
         else if (e.key === Qt.Key_K || e.key === Qt.Key_Up) { sm.sel = Math.max(sm.sel - 1, 0); e.accepted = true }
         else if (e.key === Qt.Key_Y && (e.modifiers & Qt.ShiftModifier)) {
             const all = sm.cats.map(c => c.plain).join("\n\n")
@@ -136,20 +146,50 @@ Modal {
         }
     }
 
-    footer: Row {
-        anchors.horizontalCenter: parent.horizontalCenter
-        spacing: 5
-        KeyCap { anchors.verticalCenter: parent.verticalCenter; small: true; text: "j/k" }
-        CapLabel { anchors.verticalCenter: parent.verticalCenter; text: "move" }
-        Item { width: 9; height: 1 }
-        KeyCap { anchors.verticalCenter: parent.verticalCenter; small: true; text: "y" }
-        CapLabel { anchors.verticalCenter: parent.verticalCenter; text: "yank" }
-        Item { width: 9; height: 1 }
-        KeyCap { anchors.verticalCenter: parent.verticalCenter; small: true; text: "Y" }
-        CapLabel { anchors.verticalCenter: parent.verticalCenter; text: "all" }
-        Item { width: 9; height: 1 }
-        KeyCap { anchors.verticalCenter: parent.verticalCenter; small: true; text: "esc" }
-        CapLabel { anchors.verticalCenter: parent.verticalCenter; text: "close" }
+    footer: Item {
+        width: parent.width
+        height: askBox.height + 12 + hintRow.height
+        // Full-width follow-up field, like the newtab "ask the agent" card.
+        Rectangle {
+            id: askBox
+            anchors.top: parent.top; anchors.left: parent.left; anchors.right: parent.right
+            height: 44; radius: 12
+            color: Theme.surface
+            border.width: askInput.activeFocus ? 1.5 : 1
+            border.color: askInput.activeFocus ? Theme.hairline : Theme.hairlineSoft
+            TextInput {
+                id: askInput
+                anchors.fill: parent; anchors.leftMargin: 14; anchors.rightMargin: 14
+                enabled: !Backend.summaryLoading
+                verticalAlignment: TextInput.AlignVCenter
+                color: Theme.fg; clip: true; selectByMouse: true
+                font.family: Theme.fontFamily; font.pixelSize: 13
+                onAccepted: sm._ask()
+                Keys.onEscapePressed: ev => { askInput.focus = false; ev.accepted = true }
+                Text {
+                    visible: !askInput.text; anchors.verticalCenter: parent.verticalCenter
+                    text: Backend.summaryLoading ? "Answering…" : "Ask a follow-up about this…"
+                    color: Theme.fg_muted; font: askInput.font
+                }
+            }
+        }
+        Row {
+            id: hintRow
+            anchors.top: askBox.bottom; anchors.topMargin: 12
+            anchors.horizontalCenter: parent.horizontalCenter
+            spacing: 5
+            KeyCap { anchors.verticalCenter: parent.verticalCenter; small: true; text: "j/k" }
+            CapLabel { anchors.verticalCenter: parent.verticalCenter; text: "move" }
+            Item { width: 9; height: 1 }
+            KeyCap { anchors.verticalCenter: parent.verticalCenter; small: true; text: "y" }
+            CapLabel { anchors.verticalCenter: parent.verticalCenter; text: "yank" }
+            Item { width: 9; height: 1 }
+            KeyCap { anchors.verticalCenter: parent.verticalCenter; small: true; text: "i" }
+            CapLabel { anchors.verticalCenter: parent.verticalCenter; text: "ask" }
+            Item { width: 9; height: 1 }
+            KeyCap { anchors.verticalCenter: parent.verticalCenter; small: true; text: "esc" }
+            CapLabel { anchors.verticalCenter: parent.verticalCenter; text: "close" }
+        }
     }
 
     Column {

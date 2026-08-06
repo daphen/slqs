@@ -1136,7 +1136,7 @@ Item {
         else if (e.type === "delete") applyDelete(e.channel, e.ts)
         else if (e.type === "browse") { browseResults = e.channels || []; browseLoaded() }
         else if (e.type === "toast") { if (e.text) toast(e.text) }
-        else if (e.type === "summary") { summaryText = e.text || ""; lastSummaryText = summaryText; lastSummaryChannel = currentChannel; summaryLoading = false; summaryTimeout.stop(); summaryReady() }
+        else if (e.type === "summary") { summaryText = e.text || ""; lastSummaryText = summaryText; lastSummaryChannel = currentChannel; lastSummaryScope = aiScope; lastSummaryUser = aiUser; summaryLoading = false; summaryTimeout.stop(); summaryReady() }
         else if (e.type === "answer") { summaryText = e.text || ""; summaryLoading = false; summaryTimeout.stop(); answerReady(e.question || "") }
         else if (e.type === "summaryError") { summaryLoading = false; summaryTimeout.stop(); if (e.text) toast(e.text) }
         else if (e.type === "summarizeSetup") { summaryLoading = false; summaryTimeout.stop(); summarizeClis = e.clis || []; summarizeSetupNeeded() }
@@ -1801,6 +1801,10 @@ Item {
     property string summaryText: ""
     property string lastSummaryText: ""      // most recent summary this session — ⇧C reopens it
     property string lastSummaryChannel: ""   // its channel name, for the modal subtitle
+    property string lastSummaryScope: ""     // the range that produced it, for follow-ups
+    property string lastSummaryUser: ""
+    property string aiScope: ""              // range of the in-flight summarize/ask; follow-ups reuse it
+    property string aiUser: ""
     property bool   summaryLoading: false   // drives the catch-up button spinner
     signal summaryReady()
     signal answerReady(string question)     // ask (Q&A) result — carries the asked question
@@ -1817,6 +1821,7 @@ Item {
     }
     function summarize(scope, user) {
         if (!currentChannelId || summaryLoading) return
+        aiScope = scope; aiUser = user || ""
         aiBusyLabel = "Summarizing…"
         summaryLoading = true   // drives the button spinner + the badge above the composer
         summaryTimeout.restart()
@@ -1827,6 +1832,7 @@ Item {
         if (!currentChannelId || summaryLoading) return
         const q = ("" + (question || "")).trim()
         if (!q.length) return
+        aiScope = scope; aiUser = user || ""
         aiBusyLabel = "Answering…"
         summaryLoading = true
         summaryTimeout.restart()
