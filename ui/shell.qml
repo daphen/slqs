@@ -306,7 +306,7 @@ FloatingWindow {
             "b":        { act: () => { if (win.isDiscord) win.toggleSidebar(); else browse.show() },
                           help: () => win.isDiscord ? "Toggle sidebar" : "Browse channels", cat: "chats" },
             "s":        { act: () => sidebar.toggleStarCurrent(), help: "Star / unstar channel", cat: "chats" },
-            "c":        { act: () => { if (win.isDiscord) summarizePicker.start() }, help: () => win.isDiscord ? "Catch up — AI summary" : "", cat: "chats" },
+            "c":        { act: () => { if (win.isDiscord) summarizePicker.start() }, help: () => win.isDiscord ? "Agent — summarize or ask" : "", cat: "chats" },
             "u":        { act: () => win.openUpload(), help: "Attach a file", cat: "chats" },
             // slqs only (Discord has no equivalent): d = DM anyone, I = invite to channel.
             "d":        { act: () => { if (!Backend.railHidden) peoplePicker.showDM() }, help: () => Backend.railHidden ? "" : "Message someone", cat: "chats" },
@@ -731,7 +731,7 @@ FloatingWindow {
                             }
                             Text {
                                 anchors.verticalCenter: parent.verticalCenter
-                                text: "Summarizing…"; color: Theme.bg
+                                text: Backend.aiBusyLabel; color: Theme.bg
                                 font.family: Theme.fontFamily; font.hintingPreference: Font.PreferNoHinting; font.pixelSize: 13
                             }
                         }
@@ -967,6 +967,7 @@ FloatingWindow {
                 id: summarizePicker
                 z: 105
                 onChosen: (scope, user) => Backend.summarize(scope, user)
+                onAsked: (scope, user, question) => Backend.ask(scope, user, question)
                 onOpenChanged: if (!open) win.backToNormal()
             }
 
@@ -977,6 +978,7 @@ FloatingWindow {
                 Connections {
                     target: Backend
                     function onSummaryReady() { summaryModal.showWith(Backend.summaryText, Backend.currentChannel) }
+                    function onAnswerReady(question) { summaryModal.showAnswer(Backend.summaryText, question) }
                 }
             }
 

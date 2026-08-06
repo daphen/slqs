@@ -1137,6 +1137,7 @@ Item {
         else if (e.type === "browse") { browseResults = e.channels || []; browseLoaded() }
         else if (e.type === "toast") { if (e.text) toast(e.text) }
         else if (e.type === "summary") { summaryText = e.text || ""; summaryLoading = false; summaryTimeout.stop(); summaryReady() }
+        else if (e.type === "answer") { summaryText = e.text || ""; summaryLoading = false; summaryTimeout.stop(); answerReady(e.question || "") }
         else if (e.type === "summaryError") { summaryLoading = false; summaryTimeout.stop(); if (e.text) toast(e.text) }
         else if (e.type === "summarizeSetup") { summaryLoading = false; summaryTimeout.stop(); summarizeClis = e.clis || []; summarizeSetupNeeded() }
         else if (e.type === "resync") {
@@ -1800,8 +1801,10 @@ Item {
     property string summaryText: ""
     property bool   summaryLoading: false   // drives the catch-up button spinner
     signal summaryReady()
+    signal answerReady(string question)     // ask (Q&A) result — carries the asked question
     signal summarizeSetupNeeded()           // no provider configured → show setup guide
     property var summarizeClis: []          // keyless CLIs found on this machine: [{id,label}]
+    property string aiBusyLabel: "Summarizing…"  // above-composer badge text while an AI call runs
     // Ask the daemon to write the summarize block to profiles.json.
     function summarizeEnableCli(id) { safeWrite(JSON.stringify({ type: "summarizeEnable", provider: id }) + "\n") }
     function summarizeEnableKey(provider, key) { safeWrite(JSON.stringify({ type: "summarizeEnable", provider: provider, api_key: key || "" }) + "\n") }
@@ -1812,9 +1815,20 @@ Item {
     }
     function summarize(scope, user) {
         if (!currentChannelId || summaryLoading) return
-        summaryLoading = true   // drives the button spinner + the "Summarizing…" badge above the composer
+        aiBusyLabel = "Summarizing…"
+        summaryLoading = true   // drives the button spinner + the badge above the composer
         summaryTimeout.restart()
         safeWrite(JSON.stringify({ type: "summarize", channel: currentChannelId, scope: scope, user: user || "" }) + "\n")
+    }
+    // Ask a free-text question about the chosen scope's messages (Discord agent menu).
+    function ask(scope, user, question) {
+        if (!currentChannelId || summaryLoading) return
+        const q = ("" + (question || "")).trim()
+        if (!q.length) return
+        aiBusyLabel = "Answering…"
+        summaryLoading = true
+        summaryTimeout.restart()
+        safeWrite(JSON.stringify({ type: "ask", channel: currentChannelId, scope: scope, user: user || "", question: q }) + "\n")
     }
     // Copy arbitrary text to the clipboard (summary yank).
     function copyRaw(t) { if (t && t.length) Quickshell.execDetached(["wl-copy", "--", t]) }

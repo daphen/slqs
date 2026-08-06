@@ -9,6 +9,7 @@ import QsLib
 Modal {
     id: sm
     property string text: ""
+    property string title: "Summary"
     property string meta: "WHILE AWAY"
     property int sel: 0
     panelWidth: Math.round(Math.min(860, sm.width - 64))
@@ -25,7 +26,16 @@ Modal {
 
     function showWith(t, ch) {
         text = t || ""
+        title = "Summary"
         meta = (ch && ch.length) ? ("" + ch).toUpperCase() : "WHILE AWAY"
+        sel = 0
+        show()
+    }
+    // Q&A result: title becomes "Answer", the asked question rides as the subtitle.
+    function showAnswer(t, q) {
+        text = t || ""
+        title = "Answer"
+        meta = (q && q.length) ? ("" + q).slice(0, 90) : ""
         sel = 0
         show()
     }
@@ -110,7 +120,7 @@ Modal {
         Text {
             id: hTitle
             anchors.left: parent.left; anchors.bottom: parent.bottom; anchors.bottomMargin: -2
-            text: "Summary"; color: Theme.fg
+            text: sm.title; color: Theme.fg
             font.family: sm.titleFont; font.pixelSize: 34; font.weight: 400; font.capitalization: Font.AllUppercase
             font.letterSpacing: -0.3
         }
