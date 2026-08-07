@@ -1358,6 +1358,16 @@ func (d *daemon) readConn(c net.Conn) {
 			log.Printf("testnotify -> err=%v", d.notifier.Notify("__test__", "slqs self-test", "if you see this, the daemon notifier delivers", ""))
 			continue
 		}
+		// Deep-link from outside the client: navigate the UI to a channel,
+		// exactly as a clicked notification does (onNotifActivate). Reuses the
+		// same broadcast, so there is no second navigation path to keep in
+		// sync. Handled before the workspace lookup because the caller may
+		// only know the channel id.
+		if cmd.Type == "open" && cmd.Channel != "" {
+			d.broadcast(map[string]any{"type": "open", "workspace": cmd.Workspace,
+				"channel": cmd.Channel, "thread": cmd.Thread})
+			continue
+		}
 		// browse/join act on channels we may not be a member of yet, so they
 		// resolve the workspace explicitly (not via the channel-id index).
 		if cmd.Type == "browse" {
